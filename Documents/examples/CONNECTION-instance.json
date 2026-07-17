@@ -1,0 +1,207 @@
+{
+	"id": "01c93fa0-1c74-44b1-bafd-6d8a988fea01",
+	"definition": {
+		"label": "Zigbee",
+		"description": "abc"
+	},
+	"links": [
+		{
+			"id": "#1",
+			"title": "From Admin Browser zu Webserver",
+			"fromDockRef": "d123456789#1",
+			"toDockRef": "d123456789#3",
+			"direction": "DUAL",
+			"linkparts": [
+				{
+					"fromDockpartRef": "62",
+					"toDockpartRef": "262",
+					"stackOrder": 7,
+					"fromLabelSnapshot": "xxxx",
+					"toLabelSnapshot": "HTTP"
+				},
+				{
+					"fromDockpartRef": "51",
+					"toDockpartRef": "251",
+					"stackOrder": 6,
+					"fromLabelSnapshot": "xxxx",
+					"toLabelSnapshot": "TLS"
+				},
+				{
+					"fromDockpartRef": "42",
+					"toDockpartRef": "242",
+					"stackOrder": 5,
+					"fromLabelSnapshot": "xxxx",
+					"toLabelSnapshot": "TCPv6"
+				},
+				{
+					"fromDockpartRef": "11",
+					"toDockpartRef": "211",
+					"stackOrder": 4,
+					"fromLabelSnapshot": "xxxx",
+					"toLabelSnapshot": "IPv6"
+				},
+				{
+					"fromDockpartRef": "8",
+					"toDockpartRef": "208",
+					"stackOrder": 3,
+					"fromLabelSnapshot": "xxxx",
+					"toLabelSnapshot": "VLAN"
+				},
+				{
+					"fromDockpartRef": "7",
+					"toDockpartRef": "207",
+					"stackOrder": 2,
+					"fromLabelSnapshot": "xxxx",
+					"toLabelSnapshot": "Ethernet"
+				},
+				{
+					"fromDockpartRef": "6",
+					"toDockpartRef": "206",
+					"stackOrder": 1,
+					"fromLabelSnapshot": "xxxx",
+					"toLabelSnapshot": "NetworkCard"
+				}
+			],
+			"credentials": [],
+			"metadata": {
+				"status": "established",
+				"purpose": "administrative-shell-access",
+				"owner": "admin-team"
+			},
+			"fromLabelSnapshot": "aaa",
+			"toLabelSnapshot": "bbb",
+			"fromComponentRef": "01a93fa0-1c74-44b1-bafd-6d8a988fea28",
+			"toComponentRef": "01a93fa0-1c74-44b1-bafd-6d8a988fea29"
+		},
+		{
+			"id": "#2",
+			"title": "From Admin Browser zu Webserver",
+			"fromDockRef": "d123456789A#1",
+			"toDockRef": "d123456789#3",
+			"direction": "DUAL",
+			"linkparts": [
+				{
+					"fromDockpartRef": "62",
+					"toDockpartRef": "262",
+					"stackOrder": 7,
+					"fromLabelSnapshot": "xxxx",
+					"toLabelSnapshot": "HTTP"
+				},
+				{
+					"fromDockpartRef": "51",
+					"toDockpartRef": "251",
+					"stackOrder": 6,
+					"fromLabelSnapshot": "xxxx",
+					"toLabelSnapshot": "TLS"
+				},
+				{
+					"fromDockpartRef": "43",
+					"toDockpartRef": "243",
+					"stackOrder": 5,
+					"fromLabelSnapshot": "xxxx",
+					"toLabelSnapshot": "TCPv4"
+				},
+				{
+					"fromDockpartRef": "12",
+					"toDockpartRef": "212",
+					"stackOrder": 4,
+					"fromLabelSnapshot": "xxxx",
+					"toLabelSnapshot": "IPv4"
+				},
+				{
+					"fromDockpartRef": "8",
+					"toDockpartRef": "208",
+					"stackOrder": 3,
+					"fromLabelSnapshot": "xxxx",
+					"toLabelSnapshot": "VLAN"
+				},
+				{
+					"fromDockpartRef": "7",
+					"toDockpartRef": "207",
+					"stackOrder": 2,
+					"fromLabelSnapshot": "xxxx",
+					"toLabelSnapshot": "Ethernet"
+				},
+				{
+					"fromDockpartRef": "6",
+					"toDockpartRef": "206",
+					"stackOrder": 1,
+					"fromLabelSnapshot": "xxxx",
+					"toLabelSnapshot": "NetworkCard"
+				}
+			],
+			"credentials": [],
+			"metadata": {
+				"status": "established",
+				"purpose": "administrative-shell-access",
+				"owner": "admin-team"
+			},
+			"fromLabelSnapshot": "aaa",
+			"toLabelSnapshot": "bbb",
+			"fromComponentRef": null,
+			"toComponentRef": null
+		},
+		{
+			"id": "#3",
+			"title": "From Admin Browser zu Webserver",
+			"fromDockRef": "d123456789#1",
+			"toDockRef": "d123456789#3",
+			"direction": "DUAL",
+			"linkparts": [
+				{
+					"fromDockpartRef": "61",
+					"toDockpartRef": "261",
+					"stackOrder": 6,
+					"fromLabelSnapshot": "xxxx",
+					"toLabelSnapshot": "QUIC"
+				},
+				{
+					"fromDockpartRef": "41",
+					"toDockpartRef": "241",
+					"stackOrder": 5,
+					"fromLabelSnapshot": "xxxx",
+					"toLabelSnapshot": "UDPv6"
+				},
+				{
+					"fromDockpartRef": "11",
+					"toDockpartRef": "211",
+					"stackOrder": 4,
+					"fromLabelSnapshot": "xxxx",
+					"toLabelSnapshot": "IPv6"
+				},
+				{
+					"fromDockpartRef": "8",
+					"toDockpartRef": "208",
+					"stackOrder": 3,
+					"fromLabelSnapshot": "xxxx",
+					"toLabelSnapshot": "VLAN"
+				},
+				{
+					"fromDockpartRef": "7",
+					"toDockpartRef": "207",
+					"stackOrder": 2,
+					"fromLabelSnapshot": "xxxx",
+					"toLabelSnapshot": "Ethernet"
+				},
+				{
+					"fromDockpartRef": "6",
+					"toDockpartRef": "206",
+					"stackOrder": 1,
+					"fromLabelSnapshot": "xxxx",
+					"toLabelSnapshot": "NetworkCard"
+				}
+			],
+			"credentials": [],
+			"metadata": {
+				"status": "established",
+				"purpose": "administrative-shell-access",
+				"owner": "admin-team"
+			},
+			"fromLabelSnapshot": "aaa",
+			"toLabelSnapshot": "bbb",
+			"fromComponentRef": null,
+			"toComponentRef": null
+		}
+	],
+	"settings": {}
+}

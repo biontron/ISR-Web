@@ -1,0 +1,86 @@
+{
+  "version": 1,
+  "containerDefault": {
+    "type": "CONTAINER",
+    "fill": "#f5f5f5",
+    "fillOpacity": 1,
+    "stroke": "#333333",
+    "strokeWidth": 1,
+    "strokeDasharray": ""
+  },
+  "containers": {
+    "MAIN": {
+      "type": "CONTAINER",
+      "fill": "#fff8dc",
+      "fillOpacity": 1,
+      "stroke": "#333333",
+      "strokeWidth": 1,
+      "strokeDasharray": ""
+    },
+    "LOCALE": {
+      "type": "CONTAINER",
+      "fill": "#f0e68c",
+      "fillOpacity": 1,
+      "stroke": "#666666",
+      "strokeWidth": 1,
+      "strokeDasharray": ""
+    },
+    "GROUP": {
+      "type": "CONTAINER",
+      "fill": "#eeeeff",
+      "fillOpacity": 1,
+      "stroke": "#333333",
+      "strokeWidth": 1,
+      "strokeDasharray": "5"
+    },
+    "CLUSTER": {
+      "type": "CONTAINER",
+      "fill": "#ffeeee",
+      "fillOpacity": 1,
+      "stroke": "#333333",
+      "strokeWidth": 1,
+      "strokeDasharray": "1 5"
+    },
+    "BLOCK": {
+      "type": "CONTAINER",
+      "fill": "#666666",
+      "fillOpacity": 1,
+      "stroke": "#000000",
+      "strokeWidth": 1,
+      "strokeDasharray": ""
+    }
+  },
+  "nodeDefault": {
+    "type": "NODE",
+    "fill": "#53adcb",
+    "fillOpacity": 1,
+    "stroke": "#000000",
+    "strokeWidth": 1,
+    "strokeDasharray": ""
+  },
+  "nodeChildDefault": {
+    "type": "NODE",
+    "fill": "lightblue",
+    "fillOpacity": 1,
+    "stroke": "#000000",
+    "strokeWidth": 1,
+    "strokeDasharray": ""
+  },
+  "edgeDefault": {
+    "lineColor": "#555555",
+    "lineWidth": 1.5,
+    "lineOpacity": 0.7,
+    "lineDasharray": ""
+  },
+  "activeHighlight": {
+    "stroke": "#ff6611",
+    "strokeWidth": 4
+  },
+  "swimlanes": [
+    {
+      "id": "ungrouped",
+      "label": "Ungruppiert",
+      "tags": []
+    }
+  ]
+}

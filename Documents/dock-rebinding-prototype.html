@@ -1,0 +1,692 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Prototyp • Dock-Rebinding mit Drag &amp; Drop</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&amp;family=Space+Grotesk:wght@500;600&amp;display=swap');
+        
+        :root {
+            --primary: #0f172a;
+        }
+        
+        body {
+            font-family: 'Inter', system_ui, sans-serif;
+        }
+        
+        .title-font {
+            font-family: 'Space Grotesk', 'Inter', sans-serif;
+            font-weight: 600;
+        }
+
+        .diagram-svg {
+            background: #f8fafc;
+            border: 1px solid #e2e8f0;
+            border-radius: 16px;
+            box-shadow: 0 10px 15px -3px rgb(0 0 0 / 0.05), 0 4px 6px -4px rgb(0 0 0 / 0.05);
+        }
+
+        .base-component {
+            filter: drop-shadow(0 10px 8px rgb(15 23 42 / 0.08));
+            transition: filter 0.2s ease;
+        }
+
+        .base-component:hover {
+            filter: drop-shadow(0 20px 25px rgb(15 23 42 / 0.12));
+        }
+
+        .dock {
+            cursor: grab;
+            transition: transform 0.1s ease, filter 0.2s ease;
+        }
+        
+        .dock:active {
+            cursor: grabbing;
+            transform: scale(1.1);
+        }
+
+        .dock.halo-red {
+            filter: drop-shadow(0 0 0 #f87171) drop-shadow(0 0 6px #f87171);
+        }
+        
+        .dock.halo-blue {
+            filter: drop-shadow(0 0 0 #60a5fa) drop-shadow(0 0 6px #60a5fa);
+        }
+        
+        .dock.halo-green {
+            filter: drop-shadow(0 0 0 #4ade80) drop-shadow(0 0 6px #4ade80);
+        }
+
+        .context-zone {
+            transition: opacity 0.2s ease;
+        }
+
+        .context-zone.active {
+            opacity: 0.95;
+        }
+
+        .dockpart-row {
+            transition: all 0.2s ease;
+        }
+
+        .dockpart-row.inherited {
+            color: #64748b;
+            font-style: italic;
+        }
+
+        .connection-line {
+            stroke: #64748b;
+            stroke-width: 2.5;
+            stroke-linecap: round;
+        }
+
+        .halo-ring {
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+
+        .rebind-log {
+            font-size: 0.75rem;
+            max-height: 120px;
+            overflow-y: auto;
+        }
+
+        .svg-text {
+            font-family: 'Inter', system_ui, sans-serif;
+            user-select: none;
+        }
+    </style>
+</head>
+<body class="bg-slate-50">
+    <div class="max-w-[1280px] mx-auto p-6">
+        <!-- Header -->
+        <div class="flex items-center justify-between mb-6">
+            <div>
+                <h1 class="text-3xl font-semibold text-slate-900 title-font tracking-tight">Dock-Rebinding Prototyp</h1>
+                <p class="text-slate-600 mt-1">Erlebe live, wie ein Dock in einen neuen Kontext umzieht und seine Dockparts sich verändern</p>
+            </div>
+            <div class="flex items-center gap-x-3">
+                <button onclick="resetPrototype()" 
+                        class="px-4 py-2 text-sm font-medium bg-white border border-slate-300 hover:bg-slate-50 text-slate-700 rounded-xl flex items-center gap-x-2 transition-colors">
+                    <i class="fa-solid fa-undo mr-1.5"></i>
+                    <span>Zurücksetzen</span>
+                </button>
+                <div class="px-3 py-1.5 bg-emerald-100 text-emerald-700 text-xs font-medium rounded-full flex items-center gap-x-1.5">
+                    <div class="w-2 h-2 bg-emerald-500 rounded-full animate-pulse"></div>
+                    <span>Interaktiv</span>
+                </div>
+            </div>
+        </div>
+
+        <div class="grid grid-cols-1 lg:grid-cols-12 gap-6">
+            
+            <!-- Main Diagram -->
+            <div class="lg:col-span-8">
+                <div class="bg-white rounded-3xl shadow-sm border border-slate-200 p-5">
+                    <div class="flex items-center justify-between mb-4 px-1">
+                        <div class="flex items-center gap-x-2">
+                            <div class="w-8 h-8 bg-slate-900 rounded-2xl flex items-center justify-center">
+                                <i class="fa-solid fa-project-diagram text-white text-sm"></i>
+                            </div>
+                            <div>
+                                <div class="font-semibold text-slate-900">Netzwerk-Modell</div>
+                                <div class="text-[10px] text-slate-500 -mt-0.5">Drag &amp; Drop der Docks</div>
+                            </div>
+                        </div>
+                        <div class="text-xs px-3 py-1 bg-slate-100 text-slate-600 rounded-full font-medium">
+                            Jeder Dock hat seinen eigenen Stack
+                        </div>
+                    </div>
+
+                    <!-- SVG Diagram -->
+                    <svg id="diagram" width="100%" height="620" viewBox="0 0 1100 620" class="diagram-svg w-full" style="max-height: 620px;">
+                        
+                        <!-- Background Grid -->
+                        <defs>
+                            <pattern id="grid" width="40" height="40" patternUnits="userSpaceOnUse">
+                                <path d="M 40 0 L 0 0 0 40" fill="none" stroke="#e2e8f0" stroke-width="1"/>
+                            </pattern>
+                            
+                            <!-- Halo gradients -->
+                            <filter id="halo-red" x="-50%" y="-50%" width="200%" height="200%">
+                                <feGaussianBlur in="SourceGraphic" stdDeviation="3" result="coloredBlur"/>
+                                <feMerge>
+                                    <feMergeNode in="coloredBlur"/>
+                                    <feMergeNode in="SourceGraphic"/>
+                                </feMerge>
+                            </filter>
+                            
+                            <filter id="halo-blue" x="-50%" y="-50%" width="200%" height="200%">
+                                <feGaussianBlur in="SourceGraphic" stdDeviation="3" result="coloredBlur"/>
+                                <feMerge>
+                                    <feMergeNode in="coloredBlur"/>
+                                    <feMergeNode in="SourceGraphic"/>
+                                </feMerge>
+                            </filter>
+                        </defs>
+                        
+                        <rect width="1100" height="620" fill="url(#grid)" rx="16"/>
+                        
+                        <!-- ========== CONTEXT ZONES ========== -->
+                        
+                        <!-- VLAN 10 Zone (left) -->
+                        <g id="context-vlan10">
+                            <rect x="40" y="40" width="320" height="540" rx="20" ry="20" 
+                                  fill="#fee2e2" fill-opacity="0.35" stroke="#f87171" stroke-width="2" stroke-opacity="0.4"/>
+                            <text x="200" y="75" text-anchor="middle" class="svg-text" font-size="13" font-weight="600" fill="#b91c1c">VLAN 10 — Production</text>
+                            <text x="200" y="92" text-anchor="middle" class="svg-text" font-size="10" fill="#9f1239">IP-Segment 10.0.0.0/24 (DHCP)</text>
+                        </g>
+                        
+                        <!-- VLAN 20 + Kubernetes Zone (right) -->
+                        <g id="context-vlan20">
+                            <rect x="740" y="40" width="320" height="540" rx="20" ry="20" 
+                                  fill="#dbeafe" fill-opacity="0.35" stroke="#60a5fa" stroke-width="2" stroke-opacity="0.4"/>
+                            <text x="900" y="75" text-anchor="middle" class="svg-text" font-size="13" font-weight="600" fill="#1e40af">VLAN 20 — Management</text>
+                            <text x="900" y="92" text-anchor="middle" class="svg-text" font-size="10" fill="#1e3a8a">IP-Segment 192.168.20.0/24</text>
+                            
+                            <!-- Kubernetes sub-zone -->
+                            <rect x="760" y="280" width="280" height="280" rx="16" ry="16" 
+                                  fill="#dcfce7" fill-opacity="0.45" stroke="#4ade80" stroke-width="2" stroke-opacity="0.5"/>
+                            <text x="900" y="305" text-anchor="middle" class="svg-text" font-size="11" font-weight="600" fill="#166534">Kubernetes Cluster: prod</text>
+                        </g>
+                        
+                        <!-- ========== BASE COMPONENT 1 (WebServer) ========== -->
+                        <g id="component-webserver" class="base-component">
+                            <!-- Outer 3px border -->
+                            <rect x="380" y="120" width="280" height="380" rx="14" ry="14" 
+                                  fill="#ffffff" stroke="#0f172a" stroke-width="3"/>
+                            
+                            <!-- Inner content area -->
+                            <rect x="392" y="132" width="256" height="280" rx="8" ry="8" fill="#f8fafc" stroke="#e2e8f0" stroke-width="1"/>
+                            
+                            <!-- Dockpart Stacks for each Dock -->
+                            <!-- Dock 1 Stack (left side) -->
+                            <g id="dock1-stack">
+                                <rect x="400" y="145" width="115" height="95" rx="6" ry="6" fill="#fff" stroke="#cbd5e1" stroke-width="1"/>
+                                <text x="457" y="160" text-anchor="middle" class="svg-text" font-size="9" font-weight="600" fill="#334155">Dock-1 (Prod)</text>
+                                
+                                <!-- Dockpart rows -->
+                                <text x="408" y="178" class="svg-text" font-size="8" fill="#0f172a">Ethernet</text>
+                                <text x="408" y="190" class="svg-text" font-size="8" fill="#0f172a">VLAN ID: 10</text>
+                                <text x="408" y="202" class="svg-text" font-size="8" fill="#0f172a">IPv4: 10.0.1.45</text>
+                                <text x="408" y="214" class="svg-text" font-size="8" fill="#0f172a">TCP 443 + HTTP</text>
+                            </g>
+                            
+                            <!-- Dock 2 Stack (middle) -->
+                            <g id="dock2-stack">
+                                <rect x="522" y="145" width="115" height="95" rx="6" ry="6" fill="#fff" stroke="#cbd5e1" stroke-width="1"/>
+                                <text x="579" y="160" text-anchor="middle" class="svg-text" font-size="9" font-weight="600" fill="#334155">Dock-2 (Mgmt)</text>
+                                
+                                <text x="530" y="178" class="svg-text" font-size="8" fill="#0f172a">Ethernet</text>
+                                <text x="530" y="190" class="svg-text" font-size="8" fill="#0f172a">VLAN ID: 20</text>
+                                <text x="530" y="202" class="svg-text" font-size="8" fill="#0f172a">IPv4: 192.168.20.12</text>
+                                <text x="530" y="214" class="svg-text" font-size="8" fill="#0f172a">SSH + TLS</text>
+                            </g>
+                            
+                            <!-- Dock 3 Stack (right) - THIS ONE IS DRAGGABLE -->
+                            <g id="dock3-stack">
+                                <rect x="400" y="250" width="237" height="78" rx="6" ry="6" fill="#fff" stroke="#94a3b8" stroke-width="1.5"/>
+                                <text x="518" y="265" text-anchor="middle" class="svg-text" font-size="9" font-weight="600" fill="#334155">Dock-3 (Rebindbar)</text>
+                                
+                                <!-- Dynamic content updated by JS -->
+                                <g id="dock3-content">
+                                    <text id="dock3-line1" x="408" y="282" class="svg-text" font-size="8" fill="#0f172a">Ethernet + VLAN</text>
+                                    <text id="dock3-line2" x="408" y="294" class="svg-text" font-size="8" fill="#0f172a">VLAN ID: 10</text>
+                                    <text id="dock3-line3" x="408" y="306" class="svg-text" font-size="8" fill="#0f172a">IPv4: 10.0.1.87</text>
+                                    <text id="dock3-line4" x="408" y="318" class="svg-text" font-size="8" fill="#0f172a">HTTP + TLS</text>
+                                </g>
+                            </g>
+                            
+                            <!-- Title Block at bottom -->
+                            <rect x="392" y="420" width="256" height="68" rx="8" ry="8" fill="#0f172a"/>
+                            <text x="520" y="445" text-anchor="middle" class="svg-text" font-size="13" font-weight="600" fill="#fff">WebServer-Prod-01</text>
+                            <text x="520" y="462" text-anchor="middle" class="svg-text" font-size="10" fill="#94a3b8">Funktion: Web Hosting &amp; API</text>
+                            
+                            <!-- DOCKS (draggable circles) -->
+                            <!-- Dock 1 -->
+                            <g id="dock1" class="dock" data-dock="1" data-context="vlan10">
+                                <circle cx="420" cy="200" r="11" fill="#0ea5e9" stroke="#0369a1" stroke-width="2"/>
+                                <circle cx="420" cy="200" r="5" fill="#fff"/>
+                            </g>
+                            
+                            <!-- Dock 2 -->
+                            <g id="dock2" class="dock" data-dock="2" data-context="vlan20">
+                                <circle cx="620" cy="200" r="11" fill="#0ea5e9" stroke="#0369a1" stroke-width="2"/>
+                                <circle cx="620" cy="200" r="5" fill="#fff"/>
+                            </g>
+                            
+                            <!-- Dock 3 - THE MAIN DRAGGABLE ONE -->
+                            <g id="dock3" class="dock" data-dock="3" data-context="vlan10" 
+                               onmousedown="startDrag(evt, this)" style="cursor: grab;">
+                                <!-- Halo rings (will be updated dynamically) -->
+                                <circle id="dock3-halo1" cx="520" cy="310" r="22" fill="none" stroke="#f87171" stroke-width="3" opacity="0.6"/>
+                                <circle id="dock3-halo2" cx="520" cy="310" r="17" fill="none" stroke="#f87171" stroke-width="2" opacity="0.4"/>
+                                
+                                <!-- Main dock circle -->
+                                <circle cx="520" cy="310" r="12" fill="#0ea5e9" stroke="#0369a1" stroke-width="2.5"/>
+                                <circle cx="520" cy="310" r="5.5" fill="#fff"/>
+                            </g>
+                            
+                        </g>
+                        
+                        <!-- Connection Line (simple single line) -->
+                        <line id="connection-line" x1="620" y1="310" x2="760" y2="310" 
+                              class="connection-line" stroke-dasharray="4,2"/>
+                        
+                        <!-- Small target component on right -->
+                        <g id="component-db">
+                            <rect x="760" y="260" width="110" height="100" rx="10" ry="10" 
+                                  fill="#ffffff" stroke="#64748b" stroke-width="2"/>
+                            <text x="815" y="295" text-anchor="middle" class="svg-text" font-size="11" font-weight="600" fill="#334155">DB-Cluster</text>
+                            <text x="815" y="312" text-anchor="middle" class="svg-text" font-size="9" fill="#64748b">PostgreSQL</text>
+                            
+                            <!-- Target dock on DB -->
+                            <g id="dock-db">
+                                <circle cx="760" cy="310" r="9" fill="#64748b" stroke="#475569" stroke-width="2"/>
+                                <circle cx="760" cy="310" r="4" fill="#fff"/>
+                            </g>
+                        </g>
+                        
+                    </svg>
+                </div>
+            </div>
+            
+            <!-- Sidebar: Live Inspector + Log -->
+            <div class="lg:col-span-4 space-y-4">
+                
+                <!-- Live Dock Inspector -->
+                <div class="bg-white rounded-3xl shadow-sm border border-slate-200 p-5">
+                    <div class="flex items-center gap-x-2 mb-3">
+                        <i class="fa-solid fa-microchip text-slate-700"></i>
+                        <div class="font-semibold text-slate-900">Live Dockpart-Stack Inspector</div>
+                    </div>
+                    
+                    <div id="inspector" class="bg-slate-50 border border-slate-200 rounded-2xl p-4 text-sm">
+                        <div class="flex justify-between items-center mb-2">
+                            <div class="font-medium text-slate-700">Dock-3 (Rebindbar)</div>
+                            <div id="inspector-context-badge" 
+                                 class="px-2.5 py-0.5 text-[10px] font-medium bg-red-100 text-red-700 rounded-full">VLAN 10</div>
+                        </div>
+                        
+                        <div class="space-y-1 text-xs" id="inspector-content">
+                            <!-- Populated by JS -->
+                        </div>
+                    </div>
+                    
+                    <div class="mt-3 text-[10px] text-slate-500 leading-tight">
+                        Graue Einträge = vom aktuellen Kontext geerbt
+                    </div>
+                </div>
+                
+                <!-- Event Log -->
+                <div class="bg-white rounded-3xl shadow-sm border border-slate-200 p-5 flex flex-col">
+                    <div class="flex items-center justify-between mb-3">
+                        <div class="font-semibold text-slate-900 flex items-center gap-x-2">
+                            <i class="fa-solid fa-history text-slate-700"></i>
+                            <span>Rebinding Log</span>
+                        </div>
+                        <button onclick="clearLog()" class="text-xs text-slate-400 hover:text-slate-600">leeren</button>
+                    </div>
+                    
+                    <div id="log" class="rebind-log flex-1 text-xs font-mono bg-slate-900 text-emerald-400 p-3 rounded-2xl overflow-auto">
+                        <!-- JS populated -->
+                    </div>
+                </div>
+                
+                <div class="text-center">
+                    <div class="inline-flex items-center gap-x-2 text-xs text-slate-500 bg-white px-3 py-1.5 rounded-2xl border border-slate-200">
+                        <i class="fa-solid fa-info-circle"></i>
+                        <span>Ziehe den blauen <strong>Dock-3</strong> in die blaue Zone (VLAN 20)</span>
+                    </div>
+                </div>
+            </div>
+            
+        </div>
+        
+        <!-- Legend -->
+        <div class="mt-6 bg-white border border-slate-200 rounded-3xl p-4 text-xs">
+            <div class="grid grid-cols-2 md:grid-cols-4 gap-x-6 gap-y-2 text-slate-600">
+                <div class="flex items-center gap-x-2">
+                    <div class="w-3 h-3 rounded-full bg-sky-500"></div>
+                    <span>Dock (Andockpunkt)</span>
+                </div>
+                <div class="flex items-center gap-x-2">
+                    <div class="w-3 h-0.5 bg-slate-400" style="background: repeating-linear-gradient(90deg, #64748b, #64748b 3px, transparent 3px, transparent 6px);"></div>
+                    <span>Connection (eine Linie)</span>
+                </div>
+                <div class="flex items-center gap-x-2">
+                    <div class="flex -space-x-0.5">
+                        <div class="w-2.5 h-2.5 rounded-full border border-red-400" style="background: #f87171;"></div>
+                        <div class="w-2.5 h-2.5 rounded-full border border-blue-400" style="background: #60a5fa;"></div>
+                    </div>
+                    <span>Regenbogen-Halos = Multi-Kontext</span>
+                </div>
+                <div class="flex items-center gap-x-2">
+                    <span class="font-mono text-red-600">grau</span>
+                    <span>= vom Kontext geerbt</span>
+                </div>
+            </div>
+        </div>
+        
+    </div>
+
+    <script>
+        // Tailwind script
+        function initializeTailwind() {
+            document.documentElement.style.setProperty('--accent', '#0ea5e9');
+        }
+        
+        let currentDock3Context = 'vlan10';
+        
+        // Update the inspector panel
+        function updateInspector(context) {
+            const badge = document.getElementById('inspector-context-badge');
+            const content = document.getElementById('inspector-content');
+            
+            content.innerHTML = '';
+            
+            if (context === 'vlan10') {
+                badge.className = 'px-2.5 py-0.5 text-[10px] font-medium bg-red-100 text-red-700 rounded-full';
+                badge.textContent = 'VLAN 10';
+                
+                content.innerHTML = `
+                    <div class="dockpart-row flex justify-between py-0.5">
+                        <span>Ethernet + VLAN</span>
+                        <span class="font-mono text-[10px]">10</span>
+                    </div>
+                    <div class="dockpart-row flex justify-between py-0.5">
+                        <span>VLAN ID</span>
+                        <span class="font-mono text-[10px]">10</span>
+                    </div>
+                    <div class="dockpart-row flex justify-between py-0.5">
+                        <span>IPv4</span>
+                        <span class="font-mono text-[10px]">10.0.1.87</span>
+                    </div>
+                    <div class="dockpart-row flex justify-between py-0.5">
+                        <span>HTTP + TLS</span>
+                        <span class="font-mono text-[10px] text-emerald-600">aktiv</span>
+                    </div>
+                `;
+            } else {
+                badge.className = 'px-2.5 py-0.5 text-[10px] font-medium bg-blue-100 text-blue-700 rounded-full';
+                badge.textContent = 'VLAN 20 + K8s';
+                
+                content.innerHTML = `
+                    <div class="dockpart-row flex justify-between py-0.5">
+                        <span>Ethernet + VLAN</span>
+                        <span class="font-mono text-[10px] text-slate-400">20</span>
+                    </div>
+                    <div class="dockpart-row flex justify-between py-0.5 inherited">
+                        <span>VLAN ID</span>
+                        <span class="font-mono text-[10px]">20</span>
+                    </div>
+                    <div class="dockpart-row flex justify-between py-0.5 inherited">
+                        <span>IPv4</span>
+                        <span class="font-mono text-[10px]">192.168.20.87</span>
+                    </div>
+                    <div class="dockpart-row flex justify-between py-0.5">
+                        <span>HTTP + TLS</span>
+                        <span class="font-mono text-[10px] text-emerald-600">aktiv</span>
+                    </div>
+                    <div class="dockpart-row flex justify-between py-0.5 text-emerald-600">
+                        <span>+ Kubernetes Pod</span>
+                        <span class="font-mono text-[10px]">neu</span>
+                    </div>
+                `;
+            }
+        }
+        
+        // Add log entry
+        function addLog(message, type = 'info') {
+            const log = document.getElementById('log');
+            const time = new Date().toLocaleTimeString('de-DE', { hour: '2-digit', minute: '2-digit', second: '2-digit' });
+            
+            const entry = document.createElement('div');
+            entry.className = `mb-1 flex gap-x-2 ${type === 'success' ? 'text-emerald-400' : 'text-slate-300'}`;
+            entry.innerHTML = `
+                <span class="text-slate-500 w-14 flex-shrink-0">[${time}]</span>
+                <span>${message}</span>
+            `;
+            
+            log.appendChild(entry);
+            log.scrollTop = log.scrollHeight;
+            
+            // Keep only last 8 entries
+            while (log.children.length > 8) {
+                log.removeChild(log.firstChild);
+            }
+        }
+        
+        function clearLog() {
+            document.getElementById('log').innerHTML = '';
+        }
+        
+        // Update Dock-3 halos and content
+        function updateDock3(context) {
+            const halo1 = document.getElementById('dock3-halo1');
+            const halo2 = document.getElementById('dock3-halo2');
+            const contentGroup = document.getElementById('dock3-content');
+            
+            if (context === 'vlan10') {
+                // Red halos
+                halo1.setAttribute('stroke', '#f87171');
+                halo1.setAttribute('opacity', '0.65');
+                halo2.setAttribute('stroke', '#f87171');
+                halo2.setAttribute('opacity', '0.4');
+                
+                // Update text content
+                document.getElementById('dock3-line1').textContent = 'Ethernet + VLAN';
+                document.getElementById('dock3-line1').setAttribute('fill', '#0f172a');
+                document.getElementById('dock3-line2').textContent = 'VLAN ID: 10';
+                document.getElementById('dock3-line2').setAttribute('fill', '#0f172a');
+                document.getElementById('dock3-line3').textContent = 'IPv4: 10.0.1.87';
+                document.getElementById('dock3-line3').setAttribute('fill', '#0f172a');
+                document.getElementById('dock3-line4').textContent = 'HTTP + TLS';
+                document.getElementById('dock3-line4').setAttribute('fill', '#0f172a');
+                
+            } else {
+                // Blue + green rainbow halos (VLAN 20 + K8s)
+                halo1.setAttribute('stroke', '#60a5fa');
+                halo1.setAttribute('opacity', '0.7');
+                halo2.setAttribute('stroke', '#4ade80');
+                halo2.setAttribute('opacity', '0.55');
+                
+                // Update text - some gray (inherited)
+                document.getElementById('dock3-line1').textContent = 'Ethernet + VLAN';
+                document.getElementById('dock3-line1').setAttribute('fill', '#0f172a');
+                document.getElementById('dock3-line2').textContent = 'VLAN ID: 20';
+                document.getElementById('dock3-line2').setAttribute('fill', '#64748b'); // gray
+                document.getElementById('dock3-line3').textContent = 'IPv4: 192.168.20.87';
+                document.getElementById('dock3-line3').setAttribute('fill', '#64748b'); // gray
+                document.getElementById('dock3-line4').textContent = 'HTTP + TLS + K8s';
+                document.getElementById('dock3-line4').setAttribute('fill', '#0f172a');
+            }
+            
+            currentDock3Context = context;
+            updateInspector(context);
+        }
+        
+        // Drag and Drop logic
+        let draggedDock = null;
+        let offsetX = 0;
+        let offsetY = 0;
+        
+        function startDrag(evt, dockGroup) {
+            if (dockGroup.id !== 'dock3') return; // Only Dock-3 is draggable for demo
+            
+            draggedDock = dockGroup;
+            const svg = document.getElementById('diagram');
+            const pt = svg.createSVGPoint();
+            pt.x = evt.clientX;
+            pt.y = evt.clientY;
+            const svgP = pt.matrixTransform(svg.getScreenCTM().inverse());
+            
+            const circle = dockGroup.querySelector('circle:last-child');
+            offsetX = svgP.x - parseFloat(circle.getAttribute('cx'));
+            offsetY = svgP.y - parseFloat(circle.getAttribute('cy'));
+            
+            document.addEventListener('mousemove', doDrag);
+            document.addEventListener('mouseup', endDrag);
+            
+            dockGroup.style.cursor = 'grabbing';
+            evt.preventDefault();
+        }
+        
+        function doDrag(evt) {
+            if (!draggedDock) return;
+            
+            const svg = document.getElementById('diagram');
+            const pt = svg.createSVGPoint();
+            pt.x = evt.clientX;
+            pt.y = evt.clientY;
+            const svgP = pt.matrixTransform(svg.getScreenCTM().inverse());
+            
+            const circle = draggedDock.querySelector('circle:last-child');
+            const newX = svgP.x - offsetX;
+            const newY = svgP.y - offsetY;
+            
+            // Move main circle
+            circle.setAttribute('cx', newX);
+            circle.setAttribute('cy', newY);
+            
+            // Move halos
+            const halo1 = document.getElementById('dock3-halo1');
+            const halo2 = document.getElementById('dock3-halo2');
+            halo1.setAttribute('cx', newX);
+            halo1.setAttribute('cy', newY);
+            halo2.setAttribute('cx', newX);
+            halo2.setAttribute('cy', newY);
+            
+            // Move the stack box slightly for visual feedback
+            const stack = document.getElementById('dock3-stack');
+            // We keep the stack fixed for clarity in this prototype
+        }
+        
+        function endDrag(evt) {
+            if (!draggedDock) return;
+            
+            const svg = document.getElementById('diagram');
+            const pt = svg.createSVGPoint();
+            pt.x = evt.clientX;
+            pt.y = evt.clientY;
+            const svgP = pt.matrixTransform(svg.getScreenCTM().inverse());
+            
+            const circle = draggedDock.querySelector('circle:last-child');
+            const finalX = parseFloat(circle.getAttribute('cx'));
+            const finalY = parseFloat(circle.getAttribute('cy'));
+            
+            // Check which context zone we dropped into
+            let newContext = currentDock3Context;
+            
+            // VLAN 20 zone (right side)
+            if (finalX > 740 && finalX < 1060 && finalY > 40 && finalY < 580) {
+                if (currentDock3Context !== 'vlan20') {
+                    newContext = 'vlan20';
+                    addLog('Dock-3 in VLAN 20 + Kubernetes verschoben', 'success');
+                    addLog('Dockparts neu berechnet (VLAN + IP geerbt)', 'success');
+                }
+            } 
+            // VLAN 10 zone (left side)
+            else if (finalX > 40 && finalX < 360 && finalY > 40 && finalY < 580) {
+                if (currentDock3Context !== 'vlan10') {
+                    newContext = 'vlan10';
+                    addLog('Dock-3 zurück in VLAN 10 verschoben');
+                }
+            }
+            
+            // Snap back to original position (we keep the dock visually in the component)
+            // In a real tool the dock would stay at the new position or show preview
+            circle.setAttribute('cx', '520');
+            circle.setAttribute('cy', '310');
+            
+            const halo1 = document.getElementById('dock3-halo1');
+            const halo2 = document.getElementById('dock3-halo2');
+            halo1.setAttribute('cx', '520');
+            halo1.setAttribute('cy', '310');
+            halo2.setAttribute('cx', '520');
+            halo2.setAttribute('cy', '310');
+            
+            // Update visuals if context changed
+            if (newContext !== currentDock3Context) {
+                updateDock3(newContext);
+                
+                // Update the dock's data attribute
+                draggedDock.setAttribute('data-context', newContext);
+            }
+            
+            draggedDock.style.cursor = 'grab';
+            draggedDock = null;
+            
+            document.removeEventListener('mousemove', doDrag);
+            document.removeEventListener('mouseup', endDrag);
+        }
+        
+        // Initialize everything
+        function initializePrototype() {
+            initializeTailwind();
+            
+            // Initial inspector state
+            updateInspector('vlan10');
+            
+            // Initial log
+            const log = document.getElementById('log');
+            log.innerHTML = `
+                <div class="mb-1 text-emerald-400">[System] Prototyp geladen. Dock-3 ist in VLAN 10.</div>
+            `;
+            
+            // Make sure Dock-3 has pointer events
+            const dock3 = document.getElementById('dock3');
+            dock3.style.pointerEvents = 'all';
+            
+            // Bonus: Click on Dock-3 shows info
+            dock3.addEventListener('click', () => {
+                const ctx = dock3.getAttribute('data-context');
+                addLog(`Dock-3 angeklickt (aktuell: ${ctx})`);
+            });
+            
+            // Keyboard hint
+            document.addEventListener('keydown', function(e) {
+                if (e.key === '?' && document.activeElement.tagName === 'BODY') {
+                    e.preventDefault();
+                    addLog('Tipp: Ziehe Dock-3 in die rechte (blaue) Zone');
+                }
+            });
+            
+            console.log('%c[Dock-Rebinding Prototyp] Interaktives HTML+SVG bereit.', 'color:#64748b');
+        }
+        
+        function resetPrototype() {
+            // Reset Dock-3 to original state
+            const circle = document.querySelector('#dock3 circle:last-child');
+            const halo1 = document.getElementById('dock3-halo1');
+            const halo2 = document.getElementById('dock3-halo2');
+            
+            circle.setAttribute('cx', '520');
+            circle.setAttribute('cy', '310');
+            halo1.setAttribute('cx', '520');
+            halo1.setAttribute('cy', '310');
+            halo2.setAttribute('cx', '520');
+            halo2.setAttribute('cy', '310');
+            
+            // Reset to VLAN 10
+            updateDock3('vlan10');
+            document.getElementById('dock3').setAttribute('data-context', 'vlan10');
+            
+            // Clear and reset log
+            const log = document.getElementById('log');
+            log.innerHTML = `
+                <div class="mb-1 text-emerald-400">[System] Prototyp zurückgesetzt.</div>
+            `;
+            
+            addLog('Dock-3 wieder in VLAN 10');
+        }
+        
+        // Boot
+        window.onload = function() {
+            initializePrototype();
+        };
+    </script>
+</body>
+</html>

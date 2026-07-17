@@ -1,0 +1,396 @@
+<!DOCTYPE html>
+<html lang="de"><head>
+<meta http-equiv="content-type" content="text/html; charset=UTF-8">
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>InfraRepo</title>
+    <script src="UI-Prototyp_ext_night_files/3.4_qv8p.17"></script>
+    <link rel="stylesheet" href="UI-Prototyp_ext_night_files/all.min_qv8p.css">
+    <style>
+        .tree ul { list-style: none; padding-left: 22px; position: relative; }
+        .tree ul::before { content: ''; position: absolute; left: 11px; top: 0; bottom: 5px; width: 2px; background: #52525b; }
+        .tree li { position: relative; padding: 4px 0; }
+        .tree li::before { content: ''; position: absolute; left: 11px; top: 15px; width: 12px; height: 2px; background: #52525b; }
+        .tree li:last-child::before { height: 15px; }
+        .nav-item { display: flex; align-items: center; padding: 6px 10px; border-radius: 6px; margin-left: 4px; }
+        .nav-item:hover { background-color: #27251f; }
+        .nav-item.blue { background-color: #1e3a8a35; border-left: 5px solid #2563eb; }
+        .nav-item.orange { background-color: #9a341f35; border-left: 5px solid #ea580c; }
+        .nav-item.green { background-color: #14532d30; border-left: 5px solid #16a34a; }
+    </style>
+<style>*, ::before, ::after{--tw-border-spacing-x:0;--tw-border-spacing-y:0;--tw-translate-x:0;--tw-translate-y:0;--tw-rotate:0;--tw-skew-x:0;--tw-skew-y:0;--tw-scale-x:1;--tw-scale-y:1;--tw-pan-x: ;--tw-pan-y: ;--tw-pinch-zoom: ;--tw-scroll-snap-strictness:proximity;--tw-gradient-from-position: ;--tw-gradient-via-position: ;--tw-gradient-to-position: ;--tw-ordinal: ;--tw-slashed-zero: ;--tw-numeric-figure: ;--tw-numeric-spacing: ;--tw-numeric-fraction: ;--tw-ring-inset: ;--tw-ring-offset-width:0px;--tw-ring-offset-color:#fff;--tw-ring-color:rgb(59 130 246 / 0.5);--tw-ring-offset-shadow:0 0 #0000;--tw-ring-shadow:0 0 #0000;--tw-shadow:0 0 #0000;--tw-shadow-colored:0 0 #0000;--tw-blur: ;--tw-brightness: ;--tw-contrast: ;--tw-grayscale: ;--tw-hue-rotate: ;--tw-invert: ;--tw-saturate: ;--tw-sepia: ;--tw-drop-shadow: ;--tw-backdrop-blur: ;--tw-backdrop-brightness: ;--tw-backdrop-contrast: ;--tw-backdrop-grayscale: ;--tw-backdrop-hue-rotate: ;--tw-backdrop-invert: ;--tw-backdrop-opacity: ;--tw-backdrop-saturate: ;--tw-backdrop-sepia: ;--tw-contain-size: ;--tw-contain-layout: ;--tw-contain-paint: ;--tw-contain-style: }::backdrop{--tw-border-spacing-x:0;--tw-border-spacing-y:0;--tw-translate-x:0;--tw-translate-y:0;--tw-rotate:0;--tw-skew-x:0;--tw-skew-y:0;--tw-scale-x:1;--tw-scale-y:1;--tw-pan-x: ;--tw-pan-y: ;--tw-pinch-zoom: ;--tw-scroll-snap-strictness:proximity;--tw-gradient-from-position: ;--tw-gradient-via-position: ;--tw-gradient-to-position: ;--tw-ordinal: ;--tw-slashed-zero: ;--tw-numeric-figure: ;--tw-numeric-spacing: ;--tw-numeric-fraction: ;--tw-ring-inset: ;--tw-ring-offset-width:0px;--tw-ring-offset-color:#fff;--tw-ring-color:rgb(59 130 246 / 0.5);--tw-ring-offset-shadow:0 0 #0000;--tw-ring-shadow:0 0 #0000;--tw-shadow:0 0 #0000;--tw-shadow-colored:0 0 #0000;--tw-blur: ;--tw-brightness: ;--tw-contrast: ;--tw-grayscale: ;--tw-hue-rotate: ;--tw-invert: ;--tw-saturate: ;--tw-sepia: ;--tw-drop-shadow: ;--tw-backdrop-blur: ;--tw-backdrop-brightness: ;--tw-backdrop-contrast: ;--tw-backdrop-grayscale: ;--tw-backdrop-hue-rotate: ;--tw-backdrop-invert: ;--tw-backdrop-opacity: ;--tw-backdrop-saturate: ;--tw-backdrop-sepia: ;--tw-contain-size: ;--tw-contain-layout: ;--tw-contain-paint: ;--tw-contain-style: }/* ! tailwindcss v3.4.17 | MIT License | https://tailwindcss.com */*,::after,::before{box-sizing:border-box;border-width:0;border-style:solid;border-color:#e5e7eb}::after,::before{--tw-content:''}:host,html{line-height:1.5;-webkit-text-size-adjust:100%;-moz-tab-size:4;tab-size:4;font-family:ui-sans-serif, system-ui, sans-serif, "Apple Color Emoji", "Segoe UI Emoji", "Segoe UI Symbol", "Noto Color Emoji";font-feature-settings:normal;font-variation-settings:normal;-webkit-tap-highlight-color:transparent}body{margin:0;line-height:inherit}hr{height:0;color:inherit;border-top-width:1px}abbr:where([title]){-webkit-text-decoration:underline dotted;text-decoration:underline dotted}h1,h2,h3,h4,h5,h6{font-size:inherit;font-weight:inherit}a{color:inherit;text-decoration:inherit}b,strong{font-weight:bolder}code,kbd,pre,samp{font-family:ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;font-feature-settings:normal;font-variation-settings:normal;font-size:1em}small{font-size:80%}sub,sup{font-size:75%;line-height:0;position:relative;vertical-align:baseline}sub{bottom:-.25em}sup{top:-.5em}table{text-indent:0;border-color:inherit;border-collapse:collapse}button,input,optgroup,select,textarea{font-family:inherit;font-feature-settings:inherit;font-variation-settings:inherit;font-size:100%;font-weight:inherit;line-height:inherit;letter-spacing:inherit;color:inherit;margin:0;padding:0}button,select{text-transform:none}button,input:where([type=button]),input:where([type=reset]),input:where([type=submit]){-webkit-appearance:button;background-color:transparent;background-image:none}:-moz-focusring{outline:auto}:-moz-ui-invalid{box-shadow:none}progress{vertical-align:baseline}::-webkit-inner-spin-button,::-webkit-outer-spin-button{height:auto}[type=search]{-webkit-appearance:textfield;outline-offset:-2px}::-webkit-search-decoration{-webkit-appearance:none}::-webkit-file-upload-button{-webkit-appearance:button;font:inherit}summary{display:list-item}blockquote,dd,dl,figure,h1,h2,h3,h4,h5,h6,hr,p,pre{margin:0}fieldset{margin:0;padding:0}legend{padding:0}menu,ol,ul{list-style:none;margin:0;padding:0}dialog{padding:0}textarea{resize:vertical}input::placeholder,textarea::placeholder{opacity:1;color:#9ca3af}[role=button],button{cursor:pointer}:disabled{cursor:default}audio,canvas,embed,iframe,img,object,svg,video{display:block;vertical-align:middle}img,video{max-width:100%;height:auto}[hidden]:where(:not([hidden=until-found])){display:none}.pointer-events-none{pointer-events:none}.absolute{position:absolute}.relative{position:relative}.inset-0{inset:0px}.bottom-10{bottom:2.5rem}.bottom-3{bottom:0.75rem}.bottom-6{bottom:1.5rem}.left-6{left:1.5rem}.right-4{right:1rem}.right-6{right:1.5rem}.right-8{right:2rem}.top-6{top:1.5rem}.mx-8{margin-left:2rem;margin-right:2rem}.mb-1\.5{margin-bottom:0.375rem}.mb-2{margin-bottom:0.5rem}.mb-3{margin-bottom:0.75rem}.mb-4{margin-bottom:1rem}.ml-5{margin-left:1.25rem}.ml-8{margin-left:2rem}.ml-auto{margin-left:auto}.mr-2{margin-right:0.5rem}.mt-0\.5{margin-top:0.125rem}.mt-1{margin-top:0.25rem}.mt-2{margin-top:0.5rem}.mt-3{margin-top:0.75rem}.mt-4{margin-top:1rem}.inline-block{display:inline-block}.flex{display:flex}.hidden{display:none}.h-14{height:3.5rem}.h-36{height:9rem}.h-7{height:1.75rem}.h-8{height:2rem}.h-\[520px\]{height:520px}.h-screen{height:100vh}.w-4{width:1rem}.w-48{width:12rem}.w-60{width:15rem}.w-8{width:2rem}.w-80{width:20rem}.w-full{width:100%}.max-w-md{max-width:28rem}.flex-1{flex:1 1 0%}.flex-shrink-0{flex-shrink:0}.cursor-pointer{cursor:pointer}.flex-col{flex-direction:column}.items-center{align-items:center}.justify-center{justify-content:center}.justify-between{justify-content:space-between}.gap-x-1{column-gap:0.25rem}.gap-x-2{column-gap:0.5rem}.gap-x-3{column-gap:0.75rem}.space-y-1 > :not([hidden]) ~ :not([hidden]){--tw-space-y-reverse:0;margin-top:calc(0.25rem * calc(1 - var(--tw-space-y-reverse)));margin-bottom:calc(0.25rem * var(--tw-space-y-reverse))}.space-y-2 > :not([hidden]) ~ :not([hidden]){--tw-space-y-reverse:0;margin-top:calc(0.5rem * calc(1 - var(--tw-space-y-reverse)));margin-bottom:calc(0.5rem * var(--tw-space-y-reverse))}.space-y-5 > :not([hidden]) ~ :not([hidden]){--tw-space-y-reverse:0;margin-top:calc(1.25rem * calc(1 - var(--tw-space-y-reverse)));margin-bottom:calc(1.25rem * var(--tw-space-y-reverse))}.self-start{align-self:flex-start}.overflow-auto{overflow:auto}.overflow-hidden{overflow:hidden}.rounded{border-radius:0.25rem}.rounded-2xl{border-radius:1rem}.rounded-3xl{border-radius:1.5rem}.rounded-xl{border-radius:0.75rem}.border{border-width:1px}.border-2{border-width:2px}.border-b{border-bottom-width:1px}.border-b-2{border-bottom-width:2px}.border-l{border-left-width:1px}.border-r{border-right-width:1px}.border-t{border-top-width:1px}.border-dashed{border-style:dashed}.border-blue-300{--tw-border-opacity:1;border-color:rgb(147 197 253 / var(--tw-border-opacity, 1))}.border-blue-400{--tw-border-opacity:1;border-color:rgb(96 165 250 / var(--tw-border-opacity, 1))}.border-orange-300{--tw-border-opacity:1;border-color:rgb(253 186 116 / var(--tw-border-opacity, 1))}.border-orange-400{--tw-border-opacity:1;border-color:rgb(251 146 60 / var(--tw-border-opacity, 1))}.border-red-400{--tw-border-opacity:1;border-color:rgb(248 113 113 / var(--tw-border-opacity, 1))}.border-zinc-200{--tw-border-opacity:1;border-color:rgb(228 228 231 / var(--tw-border-opacity, 1))}.border-zinc-300{--tw-border-opacity:1;border-color:rgb(212 212 216 / var(--tw-border-opacity, 1))}.bg-blue-200{--tw-bg-opacity:1;background-color:rgb(191 219 254 / var(--tw-bg-opacity, 1))}.bg-blue-50\/40{background-color:rgb(239 246 255 / 0.4)}.bg-blue-50\/60{background-color:rgb(239 246 255 / 0.6)}.bg-indigo-600{--tw-bg-opacity:1;background-color:rgb(79 70 229 / var(--tw-bg-opacity, 1))}.bg-orange-100{--tw-bg-opacity:1;background-color:rgb(255 237 213 / var(--tw-bg-opacity, 1))}.bg-orange-500{--tw-bg-opacity:1;background-color:rgb(249 115 22 / var(--tw-bg-opacity, 1))}.bg-white{--tw-bg-opacity:1;background-color:rgb(255 255 255 / var(--tw-bg-opacity, 1))}.bg-white\/90{background-color:rgb(255 255 255 / 0.9)}.bg-zinc-100{--tw-bg-opacity:1;background-color:rgb(244 244 245 / var(--tw-bg-opacity, 1))}.bg-zinc-200{--tw-bg-opacity:1;background-color:rgb(228 228 231 / var(--tw-bg-opacity, 1))}.bg-zinc-300{--tw-bg-opacity:1;background-color:rgb(212 212 216 / var(--tw-bg-opacity, 1))}.p-1{padding:0.25rem}.p-1\.5{padding:0.375rem}.p-2{padding:0.5rem}.p-3{padding:0.75rem}.p-4{padding:1rem}.p-5{padding:1.25rem}.p-6{padding:1.5rem}.px-1{padding-left:0.25rem;padding-right:0.25rem}.px-1\.5{padding-left:0.375rem;padding-right:0.375rem}.px-2{padding-left:0.5rem;padding-right:0.5rem}.px-3{padding-left:0.75rem;padding-right:0.75rem}.px-4{padding-left:1rem;padding-right:1rem}.px-6{padding-left:1.5rem;padding-right:1.5rem}.py-0\.5{padding-top:0.125rem;padding-bottom:0.125rem}.py-1{padding-top:0.25rem;padding-bottom:0.25rem}.py-2{padding-top:0.5rem;padding-bottom:0.5rem}.pb-3{padding-bottom:0.75rem}.pl-6{padding-left:1.5rem}.pt-2{padding-top:0.5rem}.font-mono{font-family:ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace}.text-2xl{font-size:1.5rem;line-height:2rem}.text-\[10px\]{font-size:10px}.text-sm{font-size:0.875rem;line-height:1.25rem}.text-xl{font-size:1.25rem;line-height:1.75rem}.text-xs{font-size:0.75rem;line-height:1rem}.font-medium{font-weight:500}.font-semibold{font-weight:600}.text-blue-500{--tw-text-opacity:1;color:rgb(59 130 246 / var(--tw-text-opacity, 1))}.text-blue-600{--tw-text-opacity:1;color:rgb(37 99 235 / var(--tw-text-opacity, 1))}.text-blue-700{--tw-text-opacity:1;color:rgb(29 78 216 / var(--tw-text-opacity, 1))}.text-emerald-500{--tw-text-opacity:1;color:rgb(16 185 129 / var(--tw-text-opacity, 1))}.text-emerald-600{--tw-text-opacity:1;color:rgb(5 150 105 / var(--tw-text-opacity, 1))}.text-orange-500{--tw-text-opacity:1;color:rgb(249 115 22 / var(--tw-text-opacity, 1))}.text-orange-600{--tw-text-opacity:1;color:rgb(234 88 12 / var(--tw-text-opacity, 1))}.text-red-400{--tw-text-opacity:1;color:rgb(248 113 113 / var(--tw-text-opacity, 1))}.text-red-500{--tw-text-opacity:1;color:rgb(239 68 68 / var(--tw-text-opacity, 1))}.text-red-600{--tw-text-opacity:1;color:rgb(220 38 38 / var(--tw-text-opacity, 1))}.text-white{--tw-text-opacity:1;color:rgb(255 255 255 / var(--tw-text-opacity, 1))}.text-zinc-400{--tw-text-opacity:1;color:rgb(161 161 170 / var(--tw-text-opacity, 1))}.text-zinc-500{--tw-text-opacity:1;color:rgb(113 113 122 / var(--tw-text-opacity, 1))}.text-zinc-600{--tw-text-opacity:1;color:rgb(82 82 91 / var(--tw-text-opacity, 1))}.text-zinc-900{--tw-text-opacity:1;color:rgb(24 24 27 / var(--tw-text-opacity, 1))}.shadow-sm{--tw-shadow:0 1px 2px 0 rgb(0 0 0 / 0.05);--tw-shadow-colored:0 1px 2px 0 var(--tw-shadow-color);box-shadow:var(--tw-ring-offset-shadow, 0 0 #0000), var(--tw-ring-shadow, 0 0 #0000), var(--tw-shadow)}.transition-transform{transition-property:transform;transition-timing-function:cubic-bezier(0.4, 0, 0.2, 1);transition-duration:150ms}.hover\:bg-white:hover{--tw-bg-opacity:1;background-color:rgb(255 255 255 / var(--tw-bg-opacity, 1))}.hover\:bg-zinc-100:hover{--tw-bg-opacity:1;background-color:rgb(244 244 245 / var(--tw-bg-opacity, 1))}.hover\:bg-zinc-200:hover{--tw-bg-opacity:1;background-color:rgb(228 228 231 / var(--tw-bg-opacity, 1))}.hover\:bg-zinc-300:hover{--tw-bg-opacity:1;background-color:rgb(212 212 216 / var(--tw-bg-opacity, 1))}.focus\:outline-none:focus{outline:2px solid transparent;outline-offset:2px}@media (prefers-color-scheme: dark){.dark\:border-orange-700{--tw-border-opacity:1;border-color:rgb(194 65 12 / var(--tw-border-opacity, 1))}.dark\:border-zinc-700{--tw-border-opacity:1;border-color:rgb(63 63 70 / var(--tw-border-opacity, 1))}.dark\:border-zinc-800{--tw-border-opacity:1;border-color:rgb(39 39 42 / var(--tw-border-opacity, 1))}.dark\:bg-blue-950\/30{background-color:rgb(23 37 84 / 0.3)}.dark\:bg-blue-950\/40{background-color:rgb(23 37 84 / 0.4)}.dark\:bg-zinc-700{--tw-bg-opacity:1;background-color:rgb(63 63 70 / var(--tw-bg-opacity, 1))}.dark\:bg-zinc-800{--tw-bg-opacity:1;background-color:rgb(39 39 42 / var(--tw-bg-opacity, 1))}.dark\:bg-zinc-900{--tw-bg-opacity:1;background-color:rgb(24 24 27 / var(--tw-bg-opacity, 1))}.dark\:bg-zinc-900\/90{background-color:rgb(24 24 27 / 0.9)}.dark\:bg-zinc-950{--tw-bg-opacity:1;background-color:rgb(9 9 11 / var(--tw-bg-opacity, 1))}.dark\:text-blue-400{--tw-text-opacity:1;color:rgb(96 165 250 / var(--tw-text-opacity, 1))}.dark\:text-emerald-400{--tw-text-opacity:1;color:rgb(52 211 153 / var(--tw-text-opacity, 1))}.dark\:text-orange-400{--tw-text-opacity:1;color:rgb(251 146 60 / var(--tw-text-opacity, 1))}.dark\:text-red-400{--tw-text-opacity:1;color:rgb(248 113 113 / var(--tw-text-opacity, 1))}.dark\:text-zinc-200{--tw-text-opacity:1;color:rgb(228 228 231 / var(--tw-text-opacity, 1))}.dark\:text-zinc-400{--tw-text-opacity:1;color:rgb(161 161 170 / var(--tw-text-opacity, 1))}.dark\:hover\:bg-zinc-700:hover{--tw-bg-opacity:1;background-color:rgb(63 63 70 / var(--tw-bg-opacity, 1))}.dark\:hover\:bg-zinc-800:hover{--tw-bg-opacity:1;background-color:rgb(39 39 42 / var(--tw-bg-opacity, 1))}}</style></head>
+<body class="bg-zinc-100 text-zinc-900 flex flex-col h-screen dark:bg-zinc-950 dark:text-zinc-200">
+
+    <!-- Header -->
+    <div class="h-14 bg-white border-b border-zinc-200 flex items-center px-6 flex-shrink-0 dark:bg-zinc-900 dark:border-zinc-800">
+        <div class="flex items-center gap-x-3">
+            <div class="w-8 h-8 bg-indigo-600 rounded-2xl flex items-center justify-center">
+                <i class="fa-solid fa-project-diagram text-white"></i>
+            </div>
+            <span class="font-semibold text-xl">InfraRepo</span>
+        </div>
+
+        <!-- View -->
+        <div class="ml-8 flex items-center gap-x-1 text-sm">
+            <span class="text-zinc-500 dark:text-zinc-400">View:</span>
+            <div onclick="openViewSettings()" class="flex items-center gap-x-1 px-3 py-1 rounded-xl hover:bg-zinc-100 dark:hover:bg-zinc-800 cursor-pointer">
+                <span class="font-medium">Projekt Alpha</span>
+            </div>
+            <button onclick="openViewSettings()" class="p-1.5 hover:bg-zinc-100 dark:hover:bg-zinc-800 rounded-xl text-zinc-500 dark:text-zinc-400">
+                <i class="fa-solid fa-cog text-sm"></i>
+            </button>
+        </div>
+
+        <!-- Environment -->
+        <div class="ml-5 flex items-center gap-x-1 text-sm">
+            <span class="text-zinc-500 dark:text-zinc-400">Environment:</span>
+            <select class="bg-white border border-zinc-300 rounded-xl px-3 py-1 text-sm dark:bg-zinc-800 dark:border-zinc-700">
+                <option selected="selected">Alle</option>
+                <option>A</option>
+                <option>B</option>
+                <option>Production</option>
+            </select>
+            <button onclick="openEnvironmentManagement()" class="p-1.5 hover:bg-zinc-100 dark:hover:bg-zinc-800 rounded-xl text-zinc-500 dark:text-zinc-400">
+                <i class="fa-solid fa-cog text-sm"></i>
+            </button>
+        </div>
+
+        <div class="flex-1 max-w-md mx-8">
+            <input type="text" placeholder="Suchen..." class="w-full bg-white border border-zinc-300 rounded-3xl px-4 py-2 text-sm focus:outline-none dark:bg-zinc-900 dark:border-zinc-700">
+        </div>
+
+        <div class="flex items-center gap-x-2">
+            <!-- Workspace Switch -->
+            <div class="flex bg-zinc-200 dark:bg-zinc-800 rounded-2xl p-1 text-xs">
+                <button onclick="switchWorkspace(0)" class="px-3 py-1 rounded-xl bg-white dark:bg-zinc-700 shadow-sm">Visualization</button>
+                <button onclick="switchWorkspace(1)" class="px-3 py-1 rounded-xl hover:bg-white dark:hover:bg-zinc-700">Connections</button>
+            </div>
+
+            <!-- Theme Toggle -->
+            <button onclick="toggleTheme()" class="p-2 hover:bg-zinc-200 dark:hover:bg-zinc-800 rounded-xl text-zinc-600 dark:text-zinc-400">
+                <i class="fa-solid fa-sun" id="theme-icon"></i>
+            </button>
+
+            <div class="w-8 h-8 bg-zinc-300 dark:bg-zinc-700 rounded-2xl flex items-center justify-center cursor-pointer">
+                <i class="fa-solid fa-user text-sm"></i>
+            </div>
+        </div>
+    </div>
+
+    <div class="flex flex-1 overflow-hidden">
+        
+        <!-- Left Sidebar -->
+        <div class="w-80 bg-white border-r border-zinc-200 p-4 overflow-auto text-sm flex-shrink-0 dark:bg-zinc-900 dark:border-zinc-800">
+            
+            <div class="flex border-b border-zinc-200 dark:border-zinc-700 pb-3 mb-4">
+                <button onclick="switchTree(0)" id="btn-comp" class="flex-1 py-2 text-sm font-medium border-b-2 border-orange-400 text-orange-500 dark:text-orange-400">Components</button>
+                <button onclick="switchTree(1)" id="btn-conn" class="flex-1 py-2 text-sm font-medium text-zinc-500 dark:text-zinc-400">Connections</button>
+            </div>
+
+            <!-- Components Tree (nur geteilte/shared Technical Components - keine Duplizierung der persönlichen Views) -->
+            <div id="tree-components">
+                <div class="mb-2 px-1 flex items-center justify-between text-xs">
+                    <div class="flex items-center gap-x-1 text-orange-600 dark:text-orange-400">
+                        <i class="fa-solid fa-globe"></i>
+                        <span class="font-medium">Shared Technical Components</span>
+                    </div>
+                    <span class="text-[10px] text-zinc-400">(Environment gefiltert)</span>
+                </div>
+
+                <ul class="tree">
+                    <li>
+                        <div class="flex items-center gap-x-2 font-medium text-orange-600 dark:text-orange-400">
+                            <i class="fa-solid fa-server"></i>
+                            <span>Technical Components</span>
+                        </div>
+                        <ul>
+                            <!-- Stackable Component mit interner Hierarchie -->
+                            <li>
+                                <div onclick="toggleStack(this)" class="nav-item orange cursor-pointer flex justify-between items-center">
+                                    <div class="flex items-center">
+                                        <i class="fa-solid fa-server text-orange-500 dark:text-orange-400 mr-2"></i>
+                                        <span>Device Web-01</span>
+                                    </div>
+                                    <i class="fa-solid fa-chevron-down text-xs transition-transform stack-chevron"></i>
+                                </div>
+                                <ul class="stack-layers hidden pl-6 mt-1 border-l border-orange-300 dark:border-orange-700">
+                                    <li><div class="nav-item orange text-xs py-1"><i class="fa-solid fa-microchip mr-2 w-4"></i><span>Hardware: Dell R750</span></div></li>
+                                    <li><div class="nav-item orange text-xs py-1"><i class="fa-brands fa-linux mr-2 w-4"></i><span>OS: Ubuntu 22.04</span></div></li>
+                                    <li><div class="nav-item orange text-xs py-1"><i class="fa-solid fa-box mr-2 w-4"></i><span>Container: Docker</span></div></li>
+                                    <li><div class="nav-item orange text-xs py-1"><i class="fa-solid fa-globe mr-2 w-4"></i><span>Service: Nginx + API</span></div></li>
+                                    <li class="mt-1 text-[10px] px-2 text-orange-500">3 Ports • Deep Links</li>
+                                </ul>
+                            </li>
+
+                            <li class="mt-1">
+                                <div onclick="selectComponent(this, 'DB-Cluster-Prod')" class="nav-item orange cursor-pointer">
+                                    <i class="fa-solid fa-database text-orange-500 dark:text-orange-400 mr-2"></i>
+                                    <span>DB-Cluster-Prod</span>
+                                </div>
+                            </li>
+                            <li>
+                                <div onclick="selectComponent(this, 'Load-Balancer-01')" class="nav-item orange cursor-pointer">
+                                    <i class="fa-solid fa-network-wired text-orange-500 dark:text-orange-400 mr-2"></i>
+                                    <span>Load-Balancer-01</span>
+                                </div>
+                            </li>
+                            <li>
+                                <div onclick="selectComponent(this, 'API-Gateway')" class="nav-item orange cursor-pointer">
+                                    <i class="fa-solid fa-globe text-orange-500 dark:text-orange-400 mr-2"></i>
+                                    <span>API-Gateway-Prod</span>
+                                </div>
+                            </li>
+                        </ul>
+                    </li>
+
+                    <!-- Verwaiste Components -->
+                    <li class="mt-4">
+                        <div class="flex items-center gap-x-2 font-medium text-red-600 dark:text-red-400">
+                            <i class="fa-solid fa-exclamation-triangle"></i>
+                            <span>Verwaiste Components (3)</span>
+                        </div>
+                        <ul>
+                            <li><div onclick="selectComponent(this, 'Temp-Sensor-03')" class="nav-item" style="background-color:#450a0a30; border-left:5px solid #ef4444; color:#f87171;"><i class="fa-solid fa-microchip mr-2"></i><span>Temp-Sensor-03</span></div></li>
+                            <li><div onclick="selectComponent(this, 'Legacy-Switch-07')" class="nav-item" style="background-color:#450a0a30; border-left:5px solid #ef4444; color:#f87171;"><i class="fa-solid fa-network-wired mr-2"></i><span>Legacy-Switch-07</span></div></li>
+                            <li><div onclick="selectComponent(this, 'Old-VM-12')" class="nav-item" style="background-color:#450a0a30; border-left:5px solid #ef4444; color:#f87171;"><i class="fa-solid fa-server mr-2"></i><span>Old-VM-12</span></div></li>
+                        </ul>
+                    </li>
+                </ul>
+
+                <div class="mt-3 px-1 text-[10px] text-zinc-400">Tipp: Components hierher ziehen → in blaue View-Box im Canvas einfügen (persönliche Zuordnung)</div>
+            </div>
+
+            <!-- Connections Tree (nur geteilte / shared Connections) -->
+            <div id="tree-connections" class="hidden">
+                <div class="mb-2 px-1 text-xs text-emerald-600 dark:text-emerald-400 flex items-center gap-x-1">
+                    <i class="fa-solid fa-link"></i>
+                    <span class="font-medium">Shared Connections</span>
+                </div>
+                <ul class="tree">
+                    <li>
+                        <div class="flex items-center gap-x-2 font-medium text-emerald-600 dark:text-emerald-400">
+                            <i class="fa-solid fa-link"></i>
+                            <span>Connections</span>
+                        </div>
+                        <ul>
+                            <li><div class="nav-item green"><span>web-01 → api-gateway (HTTPS)</span></div></li>
+                            <li><div class="nav-item green"><span>db-cluster → monitoring (gRPC)</span></div></li>
+                            <li><div class="nav-item green"><span>load-balancer → web-cluster</span></div></li>
+                        </ul>
+                    </li>
+
+                    <li class="mt-3">
+                        <div class="flex items-center gap-x-2 font-medium text-red-600 dark:text-red-400">
+                            <i class="fa-solid fa-exclamation-triangle"></i>
+                            <span>Verwaiste / Lose Connections (14)</span>
+                        </div>
+                        <ul>
+                            <li><div class="nav-item" style="background-color: #450a0a30; border-left: 5px solid #ef4444; color:#f87171;"><span>orphaned-ssh → unknown-target</span></div></li>
+                            <li><div class="nav-item" style="background-color: #450a0a30; border-left: 5px solid #ef4444; color:#f87171;"><span>legacy-api → decommissioned</span></div></li>
+                        </ul>
+                    </li>
+                </ul>
+            </div>
+        </div>
+
+        <!-- Main Workspace -->
+        <div class="flex-1 p-6 bg-zinc-100 overflow-auto dark:bg-zinc-950">
+            <div id="workspace-visualization" class="">
+                <div class="flex items-center justify-between mb-3">
+                    <div>
+                        <h1 class="text-2xl font-semibold">Deployment View</h1>
+                        <div class="text-sm text-blue-600 dark:text-blue-400 flex items-center gap-x-1">
+                            <i class="fa-regular fa-folder"></i>
+                            <span id="current-view-label">Projekt Alpha (persönliche Perspektive)</span>
+                        </div>
+                    </div>
+                    <div class="flex items-center gap-x-2 text-xs">
+                        <button onclick="setGranularity('overview')" class="px-3 py-1 rounded-xl bg-zinc-200 dark:bg-zinc-700 hover:bg-zinc-300">Übersicht</button>
+                        <button onclick="setGranularity('detailed')" class="px-3 py-1 rounded-xl bg-orange-500 text-white">Detailliert (Stacks)</button>
+                        <button onclick="resetCanvas()" class="px-3 py-1 rounded-xl border">Reset</button>
+                    </div>
+                </div>
+
+                <!-- Interaktiver Canvas: Persönliche View-Struktur (blau) mit referenzierten Shared Components (orange) -->
+                <div class="relative bg-white border border-zinc-200 rounded-3xl p-5 h-[520px] overflow-hidden dark:bg-zinc-900 dark:border-zinc-800" id="canvas-area">
+                    
+                    <!-- Root persönlicher Ordner (blau, entspricht aktuellem View) -->
+                    <div class="absolute left-6 top-6 right-6 bottom-6 border-2 border-dashed border-blue-400 rounded-3xl p-4 bg-blue-50/40 dark:bg-blue-950/30" id="personal-root">
+                        <div class="flex items-center gap-x-2 mb-3 text-blue-600 dark:text-blue-400 font-medium">
+                            <i class="fa-regular fa-folder"></i>
+                            <span>Projekt Alpha (Root der persönlichen Orga)</span>
+                            <span class="ml-auto text-xs px-2 py-0.5 bg-blue-200 text-blue-700 rounded">persönlich • nur für dich</span>
+                        </div>
+
+                        <!-- Beispiel: Persönlicher Sub-Ordner (kann weitere Ordner + Components enthalten) -->
+                        <div class="mb-4 border border-blue-300 border-dashed rounded-2xl p-3 bg-blue-50/60 dark:bg-blue-950/40">
+                            <div class="flex items-center gap-x-2 text-sm text-blue-600 mb-2">
+                                <i class="fa-regular fa-folder"></i>
+                                <span class="font-medium">Kritische Systeme (persönlicher Sub-Ordner)</span>
+                            </div>
+
+                            <!-- Orange Shared Component als Child des persönlichen Ordners -->
+                            <div onclick="toggleCanvasStack(this)" class="cursor-pointer inline-block w-60 mb-2 bg-white dark:bg-zinc-800 border border-orange-300 rounded-2xl p-3 shadow-sm">
+                                <div class="flex justify-between">
+                                    <div class="flex items-center gap-x-2">
+                                        <i class="fa-solid fa-server text-orange-500"></i>
+                                        <span class="font-medium text-sm">Device Web-01</span>
+                                    </div>
+                                    <span class="text-[10px] px-1.5 bg-orange-100 text-orange-600 rounded self-start">Stack</span>
+                                </div>
+                                <div class="stack-layers-canvas hidden mt-2 pt-2 border-t text-xs space-y-1">
+                                    <div class="px-2">Hardware → OS → Container → Service</div>
+                                    <div class="px-2 text-orange-600">Ports: 80, 443, 22 • Deep Links</div>
+                                </div>
+                            </div>
+
+                            <!-- Weiteres Child: DB Cluster -->
+                            <div onclick="selectCanvasNode(this, 'DB-Cluster-Prod')" class="cursor-pointer inline-block w-60 bg-white dark:bg-zinc-800 border border-orange-300 rounded-2xl p-3 shadow-sm">
+                                <div class="flex items-center gap-x-2">
+                                    <i class="fa-solid fa-database text-orange-500"></i>
+                                    <span class="font-medium text-sm">DB-Cluster-Prod</span>
+                                </div>
+                                <div class="text-xs text-zinc-500 mt-0.5 px-1">Shared Component • in persönlichem Ordner</div>
+                            </div>
+                        </div>
+
+                        <!-- Weiterer Top-Level Component im Root-View-Ordner -->
+                        <div onclick="selectCanvasNode(this, 'Load-Balancer-01')" class="cursor-pointer inline-block w-60 bg-white dark:bg-zinc-800 border border-orange-300 rounded-2xl p-3 shadow-sm">
+                            <div class="flex items-center gap-x-2">
+                                <i class="fa-solid fa-network-wired text-orange-500"></i>
+                                <span class="font-medium">Load-Balancer-01</span>
+                            </div>
+                            <div class="text-xs text-zinc-500 mt-0.5 px-1">Shared • direkt im View referenziert</div>
+                        </div>
+                    </div>
+
+                    <!-- Verwaiste Component (außerhalb der persönlichen Struktur) -->
+                    <div onclick="selectCanvasNode(this, 'Temp-Sensor-03 (verwaist)')" class="absolute right-8 bottom-10 cursor-pointer w-48 bg-white dark:bg-zinc-800 border-2 border-dashed border-red-400 rounded-2xl p-3 shadow-sm">
+                        <div class="flex items-center gap-x-2 text-red-500">
+                            <i class="fa-solid fa-exclamation-triangle"></i>
+                            <span class="font-medium text-sm">Temp-Sensor-03</span>
+                        </div>
+                        <div class="text-xs text-red-400 mt-1 px-1">Verwaist – nicht in dieser View zugeordnet</div>
+                    </div>
+
+                    <!-- Visuelle Connections -->
+                    <svg class="absolute inset-0 pointer-events-none" width="100%" height="100%">
+                        <line x1="320" y1="180" x2="420" y2="140" stroke="#14b8a6" stroke-width="2"></line>
+                        <line x1="320" y1="240" x2="420" y2="200" stroke="#14b8a6" stroke-width="1.5"></line>
+                    </svg>
+
+                    <div class="absolute bottom-3 right-4 text-[10px] bg-white/90 dark:bg-zinc-900/90 px-2 py-0.5 rounded text-zinc-400">Persönliche Orga (blau) referenziert Shared Components (orange)</div>
+                </div>
+            </div>
+
+            <div id="workspace-connections" class="hidden">
+                <h1 class="text-2xl font-semibold mb-4">Connections Overview</h1>
+                <div class="bg-white border border-zinc-200 rounded-3xl p-6 dark:bg-zinc-900 dark:border-zinc-800">
+                    <div class="text-emerald-600 dark:text-emerald-400">Aktive Connections: 87</div>
+                    <div class="text-red-500 dark:text-red-400 mt-1">Lose / Orphaned Connections: 14</div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Right Inspector -->
+        <div class="w-80 bg-white border-l border-zinc-200 p-5 flex-shrink-0 dark:bg-zinc-900 dark:border-zinc-800">
+            <div class="font-semibold mb-4">Inspector</div>
+            <div class="space-y-5 text-sm">
+                <div>
+                    <div class="text-xs text-zinc-500 mb-1.5">PORTS</div>
+                    <div class="bg-zinc-100 rounded-2xl p-3 dark:bg-zinc-800">HTTP (443) • SSH (22) • gRPC</div>
+                </div>
+                <div>
+                    <div class="text-xs text-zinc-500 mb-1.5">DEEP LINKS</div>
+                    <div class="space-y-2">
+                        <div class="flex items-center gap-x-2 px-3 py-2 bg-zinc-100 rounded-2xl dark:bg-zinc-800">
+                            <i class="fa-solid fa-terminal text-emerald-500"></i>
+                            <span>SSH Terminal öffnen</span>
+                        </div>
+                        <div class="flex items-center gap-x-2 px-3 py-2 bg-zinc-100 rounded-2xl dark:bg-zinc-800">
+                            <i class="fa-solid fa-globe text-blue-500"></i>
+                            <span>Admin UI öffnen</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Bottom Console -->
+    <div class="h-36 bg-white border-t border-zinc-200 flex flex-col flex-shrink-0 dark:bg-zinc-900 dark:border-zinc-800">
+        <div class="h-7 bg-zinc-200 flex items-center px-4 text-xs font-medium text-zinc-500 dark:bg-zinc-800 dark:text-zinc-400">CONSOLE</div>
+        <div class="flex-1 p-3 font-mono text-xs text-emerald-600 overflow-auto dark:text-emerald-400">
+            <div>[INFO] Connection established: web-cluster → api-gateway</div>
+            <div>[WARN] Orphaned connection detected</div>
+        </div>
+    </div>
+
+    <script>
+        function switchTree(mode) {
+            const comp = document.getElementById('tree-components');
+            const conn = document.getElementById('tree-connections');
+            const btnC = document.getElementById('btn-comp');
+            const btnCo = document.getElementById('btn-conn');
+
+            if (mode === 0) {
+                comp.classList.remove('hidden');
+                conn.classList.add('hidden');
+                btnC.classList.add('border-b-2', 'border-orange-400', 'text-orange-500', 'dark:text-orange-400');
+                btnCo.classList.remove('border-b-2', 'border-orange-400', 'text-orange-500', 'dark:text-orange-400');
+            } else {
+                comp.classList.add('hidden');
+                conn.classList.remove('hidden');
+                btnCo.classList.add('border-b-2', 'border-orange-400', 'text-orange-500', 'dark:text-orange-400');
+                btnC.classList.remove('border-b-2', 'border-orange-400', 'text-orange-500', 'dark:text-orange-400');
+            }
+        }
+
+        function switchWorkspace(mode) {
+            const vis = document.getElementById('workspace-visualization');
+            const conn = document.getElementById('workspace-connections');
+
+            if (mode === 0) {
+                vis.classList.remove('hidden');
+                conn.classList.add('hidden');
+            } else {
+                vis.classList.add('hidden');
+                conn.classList.remove('hidden');
+            }
+        }
+
+        function openViewSettings() {
+            alert('View-Einstellungen würden hier geöffnet werden.');
+        }
+
+        function openEnvironmentManagement() {
+            alert('Environment-Verwaltung (Pre-Selektion) würde hier geöffnet werden.');
+        }
+
+        function toggleTheme() {
+            const html = document.documentElement;
+            html.classList.toggle('dark');
+            
+            const icon = document.getElementById('theme-icon');
+            if (html.classList.contains('dark')) {
+                icon.classList.remove('fa-sun');
+                icon.classList.add('fa-moon');
+            } else {
+                icon.classList.remove('fa-moon');
+                icon.classList.add('fa-sun');
+            }
+        }
+
+        window.onload = function() {
+            document.getElementById('btn-comp').classList.add('border-b-2', 'border-orange-400', 'text-orange-500', 'dark:text-orange-400');
+            
+            // Default: Light Mode Icon anpassen
+            const icon = document.getElementById('theme-icon');
+            if (!document.documentElement.classList.contains('dark')) {
+                icon.classList.remove('fa-moon');
+                icon.classList.add('fa-sun');
+            }
+        }
+    </script>
+
+</body></html>

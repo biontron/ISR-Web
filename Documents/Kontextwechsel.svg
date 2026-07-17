@@ -1,0 +1,95 @@
+<svg id="svg" xmlns="http://www.w3.org/2000/svg" width="980" height="520">
+
+<style>
+text{font-family:Segoe UI,Arial; font-size:13px;}
+
+.box{
+  fill:#fff;
+  stroke:#333;
+  stroke-width:3;
+  rx:10;
+}
+
+.dock{fill:#333;}
+
+.chip{
+  fill:#e63946;
+  cursor:grab;
+  rx:6;
+}
+
+.halo{
+  fill:none;
+  stroke:#e63946;
+  stroke-width:6;
+  stroke-linecap:round;
+}
+
+.state{font-weight:bold;}
+</style>
+
+<!-- COMPONENT A -->
+<rect x="120" y="150" width="300" height="280" class="box"></rect>
+<text x="140" y="180">Component A</text>
+
+<circle cx="260" cy="320" r="7" class="dock"></circle>
+
+<path id="haloA" d="M240 300 A25 25 0 0 0 240 340" class="halo"></path>
+
+<!-- COMPONENT B -->
+<rect x="560" y="150" width="300" height="280" class="box"></rect>
+<text x="580" y="180">Component B</text>
+
+<circle cx="700" cy="320" r="7" class="dock"></circle>
+
+<path id="haloB" d="" class="halo"></path>
+
+<!-- CHIP -->
+<rect id="chip" x="200" y="240" width="120" height="26" class="chip"></rect>
+<text x="210" y="258" fill="white">VLAN 10</text>
+
+<text id="state" x="40" y="480" class="state">
+VLAN 10 → Component A
+</text>
+
+<script>
+const svg = document.getElementById("svg");
+const chip = document.getElementById("chip");
+const haloA = document.getElementById("haloA");
+const haloB = document.getElementById("haloB");
+const state = document.getElementById("state");
+
+let dragging = false;
+
+/* START DRAG ANYWHERE ON CHIP */
+chip.addEventListener("mousedown", () =&gt; dragging = true);
+window.addEventListener("mouseup", () =&gt; dragging = false);
+
+/* GLOBAL MOVE (WICHTIG!) */
+window.addEventListener("mousemove", (e) =&gt; {
+  if (!dragging) return;
+
+  const pt = svg.createSVGPoint();
+  pt.x = e.clientX;
+  pt.y = e.clientY;
+  const loc = pt.matrixTransform(svg.getScreenCTM().inverse());
+
+  chip.setAttribute("x", loc.x - 60);
+  chip.setAttribute("y", loc.y - 13);
+
+  const overB = (loc.x &gt; 560 &amp;&amp; loc.x &lt; 860 &amp;&amp; loc.y &gt; 150 &amp;&amp; loc.y &lt; 430);
+
+  if (overB) {
+    haloA.setAttribute("d","");
+    haloB.setAttribute("d","M680 300 A25 25 0 0 0 680 340");
+    state.textContent = "VLAN 10 → Component B (REBIND)";
+  } else {
+    haloA.setAttribute("d","M240 300 A25 25 0 0 0 240 340");
+    haloB.setAttribute("d","");
+    state.textContent = "VLAN 10 → Component A";
+  }
+});
+
+</script>
+
+</svg>

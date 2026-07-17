@@ -1,0 +1,440 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>InfraRepo</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+    <style>
+        .tree ul { list-style: none; padding-left: 22px; position: relative; }
+        .tree ul::before { content: ''; position: absolute; left: 11px; top: 0; bottom: 5px; width: 2px; background: #52525b; }
+        .tree li { position: relative; padding: 4px 0; }
+        .tree li::before { content: ''; position: absolute; left: 11px; top: 15px; width: 12px; height: 2px; background: #52525b; }
+        .tree li:last-child::before { height: 15px; }
+        .nav-item { display: flex; align-items: center; padding: 6px 10px; border-radius: 6px; margin-left: 4px; }
+        .nav-item:hover { background-color: #27251f; }
+        .nav-item.blue { background-color: #1e3a8a35; border-left: 5px solid #2563eb; }
+        .nav-item.orange { background-color: #9a341f35; border-left: 5px solid #ea580c; }
+        .nav-item.green { background-color: #14532d30; border-left: 5px solid #16a34a; }
+    </style>
+</head>
+<body class="bg-zinc-100 text-zinc-900 flex flex-col h-screen dark:bg-zinc-950 dark:text-zinc-200">
+
+    <!-- Header -->
+    <div class="h-14 bg-white border-b border-zinc-200 flex items-center px-6 flex-shrink-0 dark:bg-zinc-900 dark:border-zinc-800">
+        <div class="flex items-center gap-x-3">
+            <div class="w-8 h-8 bg-indigo-600 rounded-2xl flex items-center justify-center">
+                <i class="fa-solid fa-project-diagram text-white"></i>
+            </div>
+            <span class="font-semibold text-xl">InfraRepo</span>
+        </div>
+
+        <!-- View -->
+        <div class="ml-8 flex items-center gap-x-1 text-sm">
+            <span class="text-zinc-500 dark:text-zinc-400">View:</span>
+            <div onclick="openViewSettings()" class="flex items-center gap-x-1 px-3 py-1 rounded-xl hover:bg-zinc-100 dark:hover:bg-zinc-800 cursor-pointer">
+                <span class="font-medium">Projekt Alpha</span>
+            </div>
+            <button onclick="openViewSettings()" class="p-1.5 hover:bg-zinc-100 dark:hover:bg-zinc-800 rounded-xl text-zinc-500 dark:text-zinc-400">
+                <i class="fa-solid fa-cog text-sm"></i>
+            </button>
+        </div>
+
+        <!-- Environment -->
+        <div class="ml-5 flex items-center gap-x-1 text-sm">
+            <span class="text-zinc-500 dark:text-zinc-400">Environment:</span>
+            <select class="bg-white border border-zinc-300 rounded-xl px-3 py-1 text-sm dark:bg-zinc-800 dark:border-zinc-700">
+                <option>Alle</option>
+                <option>A</option>
+                <option>B</option>
+                <option>Production</option>
+            </select>
+            <button onclick="openEnvironmentManagement()" class="p-1.5 hover:bg-zinc-100 dark:hover:bg-zinc-800 rounded-xl text-zinc-500 dark:text-zinc-400">
+                <i class="fa-solid fa-cog text-sm"></i>
+            </button>
+        </div>
+
+        <div class="flex-1 max-w-md mx-8">
+            <input type="text" placeholder="Suchen..." class="w-full bg-white border border-zinc-300 rounded-3xl px-4 py-2 text-sm focus:outline-none dark:bg-zinc-900 dark:border-zinc-700">
+        </div>
+
+        <div class="flex items-center gap-x-2">
+            <!-- Workspace Switch -->
+            <div class="flex bg-zinc-200 dark:bg-zinc-800 rounded-2xl p-1 text-xs">
+                <button onclick="switchWorkspace(0)" class="px-3 py-1 rounded-xl bg-white dark:bg-zinc-700 shadow-sm">Visualization</button>
+                <button onclick="switchWorkspace(1)" class="px-3 py-1 rounded-xl hover:bg-white dark:hover:bg-zinc-700">Connections</button>
+            </div>
+
+            <!-- Theme Toggle -->
+            <button onclick="toggleTheme()" class="p-2 hover:bg-zinc-200 dark:hover:bg-zinc-800 rounded-xl text-zinc-600 dark:text-zinc-400">
+                <i class="fa-solid fa-moon" id="theme-icon"></i>
+            </button>
+
+            <div class="w-8 h-8 bg-zinc-300 dark:bg-zinc-700 rounded-2xl flex items-center justify-center cursor-pointer">
+                <i class="fa-solid fa-user text-sm"></i>
+            </div>
+        </div>
+    </div>
+
+    <div class="flex flex-1 overflow-hidden">
+        
+        <!-- Left Sidebar -->
+        <div class="w-80 bg-white border-r border-zinc-200 p-4 overflow-auto text-sm flex-shrink-0 dark:bg-zinc-900 dark:border-zinc-800">
+            
+            <div class="flex border-b border-zinc-200 dark:border-zinc-700 pb-3 mb-4">
+                <button onclick="switchTree(0)" id="btn-comp"
+                        class="flex-1 py-2 text-sm font-medium border-b-2 border-orange-400 text-orange-500 dark:text-orange-400">Components</button>
+                <button onclick="switchTree(1)" id="btn-conn"
+                        class="flex-1 py-2 text-sm font-medium text-zinc-500 dark:text-zinc-400">Connections</button>
+            </div>
+
+            <!-- Components Tree - zeigt Schachtelung der aktuellen View + Shared Palette -->
+            <div id="tree-components">
+                
+                <!-- Aktuelle persönliche View-Struktur (blau) - hier spiegelt sich die Schachtelung -->
+                <div class="mb-3">
+                    <div class="flex items-center gap-x-2 text-blue-600 dark:text-blue-400 mb-1 px-1">
+                        <i class="fa-regular fa-folder"></i>
+                        <span class="font-semibold text-sm">Aktuelle View: Projekt Alpha</span>
+                    </div>
+                    <ul class="tree">
+                        <li>
+                            <div class="nav-item blue font-medium">Projekt Alpha (Root)</div>
+                            <ul>
+                                <!-- Persönlicher Sub-Ordner -->
+                                <li>
+                                    <div class="nav-item blue">Kritische Systeme (Sub-Ordner)</div>
+                                    <ul>
+                                        <li>
+                                            <div onclick="toggleStack(this)" class="nav-item orange cursor-pointer flex justify-between items-center">
+                                                <span><i class="fa-solid fa-server mr-2"></i>Device Web-01 (Stack)</span>
+                                                <i class="fa-solid fa-chevron-down text-xs stack-chevron"></i>
+                                            </div>
+                                            <ul class="stack-layers hidden pl-5 text-xs border-l border-orange-300">
+                                                <li>Hardware: Dell R750</li>
+                                                <li>OS: Ubuntu 22.04</li>
+                                                <li>Container + Service</li>
+                                            </ul>
+                                        </li>
+                                        <li><div class="nav-item orange"><i class="fa-solid fa-database mr-2"></i>DB-Cluster-Prod</div></li>
+                                    </ul>
+                                </li>
+                                <li><div class="nav-item orange"><i class="fa-solid fa-network-wired mr-2"></i>Load-Balancer-01</div></li>
+                            </ul>
+                        </li>
+                    </ul>
+                </div>
+
+                <div class="border-t border-zinc-200 dark:border-zinc-700 my-3"></div>
+
+                <!-- Shared Components Palette (Drag Source) -->
+                <div>
+                    <div class="flex items-center gap-x-2 text-orange-600 dark:text-orange-400 mb-1 px-1 text-xs font-medium">
+                        <i class="fa-solid fa-globe"></i>
+                        <span>SHARED COMPONENTS (Drag & Drop in View)</span>
+                    </div>
+                    <ul class="tree text-sm">
+                        <li>
+                            <div draggable="true" ondragstart="dragComponent(event, 'New-WebServer-Template')" class="nav-item orange cursor-grab">
+                                <i class="fa-solid fa-server mr-2"></i> WebServer-Template
+                            </div>
+                        </li>
+                        <li>
+                            <div draggable="true" ondragstart="dragComponent(event, 'DB-Cluster-Template')" class="nav-item orange cursor-grab">
+                                <i class="fa-solid fa-database mr-2"></i> DB-Cluster-Template
+                            </div>
+                        </li>
+                        <li>
+                            <div draggable="true" ondragstart="dragComponent(event, 'Monitoring-Agent')" class="nav-item orange cursor-grab">
+                                <i class="fa-solid fa-chart-line mr-2"></i> Monitoring-Agent
+                            </div>
+                        </li>
+                    </ul>
+                </div>
+
+                <!-- Deployment Templates -->
+                <div class="mt-4">
+                    <div class="flex items-center gap-x-2 text-amber-600 dark:text-amber-400 mb-1 px-1 text-xs font-medium">
+                        <i class="fa-solid fa-layer-group"></i>
+                        <span>DEPLOYMENT TEMPLATES</span>
+                    </div>
+                    <div class="px-2 py-1 text-xs bg-amber-50 dark:bg-amber-950 rounded border border-amber-200">
+                        <div class="font-medium">Web App Stack Template</div>
+                        <div class="text-[10px] text-amber-600">Enthält: Web-01 + DB-Cluster + LB + Monitoring</div>
+                        <button onclick="applyDeploymentTemplate()" class="mt-1 text-[10px] px-2 py-0.5 bg-amber-500 text-white rounded">Template anwenden</button>
+                    </div>
+                </div>
+
+                <!-- Verwaiste -->
+                <div class="mt-4">
+                    <div class="flex items-center gap-x-2 text-red-600 mb-1 px-1 text-xs font-medium">
+                        <i class="fa-solid fa-exclamation-triangle"></i>
+                        <span>Verwaiste Components (3)</span>
+                    </div>
+                    <ul class="text-xs">
+                        <li><div class="nav-item" style="background:#450a0a30; border-left:4px solid #ef4444; color:#f87171; padding:3px 8px; border-radius:4px;">Temp-Sensor-03</div></li>
+                    </ul>
+                </div>
+            </div>
+
+            <!-- Connections Tree -->
+            <div id="tree-connections" class="hidden">
+                <ul class="tree">
+                    <li>
+                        <div class="flex items-center gap-x-2 font-medium text-blue-600 dark:text-blue-400">
+                            <i class="fa-regular fa-folder"></i>
+                            <span>Meine Views</span>
+                        </div>
+                        <ul>
+                            <li><div class="nav-item blue"><span>Projekt A</span></div></li>
+                            <li><div class="nav-item blue"><span>Projekt B</span></div></li>
+                            <li><div class="nav-item blue"><span>Team-View</span></div></li>
+                        </ul>
+                    </li>
+
+                    <li class="mt-3">
+                        <div class="flex items-center gap-x-2 font-medium text-emerald-600 dark:text-emerald-400">
+                            <i class="fa-solid fa-link"></i>
+                            <span>Connections</span>
+                        </div>
+                        <ul>
+                            <li><div class="nav-item green"><span>Aktive Connections</span></div></li>
+                            <li><div class="nav-item" style="background-color: #450a0a30; border-left: 4px solid #ef4444;">
+                                <span class="text-red-400">Lose / Orphaned Connections</span>
+                            </div></li>
+                        </ul>
+                    </li>
+                </ul>
+            </div>
+        </div>
+
+        <!-- Main Workspace -->
+        <div class="flex-1 p-6 bg-zinc-100 overflow-auto dark:bg-zinc-950">
+            <div id="workspace-visualization">
+                <div class="flex justify-between items-end mb-3">
+                    <div>
+                        <h1 class="text-2xl font-semibold">Deployment View</h1>
+                        <div class="text-blue-600 text-sm">Projekt Alpha – persönliche Orga mit Schachtelung</div>
+                    </div>
+                    <div class="text-xs text-zinc-500">Drag Shared Components in blaue Ordner • Templates anwenden</div>
+                </div>
+
+                <div class="relative bg-white border border-zinc-200 rounded-3xl p-5 h-[520px] overflow-hidden dark:bg-zinc-900 dark:border-zinc-800" id="canvas-area">
+                    
+                    <!-- Persönlicher Root-Ordner (blau) -->
+                    <div class="absolute left-5 top-5 right-5 bottom-5 border-2 border-dashed border-blue-400 rounded-3xl p-4 bg-blue-50/50 dark:bg-blue-950/30" 
+                         ondrop="dropComponent(event, this)" ondragover="allowDrop(event)">
+                        <div class="flex items-center text-blue-600 mb-3">
+                            <i class="fa-regular fa-folder mr-2"></i>
+                            <span class="font-semibold">Projekt Alpha (Root Folder)</span>
+                            <span class="ml-auto text-xs bg-blue-200 text-blue-700 px-2 rounded">persönlich</span>
+                        </div>
+
+                        <!-- Persönlicher Sub-Ordner -->
+                        <div class="mb-4 border border-blue-300 border-dashed rounded-2xl p-3 bg-white/70 dark:bg-zinc-800/70"
+                             ondrop="dropComponent(event, this)" ondragover="allowDrop(event)">
+                            <div class="flex items-center text-blue-600 text-sm mb-2">
+                                <i class="fa-regular fa-folder mr-2"></i>
+                                <span>Kritische Systeme (Sub-Ordner)</span>
+                            </div>
+                            
+                            <!-- Hier landen per Drag&Drop die Components -->
+                            <div id="drop-zone-critical" class="min-h-[60px] flex flex-wrap gap-2">
+                                <!-- Dynamisch hinzugefügte Components erscheinen hier -->
+                            </div>
+                        </div>
+
+                        <!-- Weiterer Bereich im Root -->
+                        <div class="min-h-[40px] flex flex-wrap gap-2" id="drop-zone-root"
+                             ondrop="dropComponent(event, this)" ondragover="allowDrop(event)">
+                        </div>
+                    </div>
+
+                    <!-- Verwaist -->
+                    <div class="absolute right-6 bottom-8 w-44 p-3 border-2 border-dashed border-red-400 rounded-2xl bg-red-50/50 text-xs text-red-600">
+                        <i class="fa-solid fa-exclamation-triangle mr-1"></i> Verwaist (nicht zugeordnet)
+                    </div>
+
+                    <div class="absolute bottom-3 left-6 text-[10px] text-zinc-400">Connections erben Layer von Stacks &amp; Gruppen (Dockpart / Linkpart)</div>
+                </div>
+            </div>
+
+            <div id="workspace-connections" class="hidden">
+                <h1 class="text-2xl font-semibold mb-4">Connections Overview</h1>
+                <div class="bg-white border border-zinc-200 rounded-3xl p-6 dark:bg-zinc-900 dark:border-zinc-800">
+                    <div class="text-emerald-600 dark:text-emerald-400">Aktive Connections: 87</div>
+                    <div class="text-red-500 dark:text-red-400 mt-1">Lose / Orphaned Connections: 14</div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Right Inspector -->
+        <div class="w-80 bg-white border-l border-zinc-200 p-5 flex-shrink-0 dark:bg-zinc-900 dark:border-zinc-800">
+            <div class="font-semibold mb-4">Inspector</div>
+            <div class="space-y-5 text-sm">
+                <div>
+                    <div class="text-xs text-zinc-500 mb-1.5">PORTS</div>
+                    <div class="bg-zinc-100 rounded-2xl p-3 dark:bg-zinc-800">HTTP (443) • SSH (22) • gRPC</div>
+                </div>
+                <div>
+                    <div class="text-xs text-zinc-500 mb-1.5">DEEP LINKS</div>
+                    <div class="space-y-2">
+                        <div class="flex items-center gap-x-2 px-3 py-2 bg-zinc-100 rounded-2xl dark:bg-zinc-800">
+                            <i class="fa-solid fa-terminal text-emerald-500"></i>
+                            <span>SSH Terminal öffnen</span>
+                        </div>
+                        <div class="flex items-center gap-x-2 px-3 py-2 bg-zinc-100 rounded-2xl dark:bg-zinc-800">
+                            <i class="fa-solid fa-globe text-blue-500"></i>
+                            <span>Admin UI öffnen</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Bottom Console -->
+    <div class="h-36 bg-white border-t border-zinc-200 flex flex-col flex-shrink-0 dark:bg-zinc-900 dark:border-zinc-800">
+        <div class="h-7 bg-zinc-200 flex items-center px-4 text-xs font-medium text-zinc-500 dark:bg-zinc-800 dark:text-zinc-400">CONSOLE</div>
+        <div class="flex-1 p-3 font-mono text-xs text-emerald-600 overflow-auto dark:text-emerald-400">
+            <div>[INFO] Connection established: web-cluster → api-gateway</div>
+            <div>[WARN] Orphaned connection detected</div>
+        </div>
+    </div>
+
+    <script>
+        function switchTree(mode) {
+            const comp = document.getElementById('tree-components');
+            const conn = document.getElementById('tree-connections');
+            const btnC = document.getElementById('btn-comp');
+            const btnCo = document.getElementById('btn-conn');
+
+            if (mode === 0) {
+                comp.classList.remove('hidden');
+                conn.classList.add('hidden');
+                btnC.classList.add('border-b-2', 'border-orange-400', 'text-orange-500', 'dark:text-orange-400');
+                btnCo.classList.remove('border-b-2', 'border-orange-400', 'text-orange-500', 'dark:text-orange-400');
+            } else {
+                comp.classList.add('hidden');
+                conn.classList.remove('hidden');
+                btnCo.classList.add('border-b-2', 'border-orange-400', 'text-orange-500', 'dark:text-orange-400');
+                btnC.classList.remove('border-b-2', 'border-orange-400', 'text-orange-500', 'dark:text-orange-400');
+            }
+        }
+
+        function switchWorkspace(mode) {
+            const vis = document.getElementById('workspace-visualization');
+            const conn = document.getElementById('workspace-connections');
+
+            if (mode === 0) {
+                vis.classList.remove('hidden');
+                conn.classList.add('hidden');
+            } else {
+                vis.classList.add('hidden');
+                conn.classList.remove('hidden');
+            }
+        }
+
+        function openViewSettings() {
+            alert('View-Einstellungen würden hier geöffnet werden.');
+        }
+
+        function openEnvironmentManagement() {
+            alert('Environment-Verwaltung (Pre-Selektion) würde hier geöffnet werden.');
+        }
+
+        function toggleTheme() {
+            const html = document.documentElement;
+            html.classList.toggle('dark');
+            
+            const icon = document.getElementById('theme-icon');
+            if (html.classList.contains('dark')) {
+                icon.classList.remove('fa-sun');
+                icon.classList.add('fa-moon');
+            } else {
+                icon.classList.remove('fa-moon');
+                icon.classList.add('fa-sun');
+            }
+        }
+
+        window.onload = function() {
+            const btnComp = document.getElementById('btn-comp');
+            if (btnComp) btnComp.classList.add('border-b-2', 'border-orange-400', 'text-orange-500', 'dark:text-orange-400');
+            
+            const icon = document.getElementById('theme-icon');
+            if (icon && !document.documentElement.classList.contains('dark')) {
+                icon.classList.remove('fa-moon');
+                icon.classList.add('fa-sun');
+            }
+        }
+
+        // === NEU: Drag & Drop + Deployment Template + Vererbung ===
+        function dragComponent(ev, componentName) {
+            ev.dataTransfer.setData("text/plain", componentName);
+        }
+
+        function allowDrop(ev) {
+            ev.preventDefault();
+        }
+
+        function dropComponent(ev, dropZone) {
+            ev.preventDefault();
+            const componentName = ev.dataTransfer.getData("text/plain");
+            
+            const newItem = document.createElement('div');
+            newItem.className = `inline-flex items-center gap-x-2 px-3 py-1.5 text-sm rounded-2xl border cursor-pointer mb-1 mr-1 
+                ${componentName.includes('Template') ? 'bg-amber-100 border-amber-300 text-amber-700' : 'bg-orange-100 border-orange-300 text-orange-700'}`;
+            newItem.innerHTML = `
+                <i class="fa-solid fa-${componentName.includes('DB') ? 'database' : componentName.includes('Web') || componentName.includes('Server') ? 'server' : 'chart-line'}"></i>
+                <span>${componentName}</span>
+                <span class="text-[10px] ml-1 opacity-60">(zugeordnet)</span>
+            `;
+            newItem.onclick = () => showInheritanceToast(componentName);
+            dropZone.appendChild(newItem);
+            
+            showInheritanceToast(componentName);
+        }
+
+        function showInheritanceToast(componentName) {
+            const toast = document.createElement('div');
+            toast.className = 'fixed bottom-20 right-6 bg-zinc-900 text-white text-xs px-4 py-3 rounded-2xl shadow-xl z-[100] max-w-xs';
+            toast.innerHTML = `
+                <div class="font-medium mb-1">✓ ${componentName} in persönliche Struktur verschoben</div>
+                <div class="text-emerald-400 text-[10px] leading-snug">
+                    Connections erben automatisch:<br>
+                    • Stack-Layer (Hardware/OS/Container/Service)<br>
+                    • Group Dockparts &amp; Linkparts<br>
+                    • Ziel-VLAN / IP-Netzwerk des Ordners
+                </div>
+            `;
+            document.body.appendChild(toast);
+            setTimeout(() => { toast.style.transition='all .3s'; toast.style.opacity='0'; setTimeout(()=>toast.remove(),300); }, 4500);
+        }
+
+        function applyDeploymentTemplate() {
+            const zone = document.getElementById('drop-zone-critical') || document.querySelector('#canvas-area .min-h-\\[60px\\]');
+            if (!zone) return alert('Drop-Zone nicht gefunden');
+            
+            const items = [
+                {name: 'Web-01 (Template)', icon: 'server'},
+                {name: 'DB-Cluster (Template)', icon: 'database'},
+                {name: 'Load-Balancer (Template)', icon: 'network-wired'}
+            ];
+            
+            items.forEach(item => {
+                const el = document.createElement('div');
+                el.className = 'inline-flex items-center gap-x-2 px-3 py-1 text-xs rounded-2xl bg-amber-100 border border-amber-300 text-amber-700 mr-1 mb-1';
+                el.innerHTML = `<i class="fa-solid fa-${item.icon}"></i> <span>${item.name}</span>`;
+                zone.appendChild(el);
+            });
+            
+            const toast = document.createElement('div');
+            toast.className = 'fixed bottom-20 right-6 bg-amber-600 text-white text-xs px-4 py-3 rounded-2xl shadow-xl z-[100]';
+            toast.innerHTML = 'Deployment Template angewendet.<br>Components + geerbte Connections + Layer (Dockpart/Linkpart) erstellt.';
+            document.body.appendChild(toast);
+            setTimeout(() => toast.remove(), 4000);
+        }
+    </script>
+</body>
+</html>

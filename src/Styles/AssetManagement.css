@@ -1,0 +1,314 @@
+/*
+# Infrastructure Repository (ISR) / Infrastruktur Repository (ISR)
+# SPDX-License-Identifier: GPL-2.0 
+*/
+.App {
+  text-align: center;
+}
+
+.App-logo {
+  height: 40vmin;
+  pointer-events: none;
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  .App-logo {
+    animation: App-logo-spin infinite 20s linear;
+  }
+}
+
+.App-header {
+  background-color: #0042c5;
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  font-size: calc(10px + 2vmin);
+  color: white;
+}
+
+.App-link {
+  color: #61dafb;
+}
+
+@keyframes App-logo-spin {
+  from {
+    transform: rotate(0deg);
+  }
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+.ant-tabs-nav-wrap {
+  padding: 0 10px;
+}
+
+.ant-layout-header {
+  background-color: #CCC;
+}
+
+.asset-management-header.ant-layout-header {
+  padding: 5px 20px;
+  height: auto;
+  line-height: normal;
+}
+
+.leftArea,
+.centerArea,
+.rightArea {
+  padding: 0;
+}
+
+.ant-layout .leftArea,
+.ant-layout .rightArea {
+  flex: 0 0 auto !important;
+}
+
+.ant-layout .centerArea {
+  flex: 1 1 0 !important;
+  min-width: 0;
+}
+
+.ant-col .ant-tree {
+  background-color: inherit;
+  color: inherit;
+}
+
+.ant-layout .leftArea {
+  background-color: #3aa6d4;
+}
+
+.ant-layout .centerArea {
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+  overflow: hidden;
+}
+
+.ant-layout .centerArea.Asset,
+.ant-layout .centerArea.Component {
+  background-color: #f2c200;
+}
+
+.ant-layout .centerArea.folder,
+.ant-layout .centerArea.Group {
+  background-color: #3a94d4;
+}
+
+.ant-layout .centerArea.View {
+  background-color: #8e84f5;
+}
+
+.ant-layout .centerArea .ant-tabs {
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+}
+
+.ant-layout .centerArea .ant-tabs-content-holder {
+  overflow-y: auto;
+}
+
+.ant-layout .rightArea {
+  background-color: #e6a800;
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+}
+
+.ant-layout .rightArea > .ant-layout-sider-children {
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+}
+
+.ant-layout .rightArea .ant-tabs {
+  flex: 0 0 auto;
+}
+
+.graph-panel-content {
+  flex: 1;
+  min-height: 0;
+  overflow: hidden;
+  padding: 10px;
+  display: flex;
+  flex-direction: column;
+}
+
+.graph-canvas {
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+}
+
+.graph-canvas__viewport {
+  flex: 1;
+  min-height: 0;
+  min-width: 0;
+  overflow: auto;
+  width: 100%;
+}
+
+.graph-canvas__svg {
+  display: block;
+  min-width: 100%;
+}
+
+.leftAreaTitle,
+.centerAreaTitle,
+.rightAreaTitle {
+  background-color: rgba(0, 0, 0, 0.5);
+  color: #fff;
+  padding: 1ex 1em;
+  margin: -10px -10px 0 -10px;
+  font-weight: bold;
+}
+
+.leftTitle:hover,
+.centerTitle:hover,
+.rightTitle:hover {
+  background-color: rgba(0, 0, 0, 0.0);
+  transition: background-color 0.3s ease, color 0.3s ease;
+}
+
+.area-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 8px 12px;
+  background: rgba(0,0,0,0.25);
+  cursor: pointer;
+}
+
+.element-info-title {
+  font-weight: 600;
+  margin-bottom: 8px;
+  padding: 0 8px;
+}
+
+.element-info-descriptions.ant-descriptions.ant-descriptions-bordered.ant-descriptions-small .ant-descriptions-row > .ant-descriptions-item-label,
+.element-info-descriptions.ant-descriptions.ant-descriptions-bordered.ant-descriptions-small .ant-descriptions-row > .ant-descriptions-item-content {
+  padding: 4px 8px !important;
+}
+
+.element-info-descriptions .element-info-id-value {
+  font-size: 0.6em;
+}
+
+.size-buttons button {
+  margin-left: 4px;
+  font-size: 11px;
+  padding: 2px 6px;
+  height: 24px;
+}
+
+.reactivate-bar {
+  width: 24px;
+  writing-mode: vertical-rl;
+  text-orientation: mixed;
+  background: #f0f0f0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  font-size: 12px;
+  color: #666;
+  border: 1px solid #ddd;
+}
+
+.reactivate-bar:hover {
+  background: #e0e0e0;
+  color: #333;
+}
+
+.left { order: 1; }
+.center { order: 2; }
+.right { order: 3; }
+
+.graph-fullscreen-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100vw;
+  height: 100vh;
+  background: #fff;
+  z-index: 9999;
+  display: flex;
+  flex-direction: column;
+}
+
+.graph-fullscreen-header {
+  padding: 10px 20px;
+  background: #001529;
+  color: white;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  font-weight: bold;
+  flex-shrink: 0;
+}
+
+.graph-fullscreen-tabs {
+  background: #f0f0f0;
+  padding: 0 16px;
+  border-bottom: 1px solid #ddd;
+}
+
+.graph-fullscreen-content {
+  flex: 1;
+  overflow: hidden;
+  padding: 10px;
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+}
+
+.preset-btn {
+  width: 30px;
+  height: 30px;
+  border: 2px solid #fff;
+  border-radius: 6px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 14px;
+  font-weight: bold;
+  box-shadow: 0 2px 4px rgba(0,0,0,0.15);
+  transition: all 0.1s ease;
+}
+
+.preset-btn:hover {
+  transform: scale(1.1);
+  box-shadow: 0 4px 8px rgba(0,0,0,0.2);
+}
+
+/* Farben */
+.preset-btn#screenmode-preset-default { background-color: #eeeeee; color: #000; }  /* D - Weißblau */
+.preset-btn#screenmode-preset-hirarchy { background-color: #3aa6d4; color: #000; }  /* S - Blau */
+.preset-btn#screenmode-preset-properties { background-color: #f2c200; color: #000; }   /* D - Hellblau */
+.preset-btn#screenmode-preset-relationship { background-color: #e6a800; color: #000; }   /* V - Gelb */
+.preset-btn#screenmode-fullscreen { background-color: #e6a800; color: #000; }  /* D - Weißblau */
+
+.graph-fullscreen-tabs-bar {
+  display: flex;
+  align-items: center;
+  padding: 8px 16px;
+  background: #f0f0f0;
+  border-bottom: 1px solid #ddd;
+  flex-wrap: nowrap;           /* Verhindert Umbruch */
+  gap: 12px;
+}
+
+.graph-fullscreen-tabs-bar .ant-tabs {
+  flex: 1;
+  min-width: 0;
+}
+
+.graph-fullscreen-tabs-bar .ant-tabs-nav {
+  margin-bottom: 0;
+}

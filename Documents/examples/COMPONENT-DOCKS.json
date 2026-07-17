@@ -1,0 +1,117 @@
+{
+  "id": "COMPONENT-DOCKS",
+  "baseType": "INTERNAL",
+  "type": "ANY",
+  "name": {
+    "und": "Connection Points (Link-Docks)",
+    "de": "Verbindungspunkte (Link-Docks)"
+  },
+  "description": {
+    "und": "Represents the connection points for links. The upper half are the fixed docks, the lower half are the variable dockparts.",
+    "de": "Stellt die Verbindungsendpunkte für Links dar. Die obere Hälfte sind die festen Docks, die untere Hälfte sind die variablen Dockparts."
+  },
+  "order": 0,
+  "parent": {
+    "whitelist": [],
+    "blacklist": [
+      "ANY"
+    ]
+  },
+  "style": {
+    "treeIcon": "\n            \n<svg version='1.1' id='Capa_1' xmlns='http://www.w3.org/2000/svg' xmlns:xlink='http://www.w3.org/1999/xlink' x='0px' y='0px'\n\t viewBox='0 0 54 54' style='enable-background:new 0 0 54 54;' xml:space='preserve'>\n<g>\n\t<g>\n\t\t<path d='M53,10.5H23.535l-3.703-5.555C19.646,4.667,19.334,4.5,19,4.5H1c-0.552,0-1,0.447-1,1v6v4v29.003\n\t\t\tC0,47.259,2.24,49.5,4.994,49.5h44.012C51.76,49.5,54,47.259,54,44.503V15.5v-4C54,10.947,53.552,10.5,53,10.5z M52,14.5H2v-2h21\n\t\t\th29V14.5z M2,6.5h16.465l2.667,4H2V6.5z M52,44.503c0,1.652-1.343,2.997-2.994,2.997H4.994C3.343,47.5,2,46.155,2,44.503V16.5h50\n\t\t\tV44.503z'/>\n\t\t<path d='M16,36.5c1.124,0,2.136-0.469,2.864-1.217l10.172,4.865C29.025,40.266,29,40.379,29,40.5c0,2.206,1.794,4,4,4s4-1.794,4-4\n\t\t\tc0-1.474-0.81-2.75-2-3.444l0.902-7.668C37.673,28.977,39,27.395,39,25.5c0-2.206-1.794-4-4-4c-2.139,0-3.876,1.691-3.98,3.805\n\t\t\tl-11.991,4.612C18.295,29.057,17.217,28.5,16,28.5c-2.206,0-4,1.794-4,4S13.794,36.5,16,36.5z M33,42.5c-1.103,0-2-0.897-2-2\n\t\t\ts0.897-2,2-2s2,0.897,2,2S34.103,42.5,33,42.5z M35,23.5c1.103,0,2,0.897,2,2s-0.897,2-2,2s-2-0.897-2-2S33.897,23.5,35,23.5z\n\t\t\t M31.44,27.287c0.496,0.984,1.38,1.727,2.456,2.039l-0.845,7.18c-0.017,0-0.034-0.005-0.051-0.005c-1.37,0-2.58,0.694-3.301,1.747\n\t\t\tl-9.852-4.712C19.937,33.203,20,32.86,20,32.5c0-0.268-0.029-0.529-0.079-0.782L31.44,27.287z M16,30.5c1.103,0,2,0.897,2,2\n\t\t\tc0,0.262-0.054,0.512-0.146,0.742c-0.104,0.088-0.193,0.196-0.256,0.327c-0.027,0.057-0.028,0.117-0.044,0.176\n\t\t\tC17.187,34.201,16.63,34.5,16,34.5c-1.103,0-2-0.897-2-2S14.897,30.5,16,30.5z'/>\n\t</g>\n</g>\n</svg>\n            \n        "
+  },
+  "collectionType": "map",
+  "items": [
+    {
+      "kind": "group",
+      "order": 1,
+      "dataStructure": {
+        "itemName": "docks"
+      },
+      "formProperties": {
+        "label": {
+          "und": "Connection Points (Link-Docks)",
+          "de": "Verbindungspunkte (Link-Docks)"
+        }
+      },
+      "itemFlags": {
+        "readonly": false,
+        "hidden": false
+      },
+      "minUsage": 0,
+      "maxUsage": 20,
+      "collectionType": "array",
+      "items": [
+        {
+          "kind": "group",
+          "order": 3,
+          "dataStructure": {
+            "itemName": "dockparts"
+          },
+          "formProperties": {
+            "label": {
+              "und": "Dock Parts",
+              "de": "Dock-Bestandteile"
+            }
+          },
+          "itemFlags": {
+            "readonly": false,
+            "hidden": false
+          },
+          "minUsage": 0,
+          "maxUsage": 50,
+          "collectionType": "array",
+          "items": []
+        },
+        {
+          "kind": "field",
+          "order": 1,
+          "dataStructure": {
+            "itemName": "id",
+            "default": ""
+          },
+          "formProperties": {
+            "label": {
+              "und": "ID",
+              "de": "ID"
+            }
+          },
+          "fieldType": "string",
+          "rules": "[\\x20-\\x7E]{1,50}",
+          "example": "",
+          "itemFlags": {
+            "readonly": false,
+            "hidden": false,
+            "nullable": false
+          },
+          "minUsage": 1,
+          "maxUsage": 1
+        },
+        {
+          "kind": "field",
+          "order": 2,
+          "dataStructure": {
+            "itemName": "type",
+            "default": ""
+          },
+          "formProperties": {
+            "label": {
+              "und": "Type",
+              "de": "Typ"
+            }
+          },
+          "fieldType": "string",
+          "rules": "[\\x20-\\x7E]{1,50}",
+          "example": "Webserver",
+          "itemFlags": {
+            "readonly": false,
+            "hidden": false,
+            "nullable": false
+          },
+          "minUsage": 1,
+          "maxUsage": 1
+        }
+      ]
+    }
+  ]
+}

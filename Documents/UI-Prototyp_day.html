@@ -1,0 +1,259 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>InfraRepo</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+    <style>
+        .tree ul { list-style: none; padding-left: 22px; position: relative; }
+        .tree ul::before { content: ''; position: absolute; left: 11px; top: 0; bottom: 5px; width: 2px; background: #d1d5db; }
+        .tree li { position: relative; padding: 4px 0; }
+        .tree li::before { content: ''; position: absolute; left: 11px; top: 15px; width: 12px; height: 2px; background: #d1d5db; }
+        .tree li:last-child::before { height: 15px; }
+        .nav-item { display: flex; align-items: center; padding: 6px 10px; border-radius: 6px; margin-left: 4px; }
+        .nav-item:hover { background-color: #f3f4f6; }
+        .nav-item.blue { background-color: #dbeafe; border-left: 5px solid #2563eb; }
+        .nav-item.orange { background-color: #ffedd5; border-left: 5px solid #ea580c; }
+        .nav-item.green { background-color: #dcfce7; border-left: 5px solid #16a34a; }
+    </style>
+</head>
+<body class="bg-zinc-100 text-zinc-900 flex flex-col h-screen">
+
+    <!-- Header -->
+    <div class="h-14 bg-white border-b border-zinc-200 flex items-center px-6 flex-shrink-0">
+        <div class="flex items-center gap-x-3">
+            <div class="w-8 h-8 bg-indigo-600 rounded-2xl flex items-center justify-center">
+                <i class="fa-solid fa-project-diagram text-white"></i>
+            </div>
+            <span class="font-semibold text-xl">InfraRepo</span>
+        </div>
+
+        <div class="ml-8 flex items-center gap-x-1 text-sm">
+            <span class="text-zinc-500">View:</span>
+            <div onclick="openViewSettings()" class="flex items-center gap-x-1 px-3 py-1 rounded-xl hover:bg-zinc-100 cursor-pointer">
+                <span class="font-medium">Projekt Alpha</span>
+            </div>
+            <button onclick="openViewSettings()" class="p-1.5 hover:bg-zinc-100 rounded-xl text-zinc-500">
+                <i class="fa-solid fa-cog text-sm"></i>
+            </button>
+        </div>
+
+        <div class="ml-5 flex items-center gap-x-1 text-sm">
+            <span class="text-zinc-500">Environment:</span>
+            <select class="bg-white border border-zinc-300 rounded-xl px-3 py-1 text-sm">
+                <option>Alle</option>
+                <option>A</option>
+                <option>B</option>
+                <option>Production</option>
+            </select>
+            <button onclick="openEnvironmentManagement()" class="p-1.5 hover:bg-zinc-100 rounded-xl text-zinc-500">
+                <i class="fa-solid fa-cog text-sm"></i>
+            </button>
+        </div>
+
+        <div class="flex-1 max-w-md mx-8">
+            <input type="text" placeholder="Suchen..." class="w-full bg-white border border-zinc-300 rounded-3xl px-4 py-2 text-sm focus:outline-none">
+        </div>
+
+        <div class="flex items-center gap-x-2">
+            <div class="flex bg-zinc-200 rounded-2xl p-1 text-xs">
+                <button onclick="switchWorkspace(0)" class="px-3 py-1 rounded-xl bg-white shadow-sm">Visualization</button>
+                <button onclick="switchWorkspace(1)" class="px-3 py-1 rounded-xl hover:bg-white">Connections</button>
+            </div>
+
+            <button onclick="toggleTheme()" class="p-2 hover:bg-zinc-200 rounded-xl text-zinc-600">
+                <i class="fa-solid fa-sun" id="theme-icon"></i>
+            </button>
+
+            <div class="w-8 h-8 bg-zinc-300 rounded-2xl flex items-center justify-center cursor-pointer">
+                <i class="fa-solid fa-user text-sm"></i>
+            </div>
+        </div>
+    </div>
+
+    <div class="flex flex-1 overflow-hidden">
+        
+        <!-- Left Sidebar -->
+        <div class="w-80 bg-white border-r border-zinc-200 p-4 overflow-auto text-sm flex-shrink-0">
+            
+            <div class="flex border-b border-zinc-200 pb-3 mb-4">
+                <button onclick="switchTree(0)" id="btn-comp"
+                        class="flex-1 py-2 text-sm font-medium border-b-2 border-orange-500 text-orange-600">Components</button>
+                <button onclick="switchTree(1)" id="btn-conn"
+                        class="flex-1 py-2 text-sm font-medium text-zinc-500">Connections</button>
+            </div>
+
+            <!-- Components Tree -->
+            <div id="tree-components">
+                <ul class="tree">
+                    <!-- Organisatorische Folder (blau) -->
+                    <li>
+                        <div class="flex items-center gap-x-2 font-medium text-blue-600">
+                            <i class="fa-regular fa-folder"></i>
+                            <span>Meine Views</span>
+                        </div>
+                        <ul>
+                            <li><div class="nav-item blue"><span>Projekt A</span></div></li>
+                            <li><div class="nav-item blue"><span>Projekt B</span></div></li>
+                            <li><div class="nav-item blue"><span>Team-View</span></div></li>
+                        </ul>
+                    </li>
+
+                    <!-- Technische Component Folders (orange) -->
+                    <li class="mt-3">
+                        <div class="flex items-center gap-x-2 font-medium text-orange-600">
+                            <i class="fa-solid fa-server"></i>
+                            <span>Components</span>
+                        </div>
+                        <ul>
+                            <!-- Device als Component Folder -->
+                            <li>
+                                <div class="nav-item orange">
+                                    <i class="fa-solid fa-server text-orange-500 mr-2"></i>
+                                    <span>Device Web-01</span>
+                                </div>
+                                <ul>
+                                    <li><div class="nav-item orange"><i class="fa-solid fa-microchip mr-2"></i><span>Hardware</span></div></li>
+                                    <li><div class="nav-item orange"><i class="fa-brands fa-linux mr-2"></i><span>OS</span></div></li>
+                                    <li><div class="nav-item orange"><i class="fa-solid fa-box mr-2"></i><span>Container</span></div></li>
+                                    <li><div class="nav-item orange"><i class="fa-solid fa-globe mr-2"></i><span>Application</span></div></li>
+                                </ul>
+                            </li>
+                        </ul>
+                    </li>
+                </ul>
+            </div>
+
+            <!-- Connections Tree -->
+            <div id="tree-connections" class="hidden">
+                <ul class="tree">
+                    <li>
+                        <div class="flex items-center gap-x-2 font-medium text-blue-600">
+                            <i class="fa-regular fa-folder"></i>
+                            <span>Meine Views</span>
+                        </div>
+                        <ul>
+                            <li><div class="nav-item blue"><span>Projekt A</span></div></li>
+                            <li><div class="nav-item blue"><span>Projekt B</span></div></li>
+                            <li><div class="nav-item blue"><span>Team-View</span></div></li>
+                        </ul>
+                    </li>
+                    <li class="mt-3">
+                        <div class="flex items-center gap-x-2 font-medium text-emerald-600">
+                            <i class="fa-solid fa-link"></i>
+                            <span>Connections</span>
+                        </div>
+                        <ul>
+                            <li><div class="nav-item green"><span>Aktive Connections</span></div></li>
+                            <li><div class="nav-item" style="background-color: #fee2e2; border-left: 5px solid #ef4444;">
+                                <span class="text-red-500">Lose / Orphaned Connections</span>
+                            </div></li>
+                        </ul>
+                    </li>
+                </ul>
+            </div>
+        </div>
+
+        <!-- Main Workspace -->
+        <div class="flex-1 p-6 bg-zinc-100 overflow-auto">
+            <div id="workspace-visualization">
+                <h1 class="text-2xl font-semibold mb-4">Deployment View</h1>
+                <div class="bg-white border border-zinc-200 rounded-3xl p-8 h-[480px] flex items-center justify-center">
+                    <div class="text-center text-zinc-500">
+                        <i class="fa-solid fa-project-diagram text-5xl mb-4"></i>
+                        <p>Visualisierung mit Port-Bubbles</p>
+                    </div>
+                </div>
+            </div>
+
+            <div id="workspace-connections" class="hidden">
+                <h1 class="text-2xl font-semibold mb-4">Connections Overview</h1>
+                <div class="bg-white border border-zinc-200 rounded-3xl p-6">
+                    <div class="text-emerald-600">Aktive Connections: 87</div>
+                    <div class="text-red-500 mt-1">Lose / Orphaned Connections: 14</div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Right Inspector -->
+        <div class="w-80 bg-white border-l border-zinc-200 p-5 flex-shrink-0">
+            <div class="font-semibold mb-4">Inspector</div>
+            <div class="space-y-5 text-sm">
+                <div>
+                    <div class="text-xs text-zinc-500 mb-1.5">PORTS</div>
+                    <div class="bg-zinc-100 rounded-2xl p-3">HTTP (443) • SSH (22)</div>
+                </div>
+                <div>
+                    <div class="text-xs text-zinc-500 mb-1.5">DEEP LINKS</div>
+                    <div class="space-y-2">
+                        <div class="flex items-center gap-x-2 px-3 py-2 bg-zinc-100 rounded-2xl">
+                            <i class="fa-solid fa-terminal text-emerald-500"></i>
+                            <span>SSH Terminal öffnen</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Bottom Console -->
+    <div class="h-36 bg-white border-t border-zinc-200 flex flex-col flex-shrink-0">
+        <div class="h-7 bg-zinc-200 flex items-center px-4 text-xs font-medium text-zinc-500">CONSOLE</div>
+        <div class="flex-1 p-3 font-mono text-xs text-emerald-600 overflow-auto">
+            <div>[INFO] Connection established: web-cluster → api-gateway</div>
+            <div>[WARN] Orphaned connection detected</div>
+        </div>
+    </div>
+
+    <script>
+        function switchTree(mode) {
+            const comp = document.getElementById('tree-components');
+            const conn = document.getElementById('tree-connections');
+            const btnC = document.getElementById('btn-comp');
+            const btnCo = document.getElementById('btn-conn');
+
+            if (mode === 0) {
+                comp.classList.remove('hidden');
+                conn.classList.add('hidden');
+                btnC.classList.add('border-b-2', 'border-orange-500', 'text-orange-600');
+                btnCo.classList.remove('border-b-2', 'border-orange-500', 'text-orange-600');
+            } else {
+                comp.classList.add('hidden');
+                conn.classList.remove('hidden');
+                btnCo.classList.add('border-b-2', 'border-orange-500', 'text-orange-600');
+                btnC.classList.remove('border-b-2', 'border-orange-500', 'text-orange-600');
+            }
+        }
+
+        function switchWorkspace(mode) {
+            const vis = document.getElementById('workspace-visualization');
+            const conn = document.getElementById('workspace-connections');
+            if (mode === 0) {
+                vis.classList.remove('hidden');
+                conn.classList.add('hidden');
+            } else {
+                vis.classList.add('hidden');
+                conn.classList.remove('hidden');
+            }
+        }
+
+        function openViewSettings() {
+            alert('View-Einstellungen würden hier geöffnet werden.');
+        }
+
+        function openEnvironmentManagement() {
+            alert('Environment-Verwaltung würde hier geöffnet werden.');
+        }
+
+        function toggleTheme() {
+            alert('Day/Night Mode würde hier umgeschaltet werden (im finalen System mit echten Theme-Farben).');
+        }
+
+        window.onload = function() {
+            document.getElementById('btn-comp').classList.add('border-b-2', 'border-orange-500', 'text-orange-600');
+        }
+    </script>
+</body>
+</html>

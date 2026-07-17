@@ -1,0 +1,205 @@
+{
+  "id": "SCHEMA",
+  "baseType": "INTERNAL",
+  "type": "SCHEMA",
+  "name": {
+    "und": "SchemaEditor Schema",
+    "de": "SchemaEditor Schema"
+  },
+  "description": {
+    "und": "The data structure of the SchemaEditor (self-describing).",
+    "de": "Die Datenstruktur des SchemaEditors (selbst-beschreibend)."
+  },
+  "order": 0,
+  "parent": {
+    "whitelist": ["ROOT"],
+    "blacklist": ["ANY"]
+  },
+  "style": {
+    "treeIcon": ""
+  },
+  "items": [
+    {
+      "kind": "group",
+      "order": 8,
+      "dataStructure": { "itemName": "parent" },
+      "formProperties": {
+        "label": {
+          "und": "Parent Restrictions",
+          "de": "Eltern-Beschränkungen"
+        }
+      },
+      "itemFlags": { "readonly": false, "hidden": false },
+      "minUsage": 0,
+      "maxUsage": 1,
+      "collectionType": "map",
+      "items": [
+        {
+          "kind": "group",
+          "order": 1,
+          "dataStructure": { "itemName": "whitelist" },
+          "formProperties": { "label": { "und": "Whitelist" } },
+          "itemFlags": { "readonly": false, "hidden": false },
+          "minUsage": 0,
+          "maxUsage": 1,
+          "collectionType": "array",
+          "items": [
+            {
+              "kind": "field",
+              "order": 1,
+              "dataStructure": { "itemName": "type", "default": "" },
+              "formProperties": { "label": { "und": "Type" } },
+              "fieldType": "string",
+              "rules": "[A-Z0-9_]+",
+              "example": "",
+              "itemFlags": { "readonly": false, "hidden": false, "nullable": false },
+              "minUsage": 0,
+              "maxUsage": 9999
+            }
+          ]
+        },
+        {
+          "kind": "group",
+          "order": 2,
+          "dataStructure": { "itemName": "blacklist" },
+          "formProperties": { "label": { "und": "Blacklist" } },
+          "itemFlags": { "readonly": false, "hidden": false },
+          "minUsage": 0,
+          "maxUsage": 1,
+          "collectionType": "array",
+          "items": [
+            {
+              "kind": "field",
+              "order": 1,
+              "dataStructure": { "itemName": "type", "default": "" },
+              "formProperties": { "label": { "und": "Type" } },
+              "fieldType": "string",
+              "rules": "[A-Z0-9_]+",
+              "example": "",
+              "itemFlags": { "readonly": false, "hidden": false, "nullable": false },
+              "minUsage": 0,
+              "maxUsage": 9999
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "kind": "group",
+      "order": 9,
+      "dataStructure": { "itemName": "items" },
+      "formProperties": {
+        "label": {
+          "und": "Items",
+          "de": "Felder und Gruppen"
+        }
+      },
+      "itemFlags": { "readonly": false, "hidden": false },
+      "minUsage": 1,
+      "maxUsage": 1,
+      "collectionType": "map",
+      "items": []
+    },
+    {
+      "kind": "group",
+      "order": 10,
+      "dataStructure": { "itemName": "style" },
+      "formProperties": {
+        "label": {
+          "und": "Style",
+          "de": "Darstellung"
+        }
+      },
+      "itemFlags": { "readonly": false, "hidden": false },
+      "minUsage": 0,
+      "maxUsage": 1,
+      "collectionType": "map",
+      "items": [
+        {
+          "kind": "field",
+          "order": 1,
+          "dataStructure": { "itemName": "treeIcon", "default": "" },
+          "formProperties": { "label": { "und": "Tree Icon" } },
+          "fieldType": "string",
+          "rules": ".*",
+          "example": "",
+          "itemFlags": { "readonly": false, "hidden": false, "nullable": true },
+          "minUsage": 0,
+          "maxUsage": 1
+        }
+      ]
+    },
+    {
+      "kind": "field",
+      "order": 1,
+      "dataStructure": { "itemName": "id", "default": "" },
+      "formProperties": { "label": { "und": "ID", "de": "ID" } },
+      "fieldType": "string",
+      "rules": "[A-Z0-9_]+",
+      "example": "SCHEMA",
+      "itemFlags": { "readonly": false, "hidden": false, "nullable": false },
+      "minUsage": 1,
+      "maxUsage": 1
+    },
+    {
+      "kind": "field",
+      "order": 2,
+      "dataStructure": { "itemName": "baseType", "default": "ELEMENT" },
+      "formProperties": { "label": { "und": "Basetype", "de": "Basis-Typ" } },
+      "fieldType": "string",
+      "rules": "(INTERNAL|ELEMENT|DOCKPART)",
+      "example": "",
+      "itemFlags": { "readonly": false, "hidden": false, "nullable": false },
+      "minUsage": 1,
+      "maxUsage": 1
+    },
+    {
+      "kind": "field",
+      "order": 3,
+      "dataStructure": { "itemName": "type", "default": "" },
+      "formProperties": { "label": { "und": "Type", "de": "Typ" } },
+      "fieldType": "string",
+      "rules": "[A-Z0-9\\-_]+",
+      "example": "",
+      "itemFlags": { "readonly": false, "hidden": false, "nullable": false },
+      "minUsage": 1,
+      "maxUsage": 1
+    },
+    {
+      "kind": "field",
+      "order": 5,
+      "dataStructure": { "itemName": "name", "default": "" },
+      "formProperties": { "label": { "und": "Name", "de": "Name" } },
+      "fieldType": "string",
+      "rules": "[\\x20-\\x7E]{1,80}",
+      "example": "",
+      "itemFlags": { "readonly": false, "hidden": false, "nullable": false },
+      "minUsage": 1,
+      "maxUsage": 1
+    },
+    {
+      "kind": "field",
+      "order": 6,
+      "dataStructure": { "itemName": "description", "default": "" },
+      "formProperties": { "label": { "und": "Description", "de": "Beschreibung" } },
+      "fieldType": "string",
+      "rules": "[\\x20-\\x7E]{0,500}",
+      "example": "",
+      "itemFlags": { "readonly": false, "hidden": false, "nullable": true },
+      "minUsage": 0,
+      "maxUsage": 1
+    },
+    {
+      "kind": "field",
+      "order": 7,
+      "dataStructure": { "itemName": "order", "default": "0" },
+      "formProperties": { "label": { "und": "Order", "de": "Reihenfolge" } },
+      "fieldType": "number",
+      "rules": "^[0-9]+$",
+      "example": "",
+      "itemFlags": { "readonly": false, "hidden": false, "nullable": false },
+      "minUsage": 1,
+      "maxUsage": 1
+    }
+  ]
+}

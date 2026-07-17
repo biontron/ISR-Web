@@ -1,0 +1,1951 @@
+# basicAuth with bearerAuth
+openapi: 3.0.0
+info:
+  title: infrastruktur Repository (ISR) API
+  description: API-Spezifikation generiert aus dem RESTer Export.
+  version: "1.0"
+servers:
+  - url: https://isr.biontron.com/api/{domain}
+    variables:
+      domain:
+        default: "demo"
+        description: "Die Domain, unter der die API verfügbar ist."
+
+  - url: https://infrastrukturrepository.io/v1/{domain}
+    variables:
+      domain:
+        default: "demo"
+        description: "Die Domain, unter der die API verfügbar ist."
+paths:
+  /login:
+    post:
+      summary: User Login
+      operationId: login
+      tags:
+        - Access
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                username:
+                  type: string
+                  example: "Mr. X"
+                password:
+                  type: string
+                  example: "S****-M****-0**"
+      responses:
+        '200':
+          description: Erfolgreiche Anmeldung
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/LoginResponse"    
+  /logout:
+    get:
+      summary: User Logout
+      operationId: logout
+      tags:
+        - Access
+      responses:
+        '200':
+          description: Erfolgreiche Abmeldung
+
+  /views:
+    get:
+      summary: List all views
+      tags:
+        - View
+      parameters:
+        - name: Authorization
+          in: header
+          required: true
+          description: The JWT (prefix Baerer; received as response of /login)
+          schema:
+            type: string
+      operationId: listViews
+      responses:
+        200:
+          description: An array of views
+          content:
+            application/json:    
+              schema:
+                $ref: "#/components/schemas/ViewItem"
+        default:
+          description: unexpected error
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+      security:
+        - basicAuth: []
+    post:
+      summary: Create a view
+      operationId: createView
+      tags:
+        - View
+      parameters:
+        - name: Authorization
+          in: header
+          required: true
+          description: The JWT (prefix Baerer; received as response of /login)
+          schema:
+            type: string
+      responses:
+        201:
+          description: Null response
+        default:
+          description: unexpected error
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+      security:
+        - basicAuth: []
+  /views/{viewId}:
+    get:
+      summary: Read view details
+      operationId: readView
+      tags:
+        - View
+      parameters:
+        - in: header
+          name: Authorization
+          schema:
+            type: string
+        - name: viewId
+          in: path
+          required: true
+          description: The id of the view to retrieve
+          schema:
+            type: string
+            default: 01v93fa0-1c74-44b1-bafd-6d8a988fea04
+      responses:
+        200:
+          description: Expected response to a valid request
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ViewItem"
+        default:
+          description: unexpected error
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+      security:
+        - basicAuth: []
+    delete:
+      summary: Delete a view
+      operationId: deleteView
+      tags:
+        - View
+      parameters:
+        - in: header
+          name: Authorization
+          schema:
+            type: string
+
+        - name: viewId
+          in: path
+          required: true
+          description: The id of the view to delete
+          schema:
+            type: string
+      responses:
+        201:
+          description: Null response
+        default:
+          description: unexpected error
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+      security:
+        - basicAuth: []
+  /views/{viewId}/groups:
+    get:
+      summary: List all groups
+      operationId: listGroups
+      tags:
+        - Group
+      parameters:
+        - name: Authorization
+          in: header
+          required: true
+          schema:
+            type: string
+        - name: viewId
+          in: path
+          required: true
+          description: The id of the view to use
+          schema:
+            type: string
+            default: 01v93fa0-1c74-44b1-bafd-6d8a988fea04
+      responses:
+        200:
+          description: A group list
+          content:
+            application/json:    
+              schema:
+                $ref: "#/components/schemas/GroupList"
+        default:
+          description: unexpected error
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+      security:
+        - basicAuth: []
+    post:
+      summary: Create a group
+      operationId: createGroup
+      tags:
+        - Group
+      parameters:
+        - name: Authorization
+          in: header
+          required: true
+          schema:
+            type: string
+        - name: viewId
+          in: path
+          required: true
+          description: The id of the view to use
+          schema:
+            type: string
+            default: 01v93fa0-1c74-44b1-bafd-6d8a988fea04
+      responses:
+        200:
+          description: The main group
+          content:
+            application/json:    
+              schema:
+                $ref: "#/components/schemas/GroupItem"
+        default:
+          description: unexpected error
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+      security:
+        - basicAuth: []
+
+  /views/{viewId}/groups/{groupId}:
+    get:
+      summary: Read group deatails
+      operationId: readGroup
+      tags:
+        - Group
+      parameters:
+        - name: Authorization
+          in: header
+          required: true
+          description: The JWT (prefix Baerer; received as response of /login)
+          schema:
+            type: string
+        - name: viewId
+          in: path
+          required: true
+          description: The id of the view to use
+          schema:
+            type: string
+            default: 01v93fa0-1c74-44b1-bafd-6d8a988fea04
+        - name: groupId
+          in: path
+          required: true
+          description: The id of the group to retrieve
+          schema:
+            type: string
+            default: 01g93fa0-1c74-44b1-bafd-6d8a988fea14
+      responses:
+        200:
+          description: The main group
+          content:
+            application/json:    
+              schema:
+                $ref: "#/components/schemas/GroupItem"
+        default:
+          description: unexpected error
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+      security:
+        - basicAuth: []
+    delete:
+      summary: Delete a group
+      operationId: deleteGroup
+      tags:
+        - Group
+      parameters:
+        - name: Authorization
+          in: header
+          required: true
+          description: The JWT (prefix Baerer; received as response of /login)
+          schema:
+            type: string
+        - name: viewId
+          in: path
+          required: true
+          description: The id of the view to use
+          schema:
+            type: string
+            default: 01v93fa0-1c74-44b1-bafd-6d8a988fea04
+        - name: groupId
+          in: path
+          required: true
+          description: The id of the group to retrieve
+          schema:
+            type: string
+            default: 01g93fa0-1c74-44b1-bafd-6d8a988fea14
+      responses:
+        200:
+          description: The main group
+          content:
+            application/json:    
+              schema:
+                $ref: "#/components/schemas/GroupItem"
+        default:
+          description: unexpected error
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+      security:
+        - basicAuth: []
+  
+  /environments:
+    get:
+      summary: List all environments
+      tags:
+        - Environment
+      parameters:
+        - name: Authorization
+          in: header
+          required: true
+          description: The JWT (prefix Baerer; received as response of /login)
+          schema:
+            type: string
+      operationId: listEnvironments
+      responses:
+        200:
+          description: An array of environment
+          content:
+            application/json:    
+              schema:
+                $ref: "#/components/schemas/EnvironmentList"
+        default:
+          description: unexpected error
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+      security:
+        - basicAuth: []
+    post:
+      summary: Create an environment
+      operationId: createEnvironment
+      tags:
+        - Environment
+      parameters:
+        - name: Authorization
+          in: header
+          required: true
+          description: The JWT (prefix Baerer; received as response of /login)
+          schema:
+            type: string
+      responses:
+        201:
+          description: Null response
+        default:
+          description: unexpected error
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+      security:
+        - basicAuth: []
+  /environments/{environmentId}:
+    get:
+      summary: Read environment details
+      operationId: readEnvironment
+      tags:
+        - Environment
+      parameters:
+        - name: Authorization
+          in: header
+          required: true
+          description: The JWT (prefix Baerer; received as response of /login)
+          schema:
+            type: string
+        - name: environmentId
+          in: path
+          required: true
+          description: The id of the environment to retrieve
+          schema:
+            type: string
+            example: "01e93fa0-1c74-44b1-bafd-6d8a988fea01"
+      responses:
+        200:
+          description: Expected response to a valid request
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/EnvironmentItem"
+        default:
+          description: unexpected error
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+      security:
+        - basicAuth: []
+    delete:
+      summary: Delete an environment
+      operationId: deleteEnvironment
+      tags:
+        - Environment
+      parameters:
+        - name: Authorization
+          in: header
+          required: true
+          description: The JWT (prefix Baerer; received as response of /login)
+          schema:
+            type: string
+        - name: environmentId
+          in: path
+          required: true
+          description: The id of the environment to retrieve
+          schema:
+            type: string
+            example: "01e93fa0-1c74-44b1-bafd-6d8a988fea01"
+      responses:
+        201:
+          description: Null response
+        default:
+          description: unexpected error
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+      security:
+        - basicAuth: []
+
+  /environments/{environmentId}/assets:
+    get:
+      summary: List all assets
+      operationId: listAssets
+      tags:
+        - Asset
+      parameters:
+        - name: Authorization
+          in: header
+          required: true
+          description: The JWT (prefix Baerer; received as response of /login)
+          schema:
+            type: string
+        - name: environmentId
+          in: path
+          required: true
+          description: The id of the environment to use
+          schema:
+            type: string
+            example: "01e93fa0-1c74-44b1-bafd-6d8a988fea01"
+      responses:
+        200:
+          description: An array of asset
+          content:
+            application/json:    
+              schema:
+                $ref: "#/components/schemas/AssetList"
+        default:
+          description: unexpected error
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+      security:
+        - basicAuth: []
+    post:
+      summary: Create an asset
+      operationId: createAsset
+      tags:
+        - Asset
+      parameters:
+        - name: Authorization
+          in: header
+          required: true
+          description: The JWT (prefix Baerer; received as response of /login)
+          schema:
+            type: string
+        - name: environmentId
+          in: path
+          required: true
+          description: The id of the environment to use
+          schema:
+            type: string
+            example: "01e93fa0-1c74-44b1-bafd-6d8a988fea01"
+      responses:
+        201:
+          description: Null response
+        default:
+          description: unexpected error
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+      security:
+        - basicAuth: []
+
+  /environments/{environmentId}/assets/{assetId}:
+    get:
+      summary: Read asset details
+      operationId: readAsset
+      tags:
+        - Asset
+      parameters:
+        - name: Authorization
+          in: header
+          required: true
+          description: The JWT (prefix Baerer; received as response of /login)
+          schema:
+            type: string
+        - name: environmentId
+          in: path
+          required: true
+          description: The id of the environment to use
+          schema:
+            type: string
+            example: "01e93fa0-1c74-44b1-bafd-6d8a988fea01"
+        - name: assetId
+          in: path
+          required: true
+          description: The id of the asset to retrieve
+          schema:
+            type: string
+            example: "01a93fa0-1c74-44b1-bafd-6d8a988fea38"
+      responses:
+        200:
+          description: Expected response to a valid request
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AssetItem"
+        default:
+          description: unexpected error
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+      security:
+        - basicAuth: []
+    delete:
+      summary: Delete an asset
+      operationId: deleteAsset
+      tags:
+        - Asset
+      parameters:
+        - name: Authorization
+          in: header
+          required: true
+          description: The JWT (prefix Baerer; received as response of /login)
+          schema:
+            type: string
+        - name: environmentId
+          in: path
+          required: true
+          description: The id of the environment to use
+          schema:
+            type: string
+            example: "01e93fa0-1c74-44b1-bafd-6d8a988fea01"
+        - name: assetId
+          in: path
+          required: true
+          description: The id of the asset to retrieve
+          schema:
+            type: string
+            example: "01a93fa0-1c74-44b1-bafd-6d8a988fea38"
+      responses:
+        201:
+          description: Null response
+        default:
+          description: unexpected error
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+      security:
+        - basicAuth: []
+
+
+  /environments/{environmentId}/connections:
+    get:
+      summary: List all connection
+      operationId: listConnections
+      tags:
+        - Connection
+      parameters:
+        - name: Authorization
+          in: header
+          required: true
+          description: The JWT (prefix Baerer; received as response of /login)
+          schema:
+            type: string
+        - name: environmentId
+          in: path
+          required: true
+          description: The id of the environment to use
+          schema:
+            type: string
+            example: "01e93fa0-1c74-44b1-bafd-6d8a988fea01"
+      responses:
+        200:
+          description: An array of connection
+          content:
+            application/json:    
+              schema:
+                $ref: "#/components/schemas/ConnectionList"
+        default:
+          description: unexpected error
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+      security:
+        - basicAuth: []
+    post:
+      summary: Create an connection
+      operationId: createConnection
+      tags:
+        - Connection
+      parameters:
+        - name: Authorization
+          in: header
+          required: true
+          description: The JWT (prefix Baerer; received as response of /login)
+          schema:
+            type: string
+        - name: environmentId
+          in: path
+          required: true
+          description: The id of the environment to use
+          schema:
+            type: string
+            example: "01e93fa0-1c74-44b1-bafd-6d8a988fea01"
+      responses:
+        201:
+          description: Null response
+        default:
+          description: unexpected error
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+      security:
+        - basicAuth: []
+
+  /environments/{environmentId}/connection/{connectionId}:
+    get:
+      summary: Read connection details
+      operationId: readConnection
+      tags:
+        - Connection
+      parameters:
+        - name: Authorization
+          in: header
+          required: true
+          description: The JWT (prefix Baerer; received as response of /login)
+          schema:
+            type: string
+        - name: environmentId
+          in: path
+          required: true
+          description: The id of the environment to use
+          schema:
+            type: string
+            example: "01e93fa0-1c74-44b1-bafd-6d8a988fea01"
+        - name: connectionId
+          in: path
+          required: true
+          description: The id of the connection to retrieve
+          schema:
+            type: string
+            default: xxx
+      responses:
+        200:
+          description: Expected response to a valid request
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ConnectionItem"
+        default:
+          description: unexpected error
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+      security:
+        - basicAuth: []
+    delete:
+      summary: Delete a connection
+      operationId: deleteConnection
+      tags:
+        - Connection
+      parameters:
+        - name: Authorization
+          in: header
+          required: true
+          description: The JWT (prefix Baerer; received as response of /login)
+          schema:
+            type: string
+        - name: environmentId
+          in: path
+          required: true
+          description: The id of the environment to use
+          schema:
+            type: string
+            example: "01e93fa0-1c74-44b1-bafd-6d8a988fea01"
+        - name: connectionId
+          in: path
+          required: true
+          description: The id of the connection to retrieve
+          schema:
+            type: string
+      responses:
+        201:
+          description: Null response
+        default:
+          description: unexpected error
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+      security:
+        - basicAuth: []
+
+  /config/schema/internals:
+    get:
+      summary: List all internal schemas (baseType INTERNAL)
+      operationId: listInternalSchemas
+      tags:
+        - Config-Schema
+      parameters:
+        - $ref: "#/components/parameters/AuthorizationHeader"
+        - name: validate
+          in: query
+          required: false
+          description: Validiert die REST-Antwort gegen die Meta-Schema-Definition.
+          schema:
+            type: boolean
+      responses:
+        "200":
+          description: Array von Schema-Dokumenten
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SchemaDocumentList"
+              examples:
+                withMetaSchema:
+                  $ref: "#/components/examples/SchemaMetaSchemaList"
+        default:
+          $ref: "#/components/responses/UnexpectedError"
+      security:
+        - basicAuth: []
+    post:
+      summary: Create an internal schema
+      operationId: createInternalSchema
+      tags:
+        - Config-Schema
+      parameters:
+        - $ref: "#/components/parameters/AuthorizationHeader"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/SchemaDocument"
+            examples:
+              schemaMeta:
+                $ref: "#/components/examples/SchemaMetaSchema"
+      responses:
+        "201":
+          description: Schema angelegt
+        default:
+          $ref: "#/components/responses/UnexpectedError"
+      security:
+        - basicAuth: []
+
+  /config/schema/internals/{schemaId}:
+    get:
+      summary: Read internal schema details
+      operationId: readInternalSchema
+      tags:
+        - Config-Schema
+      parameters:
+        - $ref: "#/components/parameters/AuthorizationHeader"
+        - $ref: "#/components/parameters/SchemaIdPath"
+      responses:
+        "200":
+          description: Schema-Dokument
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SchemaDocument"
+              examples:
+                schemaMeta:
+                  $ref: "#/components/examples/SchemaMetaSchema"
+        default:
+          $ref: "#/components/responses/UnexpectedError"
+      security:
+        - basicAuth: []
+    put:
+      summary: Update an internal schema
+      operationId: updateInternalSchema
+      tags:
+        - Config-Schema
+      parameters:
+        - $ref: "#/components/parameters/AuthorizationHeader"
+        - $ref: "#/components/parameters/SchemaIdPath"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/SchemaDocument"
+            examples:
+              schemaMeta:
+                $ref: "#/components/examples/SchemaMetaSchema"
+      responses:
+        "200":
+          description: Schema aktualisiert
+        default:
+          $ref: "#/components/responses/UnexpectedError"
+      security:
+        - basicAuth: []
+    delete:
+      summary: Delete an internal schema
+      operationId: deleteInternalSchema
+      tags:
+        - Config-Schema
+      parameters:
+        - $ref: "#/components/parameters/AuthorizationHeader"
+        - $ref: "#/components/parameters/SchemaIdPath"
+      responses:
+        "204":
+          description: Schema gelöscht
+        default:
+          $ref: "#/components/responses/UnexpectedError"
+      security:
+        - basicAuth: []
+
+  /config/schema/elements:
+    get:
+      summary: List all element schemas (baseType ELEMENT)
+      operationId: listElementSchemas
+      tags:
+        - Config-Schema
+      parameters:
+        - $ref: "#/components/parameters/AuthorizationHeader"
+        - name: validate
+          in: query
+          required: false
+          description: Validiert die REST-Antwort gegen die Meta-Schema-Definition.
+          schema:
+            type: boolean
+      responses:
+        "200":
+          description: Array von Schema-Dokumenten
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SchemaDocumentList"
+        default:
+          $ref: "#/components/responses/UnexpectedError"
+      security:
+        - basicAuth: []
+    post:
+      summary: Create an element schema
+      operationId: createElementSchema
+      tags:
+        - Config-Schema
+      parameters:
+        - $ref: "#/components/parameters/AuthorizationHeader"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/SchemaDocument"
+      responses:
+        "201":
+          description: Schema angelegt
+        default:
+          $ref: "#/components/responses/UnexpectedError"
+      security:
+        - basicAuth: []
+
+  /config/schema/elements/{schemaId}:
+    get:
+      summary: Read element schema details
+      operationId: readElementSchema
+      tags:
+        - Config-Schema
+      parameters:
+        - $ref: "#/components/parameters/AuthorizationHeader"
+        - $ref: "#/components/parameters/SchemaIdPath"
+      responses:
+        "200":
+          description: Schema-Dokument
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SchemaDocument"
+        default:
+          $ref: "#/components/responses/UnexpectedError"
+      security:
+        - basicAuth: []
+    put:
+      summary: Update an element schema
+      operationId: updateElementSchema
+      tags:
+        - Config-Schema
+      parameters:
+        - $ref: "#/components/parameters/AuthorizationHeader"
+        - $ref: "#/components/parameters/SchemaIdPath"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/SchemaDocument"
+      responses:
+        "200":
+          description: Schema aktualisiert
+        default:
+          $ref: "#/components/responses/UnexpectedError"
+      security:
+        - basicAuth: []
+    delete:
+      summary: Delete an element schema
+      operationId: deleteElementSchema
+      tags:
+        - Config-Schema
+      parameters:
+        - $ref: "#/components/parameters/AuthorizationHeader"
+        - $ref: "#/components/parameters/SchemaIdPath"
+      responses:
+        "204":
+          description: Schema gelöscht
+        default:
+          $ref: "#/components/responses/UnexpectedError"
+      security:
+        - basicAuth: []
+
+  /config/schema/dockparts:
+    get:
+      summary: List all dockpart schemas (baseType DOCKPART)
+      operationId: listDockpartSchemas
+      tags:
+        - Config-Schema
+      parameters:
+        - $ref: "#/components/parameters/AuthorizationHeader"
+        - name: validate
+          in: query
+          required: false
+          description: Validiert die REST-Antwort gegen die Meta-Schema-Definition.
+          schema:
+            type: boolean
+      responses:
+        "200":
+          description: Array von Schema-Dokumenten
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SchemaDocumentList"
+        default:
+          $ref: "#/components/responses/UnexpectedError"
+      security:
+        - basicAuth: []
+    post:
+      summary: Create a dockpart schema
+      operationId: createDockpartSchema
+      tags:
+        - Config-Schema
+      parameters:
+        - $ref: "#/components/parameters/AuthorizationHeader"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/SchemaDocument"
+      responses:
+        "201":
+          description: Schema angelegt
+        default:
+          $ref: "#/components/responses/UnexpectedError"
+      security:
+        - basicAuth: []
+
+  /config/schema/dockparts/{schemaId}:
+    get:
+      summary: Read dockpart schema details
+      operationId: readDockpartSchema
+      tags:
+        - Config-Schema
+      parameters:
+        - $ref: "#/components/parameters/AuthorizationHeader"
+        - $ref: "#/components/parameters/SchemaIdPath"
+      responses:
+        "200":
+          description: Schema-Dokument
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SchemaDocument"
+        default:
+          $ref: "#/components/responses/UnexpectedError"
+      security:
+        - basicAuth: []
+    put:
+      summary: Update a dockpart schema
+      operationId: updateDockpartSchema
+      tags:
+        - Config-Schema
+      parameters:
+        - $ref: "#/components/parameters/AuthorizationHeader"
+        - $ref: "#/components/parameters/SchemaIdPath"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/SchemaDocument"
+      responses:
+        "200":
+          description: Schema aktualisiert
+        default:
+          $ref: "#/components/responses/UnexpectedError"
+      security:
+        - basicAuth: []
+    delete:
+      summary: Delete a dockpart schema
+      operationId: deleteDockpartSchema
+      tags:
+        - Config-Schema
+      parameters:
+        - $ref: "#/components/parameters/AuthorizationHeader"
+        - $ref: "#/components/parameters/SchemaIdPath"
+      responses:
+        "204":
+          description: Schema gelöscht
+        default:
+          $ref: "#/components/responses/UnexpectedError"
+      security:
+        - basicAuth: []
+
+  /environments/{environmentId}/collections:
+    get:
+      summary: List all collections
+      operationId: listCollections
+      tags:
+        - Collection
+      parameters:
+        - name: Authorization
+          in: header
+          required: true
+          description: The JWT (prefix Baerer; received as response of /login)
+          schema:
+            type: string
+        - name: environmentId
+          in: path
+          required: true
+          description: The id of the environment to use
+          schema:
+            type: string
+            example: "01e93fa0-1c74-44b1-bafd-6d8a988fea01"
+      responses:
+        200:
+          description: An array of collections
+          content:
+            application/json:    
+              schema:
+                $ref: "#/components/schemas/CollectionList"
+        default:
+          description: unexpected error
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+      security:
+        - basicAuth: []
+
+  /environments/{environmentId}/collections/{collectionId}:
+    post:
+      summary: Create a collection
+      operationId: uploadDocument
+      tags:
+        - Collection
+      parameters:
+        - name: Authorization
+          in: header
+          required: true
+          description: The JWT (prefix Baerer; received as response of /login)
+          schema:
+            type: string
+        - name: environmentId
+          in: path
+          required: true
+          description: The id of the environment to use
+          schema:
+            type: string
+            example: "01e93fa0-1c74-44b1-bafd-6d8a988fea01"
+        - name: collectionId
+          in: path
+          required: true
+          description: The id of the collection to use (mostly the elementId)
+          schema:
+            type: string
+            example: "01a93fa0-1c74-44b1-bafd-6d8a988fea01"
+      responses:
+        201:
+          description: Null response
+        default:
+          description: unexpected error
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+      security:
+        - basicAuth: []
+    delete:
+      summary: Delete a collection
+      operationId: deletCollection
+      tags:
+        - Collection
+      parameters:
+        - name: Authorization
+          in: header
+          required: true
+          description: The JWT (prefix Baerer; received as response of /login)
+          schema:
+            type: string
+        - name: environmentId
+          in: path
+          required: true
+          description: The id of the environment to use
+          schema:
+            type: string
+            example: "01e93fa0-1c74-44b1-bafd-6d8a988fea01"
+        - name: collectionId
+          in: path
+          required: true
+          description: The id of the collection to retrieve
+          schema:
+            type: string
+      responses:
+        201:
+          description: Null response
+        default:
+          description: unexpected error
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+      security:
+        - basicAuth: []
+    get:
+      summary: List all documents
+      operationId: listDocuments
+      tags:
+        - Collection
+          - Document
+      parameters:
+        - name: Authorization
+          in: header
+          required: true
+          description: The JWT (prefix Baerer; received as response of /login)
+          schema:
+            type: string
+        - name: environmentId
+          in: path
+          required: true
+          description: The id of the environment to use
+          schema:
+            type: string
+            example: "01e93fa0-1c74-44b1-bafd-6d8a988fea01"
+        - name: collectionId
+          in: path
+          required: true
+          description: The id of the collection to use (mostly the elementId)
+          schema:
+            type: string
+            example: "01a93fa0-1c74-44b1-bafd-6d8a988fea01"
+      responses:
+        200:
+          description: An array of documents
+          content:
+            application/json:    
+              schema:
+                $ref: "#/components/schemas/DocumentList"
+        default:
+          description: unexpected error
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+      security:
+        - basicAuth: []
+
+  /environments/{environmentId}/collections/{collectionId}/{documentId}:
+    put:
+      summary: Upload a document
+      operationId: uploadDocument
+      tags:
+        - Collection
+          - Document
+      parameters:
+        - name: Authorization
+          in: header
+          required: true
+          description: The JWT (prefix Baerer; received as response of /login)
+          schema:
+            type: string
+        - name: environmentId
+          in: path
+          required: true
+          description: The id of the environment to use
+          schema:
+            type: string
+            example: "01e93fa0-1c74-44b1-bafd-6d8a988fea01"
+        - name: collectionId
+          in: path
+          required: true
+          description: The id of the collection to use (mostly the elementId)
+          schema:
+            type: string
+            example: "01a93fa0-1c74-44b1-bafd-6d8a988fea01"
+        - name: documentId
+          in: path
+          required: true
+          description: The id of the document to use
+          schema:
+            type: string
+            example: "2024-12-31_Handbook_Router1"
+      responses:
+        201:
+          description: Null response
+        default:
+          description: unexpected error
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+      security:
+        - basicAuth: []
+    get:
+      summary: Download a document
+      operationId: downloadDocument
+      tags:
+        - Collection
+          - Document
+      parameters:
+        - name: Authorization
+          in: header
+          required: true
+          description: The JWT (prefix Baerer; received as response of /login)
+          schema:
+            type: string
+        - name: environmentId
+          in: path
+          required: true
+          description: The id of the environment to use
+          schema:
+            type: string
+            example: "01e93fa0-1c74-44b1-bafd-6d8a988fea01"
+        - name: collectionId
+          in: path
+          required: true
+          description: The id of the collection to use (mostly the elementId)
+          schema:
+            type: string
+            example: "01a93fa0-1c74-44b1-bafd-6d8a988fea01"
+        - name: documentId
+          in: path
+          required: true
+          description: The id of the document to use
+          schema:
+            type: string
+            example: "2024-12-31_Handbook_Router1"
+      responses:
+        200:
+          description: Expected response to a valid request
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/DocumentItem"
+        default:
+          description: unexpected error
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+      security:
+        - basicAuth: []
+    delete:
+      summary: Delete a document
+      operationId: deleteDocument
+      tags:
+        - Collection
+          - Document
+      parameters:
+        - name: Authorization
+          in: header
+          required: true
+          description: The JWT (prefix Baerer; received as response of /login)
+          schema:
+            type: string
+        - name: environmentId
+          in: path
+          required: true
+          description: The id of the environment to use
+          schema:
+            type: string
+            example: "01e93fa0-1c74-44b1-bafd-6d8a988fea01"
+        - name: collectionId
+          in: path
+          required: true
+          description: The id of the collection to use (mostly the elementId)
+          schema:
+            type: string
+            example: "01a93fa0-1c74-44b1-bafd-6d8a988fea01"
+        - name: documentId
+          in: path
+          required: true
+          description: The id of the document to retrive
+          schema:
+            type: string
+            example: "2024-12-31_Handbook_Router1"
+      responses:
+        201:
+          description: Null response
+        default:
+          description: unexpected error
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+      security:
+        - basicAuth: []
+
+
+components:
+  securitySchemes:
+    basicAuth:
+      type: http
+      scheme: basic
+
+  parameters:
+    AuthorizationHeader:
+      name: Authorization
+      in: header
+      required: true
+      description: Basic Auth (Base64), erhalten über /login
+      schema:
+        type: string
+    SchemaIdPath:
+      name: schemaId
+      in: path
+      required: true
+      description: Schema-ID (z. B. SCHEMA, DEVICE, IPV4)
+      schema:
+        type: string
+        example: SCHEMA
+
+  responses:
+    UnexpectedError:
+      description: unexpected error
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/Error"
+
+  examples:
+    SchemaMetaSchema:
+      summary: Meta-Schema SCHEMA (INTERNAL)
+      description: >
+        Selbstbeschreibende Formular-Definition für den Schema Manager.
+        Im REST-Payload kann style.treeIcon SVG-Markup enthalten (Beispiel gekürzt).
+      externalValue: examples/SCHEMA.json
+    SchemaMetaSchemaList:
+      summary: Internal-Schema-Liste mit Meta-Schema SCHEMA
+      externalValue: examples/SCHEMA-list.json
+
+  schemas:
+    AnyType:
+      anyOf:
+        - type: string
+        - type: number
+        - type: integer
+        - type: boolean
+        - type: array
+          items: {}
+        - type: object
+      description: Any kind of data
+
+    AssetItem:
+      required:
+        - id
+        - xxx
+      properties:
+        id:
+          type: integer
+          format: int64
+        xxx:
+          type: string
+
+    AssetList:
+      type: array
+      items:
+        $ref: "#/components/schemas/AssetItem"
+
+    AttachmentType:
+      required:
+        - id
+        - xxx
+      properties:
+        id:
+          type: integer
+          format: int64
+        xxx:
+          type: string
+
+    CollectionItem:
+      required:
+        - id
+        - xxx
+      properties:
+        id:
+          type: integer
+          format: int64
+        xxx:
+          type: string
+
+    CollectionList:
+      type: array
+      items:
+        $ref: "#/components/schemas/CollectionItem"
+
+    ConnectionItem:
+      required:
+        - id
+        - xxx
+      properties:
+        id:
+          type: integer
+          format: int64
+        xxx:
+          type: string
+
+    ConnectionList:
+      type: array
+      items:
+        $ref: "#/components/schemas/ConnectionItem"
+
+    DefinitionType:
+      type: object
+      required:
+        - baseType
+        - subType
+        - name
+        - description
+      properties:
+        baseType:
+          type: string
+          example: "ELEMENT"
+        type:
+          type: string
+          example: "VIEW"
+        subType:
+          type: string
+          example: ""
+        name:
+          type: string
+        description:
+          type: string
+
+    DocumentItem:
+      required:
+        - id
+        - xxx
+      properties:
+        id:
+          type: integer
+          format: int64
+        xxx:
+          type: string
+
+    DocumentList:
+      type: array
+      items:
+        $ref: "#/components/schemas/DocumentItem"
+
+    ElementRefType:
+      required:
+        - id
+        - xxx
+      properties:
+        id:
+          type: integer
+          format: int64
+        xxx:
+          type: string
+
+    EnvironmentItem:
+      required:
+        - id
+        - definition
+        - properties
+      properties:
+        id:
+          type: string
+          example: "01e93fa0-1c74-44b1-bafd-6d8a988fea0"
+        definition:
+          $ref: "#/components/schemas/DefinitionType"
+        properties:
+          type: object
+          required:
+            - responsibles
+            - notaions
+          properties:
+            responsibles:
+              type: array
+              items:
+                $ref: "#/components/schemas/ResponsibleType"
+            notations:
+              type: array
+              items:
+                $ref: "#/components/schemas/NotationType"
+
+    EnvironmentList:
+      type: array
+      items:
+        $ref: "#/components/schemas/EnvironmentItem"
+
+
+
+    MultilingualTextType:
+      type: object
+      description: Sprachcode → Text (ISO 639; „und“ = sprachneutral)
+      additionalProperties:
+        type: string
+      example:
+        und: SchemaEditor Schema
+        de: SchemaEditor Schema
+
+    SchemaBaseType:
+      type: string
+      enum:
+        - INTERNAL
+        - ELEMENT
+        - DOCKPART
+
+    SchemaDataType:
+      type: string
+      enum:
+        - string
+        - number
+        - boolean
+        - "null"
+        - object
+        - array
+      description: Datentyp eines Schema-Feldes (fieldType)
+
+    SchemaFieldFlagsType:
+      type: object
+      properties:
+        readonly:
+          type: boolean
+        hidden:
+          type: boolean
+        nullable:
+          type: boolean
+      required:
+        - readonly
+        - hidden
+        - nullable
+
+    SchemaGroupFlags:
+      type: object
+      properties:
+        readonly:
+          type: boolean
+        hidden:
+          type: boolean
+      required:
+        - readonly
+        - hidden
+
+    SchemaField:
+      type: object
+      description: Feld-Definition innerhalb eines Schema-Dokuments (kind=field)
+      required:
+        - kind
+        - order
+        - dataStructure
+        - formProperties
+        - fieldType
+        - itemFlags
+        - minUsage
+        - maxUsage
+      properties:
+        kind:
+          type: string
+          enum:
+            - field
+        order:
+          type: number
+        dataStructure:
+          type: object
+          required:
+            - itemName
+          properties:
+            itemName:
+              type: string
+              description: JSON-Pfad-Segment / Eigenschaftsname in Instanzdaten
+            default:
+              type: string
+            nullable:
+              type: boolean
+        formProperties:
+          type: object
+          required:
+            - label
+          properties:
+            label:
+              $ref: "#/components/schemas/MultilingualTextType"
+        fieldType:
+          $ref: "#/components/schemas/SchemaDataType"
+        rules:
+          type: string
+          description: Validierungs-Pattern (RegExp)
+        example:
+          type: string
+        itemFlags:
+          $ref: "#/components/schemas/SchemaFieldFlagsType"
+        minUsage:
+          type: number
+        maxUsage:
+          type: number
+
+    SchemaGroup:
+      type: object
+      description: Gruppen-Definition innerhalb eines Schema-Dokuments (kind=group)
+      required:
+        - kind
+        - order
+        - dataStructure
+        - formProperties
+        - minUsage
+        - maxUsage
+        - collectionType
+        - items
+      properties:
+        kind:
+          type: string
+          enum:
+            - group
+        order:
+          type: number
+        dataStructure:
+          type: object
+          required:
+            - itemName
+          properties:
+            itemName:
+              type: string
+        formProperties:
+          type: object
+          required:
+            - label
+          properties:
+            label:
+              $ref: "#/components/schemas/MultilingualTextType"
+        itemFlags:
+          $ref: "#/components/schemas/SchemaGroupFlags"
+        minUsage:
+          type: number
+        maxUsage:
+          type: number
+        collectionType:
+          type: string
+          enum:
+            - array
+            - map
+        items:
+          type: array
+          items:
+            $ref: "#/components/schemas/SchemaItem"
+
+    SchemaItem:
+      oneOf:
+        - $ref: "#/components/schemas/SchemaField"
+        - $ref: "#/components/schemas/SchemaGroup"
+      discriminator:
+        propertyName: kind
+        mapping:
+          field: "#/components/schemas/SchemaField"
+          group: "#/components/schemas/SchemaGroup"
+
+    SchemaParentRestrictions:
+      type: object
+      required:
+        - whitelist
+        - blacklist
+      properties:
+        whitelist:
+          type: array
+          items:
+            type: string
+        blacklist:
+          type: array
+          items:
+            type: string
+
+    SchemaStyle:
+      type: object
+      required:
+        - treeIcon
+      properties:
+        treeIcon:
+          type: string
+          description: SVG oder Icon-Markup für Baum-/Tabellenansicht
+
+    SchemaDocument:
+      type: object
+      description: >
+        Schema-Dokument (INTERNAL, ELEMENT oder DOCKPART). Entspricht dem MobX SchemaModel /
+        ConnectSchemaModel. Die Meta-Schema-Definition SCHEMA beschreibt die Bearbeitung
+        solcher Dokumente im Schema Manager.
+      required:
+        - id
+        - baseType
+        - type
+        - name
+        - description
+        - order
+        - parent
+        - style
+        - items
+      properties:
+        id:
+          type: string
+          example: SCHEMA
+        baseType:
+          $ref: "#/components/schemas/SchemaBaseType"
+        type:
+          type: string
+          example: SCHEMA
+        name:
+          $ref: "#/components/schemas/MultilingualTextType"
+        description:
+          $ref: "#/components/schemas/MultilingualTextType"
+        order:
+          type: number
+        parent:
+          $ref: "#/components/schemas/SchemaParentRestrictions"
+        style:
+          $ref: "#/components/schemas/SchemaStyle"
+        items:
+          type: array
+          description: Feld- und Gruppen-Definitionen (Formular-Metadaten)
+          items:
+            $ref: "#/components/schemas/SchemaItem"
+
+    SchemaDocumentList:
+      type: array
+      items:
+        $ref: "#/components/schemas/SchemaDocument"
+
+    SchemaModel:
+      description: Alias für SchemaDocument (Legacy-Name in älteren Spec-Versionen)
+      allOf:
+        - $ref: "#/components/schemas/SchemaDocument"
+
+    ElementSchemaList:
+      description: Alias für SchemaDocumentList (Legacy-Pfad /config/element-schemas)
+      allOf:
+        - $ref: "#/components/schemas/SchemaDocumentList"
+
+    FilterruleType:
+      type: string
+
+    GroupItem:
+      required:
+        - id
+        - definition
+        - parentIdRef
+      properties:
+        id:
+          type: string
+        definition:
+          $ref: "#/components/schemas/DefinitionType"
+        parentIdRef:
+          type: string
+        elementIdRef:
+          type: array
+          items: 
+            $ref: "#/components/schemas/ElementRefType"
+        filterRules:
+          type: array
+          items:
+            $ref: "#/components/schemas/FilterruleType"
+        attachments:
+          type: array
+          items:
+            $ref: "#/components/schemas/AttachmentType"
+        properties:
+          type: object
+          required:
+            - responsibles
+            - notations
+            - style
+          properties:
+            responsibles:
+              type: array
+              items:
+                $ref: "#/components/schemas/ResponsibleType"
+            notation:
+              type: array
+              items:
+                $ref: "#/components/schemas/NotationType"
+            style:
+              type: object
+              properties:
+                bgColor:
+                  type: string
+                  example: "#FF6611"
+                graph:
+                  type: object
+                  properties:
+                    layout:
+                      type: string
+                      example: "LOCALE"
+
+        settings:
+          type: object
+          additionalProperties: true
+          description: Any kind oj JSON data.
+
+    GroupList:
+      type: array
+      items:
+        $ref: "#/components/schemas/GroupItem"
+
+    LoginResponse:
+      required:
+        - id
+        - xxx
+      properties:
+        id:
+          type: integer
+          format: int64
+        xxx:
+          type: string
+
+    NotationType:
+      required:
+        - id
+        - xxx
+      properties:
+        id:
+          type: integer
+          format: int64
+        xxx:
+          type: string
+
+    ResponsibleType:
+      required:
+        - type
+        - name
+        - email
+      properties:
+        type:
+          type: string
+        name:
+          type: string
+        email:
+          type: string
+
+    ViewItem:
+      type: object
+      required:
+        - id
+        - definition
+        - filterRules
+        - attachments
+        - properties
+        - settings
+      properties:
+        id:
+          type: string
+        definition:
+          $ref: "#/components/schemas/DefinitionType"
+        filterRules:
+          type: array
+          items:
+            $ref: "#/components/schemas/FilterruleType"
+        attachments:
+          type: array
+          items:
+            $ref: "#/components/schemas/AttachmentType"
+        properties:
+          type: object
+          required:
+            - responsibles
+            - notations
+            - style
+          properties:
+            responsibles:
+              type: array
+              items:
+                $ref: "#/components/schemas/ResponsibleType"
+            notations:
+              type: array
+              items:
+                $ref: "#/components/schemas/NotationType"
+            style:
+              type: object
+              properties:
+                bgColor:
+                  type: string
+                  example: "#FF6611"
+                graph: 
+                  type: object
+                  properties:
+                    layout: 
+                      type: string
+                      example: "MAIN"
+        settings:
+          type: object
+          additionalProperties: true
+          description: Any kind oj JSON data.
+
+    ViewList:
+      type: array
+      items:
+        $ref: "#/components/schemas/ViewItem"
+  
+    Error:
+      required:
+        - code
+        - message
+      properties:
+        code:
+          type: integer
+          format: int32
+        message:
+          type: string

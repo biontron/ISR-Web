@@ -1,0 +1,101 @@
+.iac-template-management-content {
+  flex: 1;
+  min-height: 0;
+  overflow: hidden;
+}
+
+.iac-template-management-content .leftArea,
+.iac-template-management-content .centerArea,
+.iac-template-management-content .rightArea {
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+  overflow: hidden;
+}
+
+.iac-template-management-content .panel-body {
+  flex: 1;
+  min-height: 0;
+  overflow: auto;
+}
+
+.iac-template-management-header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 12px;
+  background-color: #f0f2f5;
+  border-bottom: 1px solid #d9d9d9;
+  color: rgba(0, 0, 0, 0.88);
+  flex-shrink: 0;
+}
+
+.iac-template-management-header .preset-btn {
+  min-width: 2rem;
+}
+
+.iac-template-management-header .preset-btn#screenmode-preset-default {
+  background-color: #f2c200;
+  color: #000;
+}
+
+.iac-template-management-header .preset-btn#screenmode-preset-store {
+  background-color: #3aa6d4;
+  color: #000;
+}
+
+.iac-template-management-header .preset-btn#screenmode-preset-editor {
+  background-color: #5CBEFF;
+  color: #000;
+}
+
+.iac-template-management-header .preset-btn#screenmode-preset-run {
+  background-color: #f5cf3a;
+  color: #000;
+}
+
+.iac-template-store-toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  padding: 8px;
+  border-bottom: 1px solid rgba(0, 0, 0, 0.1);
+}
+
+.iac-template-store-table .iac-row-package {
+  font-weight: 600;
+}
+
+.iac-template-editor-panel {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  min-height: 0;
+  padding: 12px;
+  box-sizing: border-box;
+}
+
+.iac-template-editor-panel .iac-template-editor-toolbar {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 8px;
+  margin-bottom: 12px;
+}
+
+.iac-template-editor-panel .iac-template-editor-textarea {
+  flex: 1;
+  min-height: 320px;
+}
+
+.iac-template-editor-panel .iac-template-editor-textarea textarea {
+  font-family: monospace;
+  font-size: 12px;
+}
+
+.iac-template-run-toolbar {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 12px;
+}

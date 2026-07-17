@@ -1,0 +1,287 @@
+{
+  "id": "CONNECTION",
+  "baseType": "INTERNAL",
+  "type": "ANY",
+  "name": {
+    "und": "Connection",
+    "de": "Verbindung"
+  },
+  "description": {
+    "und": "Links between two assets via dock endpoints (dockId#dockpartId).",
+    "de": "Verbindungen zwischen zwei Assets über Dock-Endpunkte (dockId#dockpartId)."
+  },
+  "order": 0,
+  "parent": {
+    "whitelist": [],
+    "blacklist": ["ANY"]
+  },
+  "style": {
+    "treeIcon": ""
+  },
+  "items": [
+    {
+      "kind": "group",
+      "order": 1,
+      "dataStructure": { "itemName": "definition" },
+      "formProperties": {
+        "label": { "und": "Definition", "de": "Definition" }
+      },
+      "itemFlags": { "readonly": false, "hidden": false },
+      "minUsage": 1,
+      "maxUsage": 1,
+      "collectionType": "map",
+      "items": [
+        {
+          "kind": "field",
+          "order": 1,
+          "dataStructure": { "itemName": "label", "default": "" },
+          "formProperties": { "label": { "und": "Label", "de": "Label" } },
+          "fieldType": "string",
+          "rules": "[\\x20-\\x7E]{0,100}",
+          "itemFlags": { "readonly": false, "hidden": false, "nullable": false },
+          "minUsage": 0,
+          "maxUsage": 1
+        },
+        {
+          "kind": "field",
+          "order": 2,
+          "dataStructure": { "itemName": "description", "default": "" },
+          "formProperties": { "label": { "und": "Description", "de": "Beschreibung" } },
+          "fieldType": "string",
+          "rules": "[\\x20-\\x7E]{0,500}",
+          "itemFlags": { "readonly": false, "hidden": false, "nullable": true },
+          "minUsage": 0,
+          "maxUsage": 1
+        }
+      ]
+    },
+    {
+      "kind": "group",
+      "order": 2,
+      "dataStructure": { "itemName": "links" },
+      "formProperties": {
+        "label": { "und": "Links", "de": "Links" }
+      },
+      "itemFlags": { "readonly": false, "hidden": false },
+      "minUsage": 0,
+      "maxUsage": 50,
+      "collectionType": "array",
+      "items": [
+        {
+          "kind": "field",
+          "order": 1,
+          "dataStructure": { "itemName": "id", "default": "" },
+          "formProperties": { "label": { "und": "ID", "de": "ID" } },
+          "fieldType": "string",
+          "rules": "[0-9A-Z\\-_#]+",
+          "itemFlags": { "readonly": false, "hidden": false, "nullable": false },
+          "minUsage": 1,
+          "maxUsage": 1
+        },
+        {
+          "kind": "field",
+          "order": 2,
+          "dataStructure": { "itemName": "title", "default": "" },
+          "formProperties": { "label": { "und": "Title", "de": "Titel" } },
+          "fieldType": "string",
+          "rules": "[\\x20-\\x7E]{1,200}",
+          "itemFlags": { "readonly": false, "hidden": false, "nullable": false },
+          "minUsage": 1,
+          "maxUsage": 1
+        },
+        {
+          "kind": "field",
+          "order": 3,
+          "dataStructure": { "itemName": "fromComponentRef", "default": null },
+          "formProperties": { "label": { "und": "From asset", "de": "Von-Asset" } },
+          "fieldType": "string",
+          "rules": "[\\x20-\\x7E]{0,100}",
+          "itemFlags": { "readonly": false, "hidden": false, "nullable": true },
+          "minUsage": 0,
+          "maxUsage": 1
+        },
+        {
+          "kind": "field",
+          "order": 4,
+          "dataStructure": { "itemName": "toComponentRef", "default": null },
+          "formProperties": { "label": { "und": "To asset", "de": "Nach-Asset" } },
+          "fieldType": "string",
+          "rules": "[\\x20-\\x7E]{0,100}",
+          "itemFlags": { "readonly": false, "hidden": false, "nullable": true },
+          "minUsage": 0,
+          "maxUsage": 1
+        },
+        {
+          "kind": "field",
+          "order": 5,
+          "dataStructure": { "itemName": "fromLabelSnapshot", "default": "" },
+          "formProperties": { "label": { "und": "From label snapshot", "de": "Von-Label-Snapshot" } },
+          "fieldType": "string",
+          "rules": "[\\x20-\\x7E]{0,100}",
+          "itemFlags": { "readonly": false, "hidden": false, "nullable": true },
+          "minUsage": 0,
+          "maxUsage": 1
+        },
+        {
+          "kind": "field",
+          "order": 6,
+          "dataStructure": { "itemName": "toLabelSnapshot", "default": "" },
+          "formProperties": { "label": { "und": "To label snapshot", "de": "Nach-Label-Snapshot" } },
+          "fieldType": "string",
+          "rules": "[\\x20-\\x7E]{0,100}",
+          "itemFlags": { "readonly": false, "hidden": false, "nullable": true },
+          "minUsage": 0,
+          "maxUsage": 1
+        },
+        {
+          "kind": "field",
+          "order": 7,
+          "dataStructure": { "itemName": "fromDockRef", "default": "" },
+          "formProperties": { "label": { "und": "From dock", "de": "Von Dock" } },
+          "fieldType": "string",
+          "rules": "[\\x20-\\x7E]{0,100}",
+          "itemFlags": { "readonly": false, "hidden": false, "nullable": true },
+          "minUsage": 0,
+          "maxUsage": 1
+        },
+        {
+          "kind": "field",
+          "order": 8,
+          "dataStructure": { "itemName": "toDockRef", "default": "" },
+          "formProperties": { "label": { "und": "To dock", "de": "Nach Dock" } },
+          "fieldType": "string",
+          "rules": "[\\x20-\\x7E]{0,100}",
+          "itemFlags": { "readonly": false, "hidden": false, "nullable": true },
+          "minUsage": 0,
+          "maxUsage": 1
+        },
+        {
+          "kind": "field",
+          "order": 9,
+          "dataStructure": { "itemName": "direction", "default": "DUAL" },
+          "formProperties": { "label": { "und": "Direction", "de": "Richtung" } },
+          "fieldType": "string",
+          "rules": "[A-Z_]+",
+          "itemFlags": { "readonly": false, "hidden": false, "nullable": false },
+          "minUsage": 1,
+          "maxUsage": 1
+        },
+        {
+          "kind": "group",
+          "order": 10,
+          "dataStructure": { "itemName": "metadata" },
+          "formProperties": {
+            "label": { "und": "Metadata", "de": "Metadaten" }
+          },
+          "itemFlags": { "readonly": false, "hidden": false },
+          "minUsage": 1,
+          "maxUsage": 1,
+          "collectionType": "map",
+          "items": [
+            {
+              "kind": "field",
+              "order": 1,
+              "dataStructure": { "itemName": "status", "default": "established" },
+              "formProperties": { "label": { "und": "Status", "de": "Status" } },
+              "fieldType": "string",
+              "rules": "[\\x20-\\x7E]{1,50}",
+              "itemFlags": { "readonly": false, "hidden": false, "nullable": false },
+              "minUsage": 1,
+              "maxUsage": 1
+            },
+            {
+              "kind": "field",
+              "order": 2,
+              "dataStructure": { "itemName": "purpose", "default": "" },
+              "formProperties": { "label": { "und": "Purpose", "de": "Zweck" } },
+              "fieldType": "string",
+              "rules": "[\\x20-\\x7E]{0,200}",
+              "itemFlags": { "readonly": false, "hidden": false, "nullable": true },
+              "minUsage": 0,
+              "maxUsage": 1
+            },
+            {
+              "kind": "field",
+              "order": 3,
+              "dataStructure": { "itemName": "owner", "default": "" },
+              "formProperties": { "label": { "und": "Owner", "de": "Besitzer" } },
+              "fieldType": "string",
+              "rules": "[\\x20-\\x7E]{0,100}",
+              "itemFlags": { "readonly": false, "hidden": false, "nullable": true },
+              "minUsage": 0,
+              "maxUsage": 1
+            }
+          ]
+        },
+        {
+          "kind": "group",
+          "order": 11,
+          "dataStructure": { "itemName": "linkparts" },
+          "formProperties": {
+            "label": { "und": "Link parts", "de": "Link-Bestandteile" }
+          },
+          "itemFlags": { "readonly": false, "hidden": false },
+          "minUsage": 0,
+          "maxUsage": 20,
+          "collectionType": "array",
+          "items": [
+            {
+              "kind": "field",
+              "order": 1,
+              "dataStructure": { "itemName": "fromLabelSnapshot", "default": "" },
+              "formProperties": { "label": { "und": "From label snapshot", "de": "Von-Label-Snapshot" } },
+              "fieldType": "string",
+              "rules": "[\\x20-\\x7E]{0,100}",
+              "itemFlags": { "readonly": false, "hidden": false, "nullable": true },
+              "minUsage": 0,
+              "maxUsage": 1
+            },
+            {
+              "kind": "field",
+              "order": 2,
+              "dataStructure": { "itemName": "toLabelSnapshot", "default": "" },
+              "formProperties": { "label": { "und": "To label snapshot", "de": "Nach-Label-Snapshot" } },
+              "fieldType": "string",
+              "rules": "[\\x20-\\x7E]{0,100}",
+              "itemFlags": { "readonly": false, "hidden": false, "nullable": true },
+              "minUsage": 0,
+              "maxUsage": 1
+            },
+            {
+              "kind": "field",
+              "order": 3,
+              "dataStructure": { "itemName": "fromDockpartRef", "default": "" },
+              "formProperties": { "label": { "und": "From dockpart", "de": "Von Dockpart" } },
+              "fieldType": "string",
+              "rules": "[\\x20-\\x7E]{1,100}",
+              "itemFlags": { "readonly": false, "hidden": false, "nullable": false },
+              "minUsage": 1,
+              "maxUsage": 1
+            },
+            {
+              "kind": "field",
+              "order": 4,
+              "dataStructure": { "itemName": "toDockpartRef", "default": "" },
+              "formProperties": { "label": { "und": "To dockpart", "de": "Nach Dockpart" } },
+              "fieldType": "string",
+              "rules": "[\\x20-\\x7E]{1,100}",
+              "itemFlags": { "readonly": false, "hidden": false, "nullable": false },
+              "minUsage": 1,
+              "maxUsage": 1
+            },
+            {
+              "kind": "field",
+              "order": 5,
+              "dataStructure": { "itemName": "stackOrder", "default": 0 },
+              "formProperties": { "label": { "und": "Stack order", "de": "Stack-Reihenfolge" } },
+              "fieldType": "number",
+              "itemFlags": { "readonly": false, "hidden": false, "nullable": false },
+              "minUsage": 1,
+              "maxUsage": 1
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}

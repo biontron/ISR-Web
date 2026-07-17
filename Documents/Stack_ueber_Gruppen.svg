@@ -1,0 +1,174 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="950" height="620" viewBox="0 0 950 620">
+
+<style>
+
+text{
+font-family:Segoe UI,Arial,sans-serif;
+fill:#222;
+font-size:13px;
+}
+
+.title{
+font-size:16px;
+font-weight:bold;
+}
+
+.context{
+fill:#eef6ff;
+stroke:#8bb7e8;
+stroke-width:2;
+rx:8;
+}
+
+.base{
+fill:white;
+stroke:#333;
+stroke-width:3;
+rx:8;
+}
+
+.layer{
+fill:#fafafa;
+stroke:#999;
+stroke-width:1;
+}
+
+.legend{
+font-size:12px;
+fill:#555;
+}
+
+</style>
+
+<!-- Ethernet -->
+
+<rect x="40" y="40" width="860" height="520" class="context"></rect>
+
+<text x="60" y="65" class="title">
+
+🖧 Ethernet Segment
+
+</text>
+
+<text x="60" y="88">
+
+MTU 1500 · 1 GBit
+
+</text>
+
+<!-- VLAN -->
+
+<rect x="180" y="110" width="640" height="390" class="context" fill="#fff7d9"></rect>
+
+<text x="200" y="135" class="title">
+
+🏷 VLAN 10
+
+</text>
+
+<text x="200" y="158">
+
+802.1Q
+
+</text>
+
+<!-- IPv4 -->
+
+<rect x="300" y="190" width="420" height="240" class="context" fill="#eefcec"></rect>
+
+<text x="320" y="215" class="title">
+
+🌐 IPv4 Segment
+
+</text>
+
+<text x="320" y="238">
+
+10.10.10.0/24 · DHCP
+
+</text>
+
+<!-- Base Component -->
+
+<g transform="translate(405 245)">
+
+<circle cx="85" cy="-10" r="5" fill="#444"></circle>
+<circle cx="85" cy="245" r="5" fill="#444"></circle>
+<circle cx="-10" cy="118" r="5" fill="#444"></circle>
+<circle cx="180" cy="118" r="5" fill="#444"></circle>
+
+<rect width="170" height="235" class="base"></rect>
+
+<!-- Layer -->
+
+<rect x="8" y="8" width="154" height="28" class="layer"></rect>
+
+<text x="18" y="27">● HTTP</text>
+
+<text x="120" y="27">lokal</text>
+
+<rect x="8" y="38" width="154" height="28" class="layer"></rect>
+
+<text x="18" y="57">● TLS</text>
+
+<text x="120" y="57">lokal</text>
+
+<rect x="8" y="68" width="154" height="28" class="layer"></rect>
+
+<text x="18" y="87">● TCP 443</text>
+
+<text x="120" y="87">lokal</text>
+
+<rect x="8" y="98" width="154" height="28" class="layer"></rect>
+
+<text x="18" y="117">◐ IPv4</text>
+
+<text x="90" y="117">10.10.10.42</text>
+
+<rect x="8" y="128" width="154" height="28" class="layer"></rect>
+
+<text x="18" y="147">○ Ethernet</text>
+
+<text x="105" y="147">MTU 1500</text>
+
+<!-- Separator -->
+
+<line x1="0" y1="170" x2="170" y2="170" stroke="#bbb"></line>
+
+<!-- Title -->
+
+<text x="18" y="198">
+
+🖥 Linux Server
+
+</text>
+
+<text x="18" y="220" font-weight="bold">
+
+api-01
+
+</text>
+
+</g>
+
+<!-- Legend -->
+
+<text x="50" y="590" class="legend">
+
+● lokal definiert
+
+</text>
+
+<text x="220" y="590" class="legend">
+
+○ aus Kontext übernommen
+
+</text>
+
+<text x="470" y="590" class="legend">
+
+◐ Kontext übernommen und lokal überschrieben
+
+</text>
+
+</svg>
