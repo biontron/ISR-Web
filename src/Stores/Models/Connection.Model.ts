@@ -6,12 +6,19 @@ export const ConnectionDefinitionModel = types.model("ConnectionDefinition", {
 	description: types.optional(types.string, ""),
 });
 
+export const ComponentRefSnapshotModel = types.model("ComponentRefSnapshot", {
+	id: types.string,
+	label: types.optional(types.string, ""),
+});
+
 export const LinkpartModel = types.model("Linkpart", {
 	fromLabelSnapshot: types.optional(types.string, ""),
 	toLabelSnapshot: types.optional(types.string, ""),
 	fromDockpartRef: types.optional(types.string, ""),
 	toDockpartRef: types.optional(types.string, ""),
 	stackOrder: types.optional(types.number, 0),
+	fromValueSnapshot: types.maybe(types.frozen()),
+	toValueSnapshot: types.maybe(types.frozen()),
 });
 
 export const LinkMetadataModel = types.model("LinkMetadata", {
@@ -26,9 +33,11 @@ export const LinkModel = types.model("Link", {
 	fromComponentRef: types.maybeNull(types.string),
 	fromDockRef: types.optional(types.string, ""),
 	fromLabelSnapshot: types.optional(types.string, ""),
+	fromComponentRefSnapshot: types.maybe(ComponentRefSnapshotModel),
 	toComponentRef: types.maybeNull(types.string),
 	toDockRef: types.optional(types.string, ""),
 	toLabelSnapshot: types.optional(types.string, ""),
+	toComponentRefSnapshot: types.maybe(ComponentRefSnapshotModel),
 	direction: types.optional(types.string, "DUAL"),
 	linkparts: types.optional(types.array(LinkpartModel), []),
 	credentials: types.optional(types.array(types.frozen()), []),

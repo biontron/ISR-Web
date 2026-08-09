@@ -67,6 +67,15 @@ export const AssetModel = types.compose(
 					id: types.string,
 				})
 			),
+			contextMemberships: types.optional(
+				types.array(
+					types.model({
+						contextRef: types.string,
+						contextLabelSnapshot: types.optional(types.string, ""),
+					})
+				),
+				[]
+			),
 			filterRules: types.array(types.frozen()),
 		})
 		// .volatile(() => ({ }))

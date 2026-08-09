@@ -31,14 +31,14 @@ import {
 	resolveConnectionEndpointSide,
 } from "../lib/connectionEndpointRef";
 import { ConnectionDirection } from "../lib/connectionDirection";
-import { PairedLinkpartSnapshot } from "../lib/connectionDockpartPairing";
 import {
-	BuiltLinkSnapshot,
 	buildSingleLinkSnapshot,
 	DockSelectionByAsset,
 	buildLinksFromStackDrafts,
 	collectStackLinkDrafts,
+	StackLinkDraft,
 } from "../lib/connectionStackTraversal";
+import type { BuiltLinkSnapshot } from "../lib/connectionSnapshot";
 import { resolveAssetStackChain } from "../lib/connectionStackChain";
 
 export type { ConnectionDirection };
@@ -68,6 +68,14 @@ export type CreateLogicalConnectionInput = {
 	owner?: string;
 };
 
+export type CreateFromStackDraftsInput = {
+	drafts: StackLinkDraft[];
+	linkTitle?: string;
+	definitionLabel?: string;
+	definitionDescription?: string;
+	direction?: ConnectionDirection;
+};
+
 export type CreateWithStackAnchorsInput = {
 	fromAnchorAssetId: string;
 	toAnchorAssetId: string;
@@ -83,14 +91,25 @@ function defaultLinkMetadata(purpose = "", owner = "") {
 	return { status: "established", purpose, owner };
 }
 
-function snapshotLinkparts(linkparts: PairedLinkpartSnapshot[]) {
-	return linkparts.map((part) => ({
-		fromLabelSnapshot: part.fromLabelSnapshot,
-		toLabelSnapshot: part.toLabelSnapshot,
-		fromDockpartRef: part.fromDockpartRef,
-		toDockpartRef: part.toDockpartRef,
-		stackOrder: part.stackOrder,
-	}));
+function snapshotLinkparts(linkparts: BuiltLinkSnapshot["linkparts"]) {
+	return linkparts.map((part) => {
+		const snapshot: Record<string, unknown> = {
+			fromLabelSnapshot: part.fromLabelSnapshot,
+			toLabelSnapshot: part.toLabelSnapshot,
+			fromDockpartRef: part.fromDockpartRef,
+			toDockpartRef: part.toDockpartRef,
+			stackOrder: part.stackOrder,
+		};
+		const fromValues = (part as { fromValueSnapshot?: Record<string, unknown> }).fromValueSnapshot;
+		const toValues = (part as { toValueSnapshot?: Record<string, unknown> }).toValueSnapshot;
+		if (fromValues && Object.keys(fromValues).length > 0) {
+			snapshot.fromValueSnapshot = fromValues;
+		}
+		if (toValues && Object.keys(toValues).length > 0) {
+			snapshot.toValueSnapshot = toValues;
+		}
+		return snapshot;
+	});
 }
 
 function snapshotToLink(
@@ -100,7 +119,7 @@ function snapshotToLink(
 	direction: ConnectionDirection,
 	metadata = defaultLinkMetadata()
 ) {
-	return {
+	const link = {
 		id: linkId,
 		title,
 		fromComponentRef: snapshot.fromComponentRef,
@@ -113,7 +132,31 @@ function snapshotToLink(
 		linkparts: snapshotLinkparts(snapshot.linkparts),
 		credentials: [],
 		metadata,
+	} as {
+		id: string;
+		title: string;
+		fromComponentRef: string | null;
+		fromDockRef: string;
+		fromLabelSnapshot: string;
+		toComponentRef: string | null;
+		toDockRef: string;
+		toLabelSnapshot: string;
+		direction: ConnectionDirection;
+		linkparts: ReturnType<typeof snapshotLinkparts>;
+		credentials: [];
+		metadata: ReturnType<typeof defaultLinkMetadata>;
+		fromComponentRefSnapshot?: { id: string; label: string };
+		toComponentRefSnapshot?: { id: string; label: string };
 	};
+
+	if (snapshot.fromComponentRefSnapshot?.id) {
+		link.fromComponentRefSnapshot = snapshot.fromComponentRefSnapshot;
+	}
+	if (snapshot.toComponentRefSnapshot?.id) {
+		link.toComponentRefSnapshot = snapshot.toComponentRefSnapshot;
+	}
+
+	return link;
 }
 
 export const ConnectionStore = types.compose("ConnectionStore", BaseStore, types.model({
@@ -289,32 +332,18 @@ export const ConnectionStore = types.compose("ConnectionStore", BaseStore, types
 		return newConnection;
 	}
 
-	function createWithStackAnchors(input: CreateWithStackAnchorsInput) {
+	function createFromStackDrafts(input: CreateFromStackDraftsInput) {
 		const root = getRoot(self) as IRootStore;
 		const assets = root.assets.assets.slice();
-		const fromChain = resolveAssetStackChain(input.fromAnchorAssetId, assets);
-		const toChain = resolveAssetStackChain(input.toAnchorAssetId, assets);
-		if (fromChain.length === 0 || toChain.length === 0) {
-			throw new Error("Stack-Kette konnte nicht aufgelöst werden.");
-		}
-
-		const drafts = collectStackLinkDrafts(
-			fromChain,
-			toChain,
-			input.fromDockSelections,
-			input.toDockSelections
-		);
-		const snapshots = buildLinksFromStackDrafts(assets, drafts);
+		const snapshots = buildLinksFromStackDrafts(assets, input.drafts);
 		if (snapshots.length === 0) {
-			throw new Error("Keine Links aus Stack-Auswahl erzeugt.");
+			throw new Error("Keine Links aus Wizard-Auswahl erzeugt.");
 		}
 
 		const definitionLabel = input.definitionLabel?.trim() ?? "";
 		const definitionDescription = input.definitionDescription?.trim() ?? "";
 		const direction = input.direction ?? "DUAL";
-		const defaultTitle =
-			input.linkTitle?.trim() ||
-			`${formatAssetDisplayName(fromChain[fromChain.length - 1])} ↔ ${formatAssetDisplayName(toChain[toChain.length - 1])}`;
+		const defaultTitle = input.linkTitle?.trim() || "New Connection";
 
 		const links = snapshots.map((snapshot, index) => {
 			const baseId = nextLinkId();
@@ -337,6 +366,31 @@ export const ConnectionStore = types.compose("ConnectionStore", BaseStore, types
 		newConnection.setStatus("new");
 		newConnection.beginEdit();
 		return newConnection;
+	}
+
+	function createWithStackAnchors(input: CreateWithStackAnchorsInput) {
+		const root = getRoot(self) as IRootStore;
+		const assets = root.assets.assets.slice();
+		const fromChain = resolveAssetStackChain(input.fromAnchorAssetId, assets);
+		const toChain = resolveAssetStackChain(input.toAnchorAssetId, assets);
+		if (fromChain.length === 0 || toChain.length === 0) {
+			throw new Error("Stack-Kette konnte nicht aufgelöst werden.");
+		}
+
+		const drafts = collectStackLinkDrafts(
+			fromChain,
+			toChain,
+			input.fromDockSelections,
+			input.toDockSelections
+		);
+
+		return createFromStackDrafts({
+			drafts,
+			linkTitle: input.linkTitle,
+			definitionLabel: input.definitionLabel,
+			definitionDescription: input.definitionDescription,
+			direction: input.direction,
+		});
 	}
 
 	const store = flow(function* saveData(connectionID: string) {
@@ -409,6 +463,7 @@ export const ConnectionStore = types.compose("ConnectionStore", BaseStore, types
 		createWithEndpoints,
 		createLogicalConnection,
 		createWithLinkparts,
+		createFromStackDrafts,
 		createWithStackAnchors,
 		store,
 		remove,

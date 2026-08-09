@@ -19,6 +19,8 @@ import JsonInspectDialog from "./JsonInspectDialog";
 import { useLangtext } from "../../lib/common";
 import { hasTouchedObjects } from "../../lib/touchedObjects";
 import { stageDelete, isNewElementStatus } from "../../lib/elementStaging";
+import { freezeConnectionSnapshotsForAsset } from "../../lib/connectionSnapshot";
+import { IAsset } from "../../Stores/Models/Asset.Model";
 import {
 	canDiscardElementStatus,
 	canSaveElementStatus,
@@ -108,6 +110,14 @@ const ChangeModeToolbar: React.FC = () => {
 				}
 			}
 			return;
+		}
+
+		if (activeElement.class === "Asset") {
+			freezeConnectionSnapshotsForAsset(
+				activeElement.id,
+				rootStore.connections.connections.slice(),
+				rootStore.assets.assets.slice()
+			);
 		}
 
 		stageDelete(activeElement);

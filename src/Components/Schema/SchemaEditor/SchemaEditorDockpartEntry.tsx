@@ -4,10 +4,13 @@ import SchemaEditor from "./SchemaEditor.Component";
 import SchemaEditorEmptyState from "./SchemaEditorEmptyState";
 import SchemaEditorGroupEntryControls from "./SchemaEditorGroupEntryControls";
 import SchemaEditorGroupEntryHeader from "./SchemaEditorGroupEntryHeader";
+import SchemaEditorDockpartBasedOn from "./SchemaEditorDockpartBasedOn";
 import { useLangtext } from "../../../lib/common";
 import { resolveDockpartEntrySchemaDefinition } from "../../../lib/dockpartSchemaResolve";
 import { rootStore } from "../../../Stores/Root.Store";
 import { IElement } from "../../../Stores/Models/Element.Model";
+import { IAsset } from "../../../Stores/Models/Asset.Model";
+import { isDockpartNode } from "../../../Stores/Models/Dock.Model";
 
 interface SchemaEditorDockpartEntryProps {
 	entryPath: string;
@@ -94,6 +97,13 @@ const SchemaEditorDockpartEntry: React.FC<SchemaEditorDockpartEntryProps> = ({
 						detail={dockpartType ? `„${dockpartType}“` : undefined}
 					/>
 				)}
+				{elementData.class === "Asset" && isDockpartNode(dockpart) ? (
+					<SchemaEditorDockpartBasedOn
+						dockpart={dockpart}
+						asset={elementData as IAsset}
+						canEdit={canEdit}
+					/>
+				) : null}
 			</div>
 		</div>
 	);

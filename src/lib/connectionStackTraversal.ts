@@ -10,6 +10,8 @@ import {
 	topDockpartIdFromSelection,
 } from "./connectionDockpartPairing";
 import { alignStackChains } from "./connectionStackChain";
+import { enrichBuiltLinkSnapshot } from "./connectionSnapshot";
+import type { BuiltLinkSnapshot } from "./connectionSnapshot";
 
 export type DockSelectionByAsset = Map<string, string[]>;
 
@@ -22,15 +24,7 @@ export type StackLinkDraft = {
 	toDockpartIds: string[];
 };
 
-export type BuiltLinkSnapshot = {
-	fromComponentRef: string | null;
-	fromDockRef: string;
-	fromLabelSnapshot: string;
-	toComponentRef: string | null;
-	toDockRef: string;
-	toLabelSnapshot: string;
-	linkparts: PairedLinkpartSnapshot[];
-};
+export type { BuiltLinkSnapshot } from "./connectionSnapshot";
 
 function assetLabel(asset: IAsset | undefined): string {
 	if (!asset) {
@@ -105,7 +99,8 @@ export function buildLinkSnapshotFromDraft(
 		fromDock,
 		draft.fromDockpartIds,
 		toDock,
-		draft.toDockpartIds
+		draft.toDockpartIds,
+		{ fromAsset, toAsset, allAssets: assets }
 	);
 	if (linkparts.length === 0) {
 		if (unmatchedFromKeys.length > 0) {
@@ -114,21 +109,28 @@ export function buildLinkSnapshotFromDraft(
 		return undefined;
 	}
 
-	const topFromId = topDockpartIdFromSelection(fromDock, draft.fromDockpartIds);
-	const topToId = topDockpartIdFromSelection(toDock, draft.toDockpartIds);
+	const topFromId = topDockpartIdFromSelection(fromDock, draft.fromDockpartIds, fromAsset, assets);
+	const topToId = topDockpartIdFromSelection(toDock, draft.toDockpartIds, toAsset, assets);
 	if (!topFromId || !topToId) {
 		return undefined;
 	}
 
-	return {
-		fromComponentRef: fromAsset.id,
-		fromDockRef: formatDockEndpointRef(String(fromDock.id), topFromId),
-		fromLabelSnapshot: assetLabel(fromAsset),
-		toComponentRef: toAsset.id,
-		toDockRef: formatDockEndpointRef(String(toDock.id), topToId),
-		toLabelSnapshot: assetLabel(toAsset),
-		linkparts,
-	};
+	return enrichBuiltLinkSnapshot(
+		assets,
+		{
+			fromComponentRef: fromAsset.id,
+			fromDockRef: formatDockEndpointRef(String(fromDock.id), topFromId),
+			fromLabelSnapshot: assetLabel(fromAsset),
+			toComponentRef: toAsset.id,
+			toDockRef: formatDockEndpointRef(String(toDock.id), topToId),
+			toLabelSnapshot: assetLabel(toAsset),
+			linkparts,
+		},
+		draft.fromAssetId,
+		draft.toAssetId,
+		draft.fromDockId,
+		draft.toDockId
+	);
 }
 
 export function buildLinksFromStackDrafts(

@@ -310,6 +310,14 @@ export function formatConnectionSideSummary(
 	side: ConnectionSide
 ): string {
 	for (const link of connection.links) {
+		const componentSnapshot =
+			side === "from"
+				? (link as { fromComponentRefSnapshot?: { label?: string } }).fromComponentRefSnapshot
+				: (link as { toComponentRefSnapshot?: { label?: string } }).toComponentRefSnapshot;
+		if (componentSnapshot?.label?.trim()) {
+			return componentSnapshot.label.trim();
+		}
+
 		const snapshot =
 			side === "from" ? link.fromLabelSnapshot?.trim() : link.toLabelSnapshot?.trim();
 		if (snapshot) {

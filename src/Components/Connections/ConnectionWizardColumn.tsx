@@ -1,6 +1,7 @@
 import React, { useMemo } from "react";
 import { Checkbox, Tag } from "antd";
 import { IAsset } from "../../Stores/Models/Asset.Model";
+import { IDock, IDockpart } from "../../Stores/Models/Dock.Model";
 import {
 	dockpartDisplayLabel,
 	dockpartMatchKey,
@@ -8,6 +9,11 @@ import {
 } from "../../lib/connectionDockpartPairing";
 import { assetDisplayName } from "../../lib/connectionCandidateFilter";
 import { resolveAssetElementType } from "../../lib/elementDefinitionTypes";
+import {
+	formatEffectiveDockpartLabel,
+	getEffectiveDocks,
+	isInheritedDockpart,
+} from "../../lib/effectiveDockparts";
 import {
 	DockpartLocator,
 	WizardDockpartSelection,
@@ -30,6 +36,7 @@ export function buildWizardNodeRefId(
 type ConnectionWizardColumnProps = {
 	side: "from" | "to";
 	assets: IAsset[];
+	allAssets: IAsset[];
 	selection: WizardDockpartSelection[];
 	onSelectionChange: (next: WizardDockpartSelection[]) => void;
 	registerNodeRef: (id: ConnectionWizardNodeRefId, element: HTMLElement | null) => void;
@@ -40,6 +47,7 @@ type ConnectionWizardColumnProps = {
 const ConnectionWizardColumn: React.FC<ConnectionWizardColumnProps> = ({
 	side,
 	assets,
+	allAssets,
 	selection,
 	onSelectionChange,
 	registerNodeRef,
@@ -47,8 +55,11 @@ const ConnectionWizardColumn: React.FC<ConnectionWizardColumnProps> = ({
 	headerExtra,
 }) => {
 	const visibleAssets = useMemo(
-		() => assets.filter((asset) => asset.docks.some((dock) => dock.dockparts.length > 0)),
-		[assets]
+		() =>
+			assets.filter((asset) =>
+				getEffectiveDocks(asset, allAssets).some((dock) => dock.dockparts.length > 0)
+			),
+		[assets, allAssets]
 	);
 
 	return (
@@ -75,11 +86,14 @@ const ConnectionWizardColumn: React.FC<ConnectionWizardColumnProps> = ({
 							) : null}
 						</div>
 
-						{asset.docks
+						{getEffectiveDocks(asset, allAssets)
 							.filter((dock) => dock.dockparts.length > 0)
 							.map((dock) => {
 								const dockId = String(dock.id);
-								const parts = orderDockpartsForDisplay(dock, dock.dockparts.slice());
+								const parts = orderDockpartsForDisplay(
+									dock as IDock,
+									dock.dockparts.slice() as IDockpart[]
+								);
 								return (
 									<div key={`${asset.id}-${dockId}`} className="connection-selection-tree__dock">
 										<div className="connection-selection-tree__dock-title">
@@ -98,13 +112,16 @@ const ConnectionWizardColumn: React.FC<ConnectionWizardColumnProps> = ({
 												const checked = isDockpartSelected(selection, locator);
 												const refId = buildWizardNodeRefId(side, locator);
 												const highlighted = !!matchKey && highlightMatchKeys?.has(matchKey);
+												const inherited = isInheritedDockpart(part);
 												return (
 													<div
 														key={refId}
 														className={
 															highlighted
 																? "connection-selection-tree__dockpart connection-selection-tree__dockpart--match"
-																: "connection-selection-tree__dockpart"
+																: inherited
+																	? "connection-selection-tree__dockpart connection-selection-tree__dockpart--inherited"
+																	: "connection-selection-tree__dockpart"
 														}
 														ref={(element) => registerNodeRef(refId, element)}
 													>
@@ -120,7 +137,9 @@ const ConnectionWizardColumn: React.FC<ConnectionWizardColumnProps> = ({
 																)
 															}
 														>
-															{dockpartDisplayLabel(part)}
+															{inherited
+																? formatEffectiveDockpartLabel(part)
+																: dockpartDisplayLabel(part)}
 															{matchKey ? (
 																<Tag style={{ marginLeft: 8 }}>{matchKey}</Tag>
 															) : null}

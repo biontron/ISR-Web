@@ -3,8 +3,8 @@ import { IConnectSchemaModel } from "../Stores/Models/ConnectSchema.Model";
 import { IConnectSchemaItem } from "../Stores/Types/ConnectSchemaItem";
 import { buildDefaultsFromSchemaItems } from "./schemaEntryDefaults";
 
-/** Bekannte Schema/MST-Shape-Konflikte — nicht im Asset-Dockpart-Editor (basedOn: Map vs. Array). */
-const DOCKPART_EDITOR_OMITTED_SCHEMA_KEYS = new Set(["basedOn"]);
+/** Bekannte Schema/MST-Shape-Konflikte — nicht im generischen Asset-Dockpart-Editor. */
+const DOCKPART_EDITOR_OMITTED_SCHEMA_KEYS = new Set<string>([]);
 
 function filterDockpartEditorSchemaItems(items: IConnectSchemaItem[]): IConnectSchemaItem[] {
 	return items.filter(

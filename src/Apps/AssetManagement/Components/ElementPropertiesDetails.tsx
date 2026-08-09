@@ -13,6 +13,7 @@ import { IAsset } from "../../../Stores/Models/Asset.Model";
 import { isTreeElement } from "../../../Interfaces/Element";
 import ElementChildMapping from "../../../Components/Schema/SchemaEditor/Mappings/ElementChildMapping.Component";
 import AssetReferenceMapping from "../../../Components/Schema/SchemaEditor/Mappings/AssetReferenceMapping.Component";
+import ContextMembershipMapping from "../../../Components/Schema/SchemaEditor/Mappings/ContextMembershipMapping.Component";
 import { buildElementStatusClass } from "../../../lib/elementStatusStyle";
 import {
 	hasElementSettingsValidationErrors,
@@ -146,6 +147,12 @@ const ElementPropertiesDetails: React.FC<ElementPropertiesDetailsProps> = () => 
 			{activeElement && (activeElement.class === "View" || activeElement.class === "Group") && (
 				<CardCollapse title={langtext("general.groupreference_assignment")}>
 					<ElementChildMapping element={activeElement} />
+				</CardCollapse>
+			)}
+
+			{activeElement && activeElement.class === "Asset" && (
+				<CardCollapse title="Kontext & Vererbung">
+					<ContextMembershipMapping asset={activeElement as IAsset} canEdit={canEdit} />
 				</CardCollapse>
 			)}
 

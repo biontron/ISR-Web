@@ -64,7 +64,7 @@ describe("dockpartSchemaResolve", () => {
 		expect(resolveDockpartEntrySchemaDefinition({ id: "1" }, schemas as any)).toBeUndefined();
 	});
 
-	it("resolveDockpartEntrySchemaDefinition blendet nur basedOn aus (Map/Array-Konflikt)", () => {
+	it("resolveDockpartEntrySchemaDefinition enthält basedOn für den Editor", () => {
 		const schemas = [
 			{
 				id: "GENERIC",
@@ -94,7 +94,7 @@ describe("dockpartSchemaResolve", () => {
 			{ id: "1", type: "GENERIC", basedOn: [] },
 			schemas as any
 		);
-		expect(resolved!.items.map((item) => item.dataStructure.itemName)).toEqual(["address"]);
+		expect(resolved!.items.map((item) => item.dataStructure.itemName)).toEqual(["basedOn", "address"]);
 	});
 
 	it("resolveDockpartEntrySchemaDefinition behält settings-Gruppe für den Editor", () => {

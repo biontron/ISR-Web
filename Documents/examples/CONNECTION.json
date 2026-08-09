@@ -134,6 +134,62 @@
           "maxUsage": 1
         },
         {
+          "kind": "group",
+          "order": 6.5,
+          "dataStructure": { "itemName": "fromComponentRefSnapshot" },
+          "formProperties": { "label": { "und": "From component snapshot", "de": "Von-Component-Snapshot" } },
+          "itemFlags": { "readonly": false, "hidden": false },
+          "minUsage": 0,
+          "maxUsage": 1,
+          "collectionType": "map",
+          "items": [
+            {
+              "kind": "field",
+              "order": 1,
+              "dataStructure": { "itemName": "id", "default": "" },
+              "fieldType": "string",
+              "minUsage": 0,
+              "maxUsage": 1
+            },
+            {
+              "kind": "field",
+              "order": 2,
+              "dataStructure": { "itemName": "label", "default": "" },
+              "fieldType": "string",
+              "minUsage": 0,
+              "maxUsage": 1
+            }
+          ]
+        },
+        {
+          "kind": "group",
+          "order": 6.6,
+          "dataStructure": { "itemName": "toComponentRefSnapshot" },
+          "formProperties": { "label": { "und": "To component snapshot", "de": "Nach-Component-Snapshot" } },
+          "itemFlags": { "readonly": false, "hidden": false },
+          "minUsage": 0,
+          "maxUsage": 1,
+          "collectionType": "map",
+          "items": [
+            {
+              "kind": "field",
+              "order": 1,
+              "dataStructure": { "itemName": "id", "default": "" },
+              "fieldType": "string",
+              "minUsage": 0,
+              "maxUsage": 1
+            },
+            {
+              "kind": "field",
+              "order": 2,
+              "dataStructure": { "itemName": "label", "default": "" },
+              "fieldType": "string",
+              "minUsage": 0,
+              "maxUsage": 1
+            }
+          ]
+        },
+        {
           "kind": "field",
           "order": 7,
           "dataStructure": { "itemName": "fromDockRef", "default": "" },
@@ -277,6 +333,26 @@
               "fieldType": "number",
               "itemFlags": { "readonly": false, "hidden": false, "nullable": false },
               "minUsage": 1,
+              "maxUsage": 1
+            },
+            {
+              "kind": "field",
+              "order": 6,
+              "dataStructure": { "itemName": "fromValueSnapshot", "default": null },
+              "formProperties": { "label": { "und": "From value snapshot", "de": "Von-Werte-Snapshot" } },
+              "fieldType": "object",
+              "itemFlags": { "readonly": false, "hidden": false, "nullable": true },
+              "minUsage": 0,
+              "maxUsage": 1
+            },
+            {
+              "kind": "field",
+              "order": 7,
+              "dataStructure": { "itemName": "toValueSnapshot", "default": null },
+              "formProperties": { "label": { "und": "To value snapshot", "de": "Nach-Werte-Snapshot" } },
+              "fieldType": "object",
+              "itemFlags": { "readonly": false, "hidden": false, "nullable": true },
+              "minUsage": 0,
               "maxUsage": 1
             }
           ]

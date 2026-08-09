@@ -19,8 +19,9 @@ import {
 	collectDistinctSubTypes,
 	filterConnectionCandidates,
 } from "../../lib/connectionCandidateFilter";
-import { resolveAssetStackChain } from "../../lib/connectionStackChain";
+import { resolveAssetStackAncestorChain } from "../../lib/connectionStackChain";
 import {
+	buildStackDraftsFromActiveMatches,
 	collectWizardDockpartMatches,
 	resolveActiveWizardMatches,
 	wizardMatchId,
@@ -68,17 +69,6 @@ function listBrowsableCandidates(allAssets: IAsset[], currentAsset: IAsset): IAs
 	);
 }
 
-function groupMatchesByDockPair(matches: ReturnType<typeof resolveActiveWizardMatches>) {
-	const groups = new Map<string, ReturnType<typeof resolveActiveWizardMatches>>();
-	for (const match of matches) {
-		const key = `${match.from.assetId}|${match.from.dockId}::${match.to.assetId}|${match.to.dockId}`;
-		const bucket = groups.get(key) ?? [];
-		bucket.push(match);
-		groups.set(key, bucket);
-	}
-	return groups;
-}
-
 const ConnectionSelectionDialog: React.FC<ConnectionSelectionDialogProps> = ({
 	visible,
 	currentAsset,
@@ -115,7 +105,7 @@ const ConnectionSelectionDialog: React.FC<ConnectionSelectionDialogProps> = ({
 		if (!currentAsset) {
 			return [];
 		}
-		const chain = resolveAssetStackChain(currentAsset.id, allAssets);
+		const chain = resolveAssetStackAncestorChain(currentAsset.id, allAssets);
 		return chain.length > 0 ? chain : [currentAsset];
 	}, [currentAsset, allAssets]);
 
@@ -154,13 +144,13 @@ const ConnectionSelectionDialog: React.FC<ConnectionSelectionDialogProps> = ({
 		if (!toAsset) {
 			return [];
 		}
-		const chain = resolveAssetStackChain(toAsset.id, allAssets);
+		const chain = resolveAssetStackAncestorChain(toAsset.id, allAssets);
 		return chain.length > 0 ? chain : [toAsset];
 	}, [toAsset, allAssets]);
 
 	const wizardMatches = useMemo(
-		() => collectWizardDockpartMatches(fromStack, toStack),
-		[fromStack, toStack]
+		() => collectWizardDockpartMatches(fromStack, toStack, allAssets),
+		[fromStack, toStack, allAssets]
 	);
 
 	const activeMatches = useMemo(
@@ -212,69 +202,55 @@ const ConnectionSelectionDialog: React.FC<ConnectionSelectionDialogProps> = ({
 			return;
 		}
 
-		const groups = groupMatchesByDockPair(activeMatches);
-		if (groups.size === 0) {
+		const drafts = buildStackDraftsFromActiveMatches(activeMatches);
+		if (drafts.length === 0) {
 			message.error("Keine aktiven Pairings ausgewählt.");
 			return;
 		}
 
-		let bestMatches: typeof activeMatches = [];
-		Array.from(groups.values()).forEach((matches) => {
-			if (matches.length > bestMatches.length) {
-				bestMatches = matches;
+		for (const draft of drafts) {
+			const fromDock = allAssets
+				.find((asset) => asset.id === draft.fromAssetId)
+				?.docks.find((dock) => String(dock.id) === draft.fromDockId);
+			const toDock = allAssets
+				.find((asset) => asset.id === draft.toAssetId)
+				?.docks.find((dock) => String(dock.id) === draft.toDockId);
+			if (!fromDock || !toDock) {
+				message.error("Dock für ausgewähltes Pairing konnte nicht aufgelöst werden.");
+				return;
 			}
-		});
-
-		if (groups.size > 1) {
-			message.warning(
-				"Mehrere Dock-Paare ausgewählt — es wird zunächst das Paar mit den meisten Pairings verbunden."
+			const pairingPreview = pairSelectedDockparts(
+				fromDock,
+				draft.fromDockpartIds,
+				toDock,
+				draft.toDockpartIds,
+				{
+					fromAsset: allAssets.find((asset) => asset.id === draft.fromAssetId),
+					toAsset: allAssets.find((asset) => asset.id === draft.toAssetId),
+					allAssets,
+				}
 			);
-		}
-
-		const sample = bestMatches[0];
-		const fromDock = allAssets
-			.find((asset) => asset.id === sample.from.assetId)
-			?.docks.find((dock) => String(dock.id) === sample.from.dockId);
-		const toDock = allAssets
-			.find((asset) => asset.id === sample.to.assetId)
-			?.docks.find((dock) => String(dock.id) === sample.to.dockId);
-
-		if (!fromDock || !toDock) {
-			message.error("Dock für ausgewähltes Pairing konnte nicht aufgelöst werden.");
-			return;
-		}
-
-		const fromDockpartIds = Array.from(
-			new Set(bestMatches.map((match) => match.from.dockpartId))
-		);
-		const toDockpartIds = Array.from(new Set(bestMatches.map((match) => match.to.dockpartId)));
-		const pairingPreview = pairSelectedDockparts(
-			fromDock,
-			fromDockpartIds,
-			toDock,
-			toDockpartIds
-		);
-
-		if (pairingPreview.linkparts.length === 0) {
-			message.error("Keine passenden Dockpart-Paare gefunden.");
-			return;
+			if (pairingPreview.linkparts.length === 0) {
+				message.error("Keine passenden Dockpart-Paare gefunden.");
+				return;
+			}
 		}
 
 		try {
 			const trimmedTitle = linkTitle.trim();
-			const connection = rootStore.connections.createWithLinkparts({
-				fromAssetId: sample.from.assetId,
-				fromDockId: sample.from.dockId,
-				fromDockpartIds,
-				toAssetId: sample.to.assetId,
-				toDockId: sample.to.dockId,
-				toDockpartIds,
+			const connection = rootStore.connections.createFromStackDrafts({
+				drafts,
 				linkTitle: trimmedTitle || undefined,
 				definitionLabel: trimmedTitle || undefined,
 				definitionDescription: definitionDescription.trim() || undefined,
 				direction,
 			});
-			message.success("Connection erstellt");
+			const linkCount = connection.links.length;
+			message.success(
+				linkCount === 1
+					? "Connection erstellt"
+					: `Connection mit ${linkCount} Links erstellt`
+			);
 			onCreated?.(connection.id);
 			resetState();
 			onCancel();
@@ -408,6 +384,7 @@ const ConnectionSelectionDialog: React.FC<ConnectionSelectionDialogProps> = ({
 						<ConnectionWizardColumn
 							side="from"
 							assets={fromStack}
+							allAssets={allAssets}
 							selection={fromSelection}
 							onSelectionChange={setFromSelection}
 							registerNodeRef={registerNodeRef}
@@ -431,6 +408,7 @@ const ConnectionSelectionDialog: React.FC<ConnectionSelectionDialogProps> = ({
 						<ConnectionWizardColumn
 							side="to"
 							assets={toStack}
+							allAssets={allAssets}
 							selection={toSelection}
 							onSelectionChange={setToSelection}
 							registerNodeRef={registerNodeRef}

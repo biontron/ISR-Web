@@ -1,5 +1,6 @@
 import { IAsset } from "../Stores/Models/Asset.Model";
 import { IDock, IDockpart } from "../Stores/Models/Dock.Model";
+import { sortDockpartsByResolvedStack } from "./dockpartStackResolve";
 
 export type SelectedDockpartRef = {
 	dockId: string;
@@ -39,7 +40,16 @@ function findDockpart(dock: IDock, dockpartId: string): IDockpart | undefined {
 	return dock.dockparts.find((part) => String(part.id) === String(dockpartId));
 }
 
-export function sortDockpartsByBasedOn(dock: IDock, dockpartIds: string[]): string[] {
+export function sortDockpartsByBasedOn(
+	dock: IDock,
+	dockpartIds: string[],
+	asset?: IAsset,
+	allAssets?: IAsset[]
+): string[] {
+	if (asset && allAssets && allAssets.length > 0) {
+		return sortDockpartsByResolvedStack(dock, asset, allAssets, dockpartIds);
+	}
+
 	const selectedIds = dockpartIds.map(String);
 	const selectedSet = new Set(selectedIds);
 	const inDegree = new Map<string, number>();
@@ -192,9 +202,19 @@ export function pairSelectedDockparts(
 	fromDock: IDock,
 	fromDockpartIds: string[],
 	toDock: IDock,
-	toDockpartIds: string[]
+	toDockpartIds: string[],
+	options?: {
+		fromAsset?: IAsset;
+		toAsset?: IAsset;
+		allAssets?: IAsset[];
+	}
 ): PairSelectedDockpartsResult {
-	const sortedFromIds = sortDockpartsByBasedOn(fromDock, fromDockpartIds);
+	const sortedFromIds = sortDockpartsByBasedOn(
+		fromDock,
+		fromDockpartIds,
+		options?.fromAsset,
+		options?.allAssets
+	);
 	const toByKey = new Map<string, IDockpart[]>();
 
 	for (const toId of toDockpartIds) {
@@ -241,8 +261,13 @@ export function pairSelectedDockparts(
 	return { linkparts, unmatchedFromKeys };
 }
 
-export function topDockpartIdFromSelection(dock: IDock, dockpartIds: string[]): string | undefined {
-	const sorted = sortDockpartsByBasedOn(dock, dockpartIds);
+export function topDockpartIdFromSelection(
+	dock: IDock,
+	dockpartIds: string[],
+	asset?: IAsset,
+	allAssets?: IAsset[]
+): string | undefined {
+	const sorted = sortDockpartsByBasedOn(dock, dockpartIds, asset, allAssets);
 	return sorted[sorted.length - 1];
 }
 

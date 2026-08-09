@@ -26,6 +26,7 @@ import {
 import { resolveFieldValueOnAdd } from "../../../lib/schemaAddFieldDefaults";
 import SchemaEditorFieldEdit from "./SchemaEditorFieldEdit";
 import SchemaEditorFieldView from "./SchemaEditorFieldView";
+import SchemaEditorValueRefField from "./SchemaEditorValueRefField";
 import { IElement } from "../../../Stores/Models/Element.Model";
 import { useSchemaEditorContext } from "./SchemaEditorContext";
 
@@ -205,6 +206,23 @@ const SchemaEditorField: React.FC<FieldComponentProps> = ({
 
 	if (isOmittedField) {
 		return null;
+	}
+
+	const isValueRefField =
+		schemaDefinitionField.fieldType === "valueRef" ||
+		schemaDefinitionField.fieldType === "componentRef";
+
+	if (isValueRefField) {
+		return (
+			<SchemaEditorValueRefField
+				field={schemaDefinitionField}
+				value={externalValue}
+				canEdit={canEdit && !isApplicationAssignedField}
+				onChange={(next) => elementData.setValueByPath(mstPath, next)}
+				mstPath={mstPath}
+				schemaPath={schemaPath}
+			/>
+		);
 	}
 
 	if (!canEdit) {

@@ -1,7 +1,9 @@
 import { Instance, types } from "mobx-state-tree";
 
 export const DockpartBasedOnEntryModel = types.model("DockpartBasedOnEntry", {
-	dockpartId: types.union(types.string, types.number),
+	dockpartId: types.maybe(types.union(types.string, types.number)),
+	componentRef: types.maybe(types.string),
+	externalDockpartRef: types.maybe(types.string),
 });
 
 export const DockpartVersionModel = types.model("DockpartVersion", {
