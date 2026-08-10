@@ -89,6 +89,7 @@ const ConnectionSelectionDialog: React.FC<ConnectionSelectionDialogProps> = ({
 	const bodyRef = useRef<HTMLDivElement>(null);
 
 	const allAssets = rootStore.assets.assets.slice();
+	const allGroups = rootStore.groups.groups.slice();
 
 	const registerNodeRef = useCallback(
 		(id: ConnectionWizardNodeRefId, element: HTMLElement | null) => {
@@ -149,8 +150,8 @@ const ConnectionSelectionDialog: React.FC<ConnectionSelectionDialogProps> = ({
 	}, [toAsset, allAssets]);
 
 	const wizardMatches = useMemo(
-		() => collectWizardDockpartMatches(fromStack, toStack, allAssets),
-		[fromStack, toStack, allAssets]
+		() => collectWizardDockpartMatches(fromStack, toStack, allAssets, allGroups),
+		[fromStack, toStack, allAssets, allGroups]
 	);
 
 	const activeMatches = useMemo(
@@ -385,6 +386,7 @@ const ConnectionSelectionDialog: React.FC<ConnectionSelectionDialogProps> = ({
 							side="from"
 							assets={fromStack}
 							allAssets={allAssets}
+							allGroups={allGroups}
 							selection={fromSelection}
 							onSelectionChange={setFromSelection}
 							registerNodeRef={registerNodeRef}
@@ -409,6 +411,7 @@ const ConnectionSelectionDialog: React.FC<ConnectionSelectionDialogProps> = ({
 							side="to"
 							assets={toStack}
 							allAssets={allAssets}
+							allGroups={allGroups}
 							selection={toSelection}
 							onSelectionChange={setToSelection}
 							registerNodeRef={registerNodeRef}

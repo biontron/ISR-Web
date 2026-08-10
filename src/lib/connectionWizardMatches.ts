@@ -2,6 +2,7 @@ import { IAsset } from "../Stores/Models/Asset.Model";
 import { dockpartMatchKey } from "./connectionDockpartPairing";
 import { getEffectiveDocks } from "./effectiveDockparts";
 import { StackLinkDraft } from "./connectionStackTraversal";
+import { IGroup } from "../Stores/Models/Group.Model";
 
 export type DockpartLocator = {
 	assetId: string;
@@ -47,20 +48,21 @@ export function toggleDockpartSelection(
 export function collectWizardDockpartMatches(
 	fromAssets: IAsset[],
 	toAssets: IAsset[],
-	allAssets: IAsset[] = [...fromAssets, ...toAssets]
+	allAssets: IAsset[] = [...fromAssets, ...toAssets],
+	allGroups: IGroup[] = []
 ): WizardDockpartMatch[] {
 	const matches: WizardDockpartMatch[] = [];
 	const seen = new Set<string>();
 
 	for (const fromAsset of fromAssets) {
-		for (const fromDock of getEffectiveDocks(fromAsset, allAssets)) {
+		for (const fromDock of getEffectiveDocks(fromAsset, allAssets, allGroups)) {
 			for (const fromPart of fromDock.dockparts) {
 				const matchKey = dockpartMatchKey(fromPart);
 				if (!matchKey) {
 					continue;
 				}
 				for (const toAsset of toAssets) {
-					for (const toDock of getEffectiveDocks(toAsset, allAssets)) {
+					for (const toDock of getEffectiveDocks(toAsset, allAssets, allGroups)) {
 						for (const toPart of toDock.dockparts) {
 							if (dockpartMatchKey(toPart) !== matchKey) {
 								continue;

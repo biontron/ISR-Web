@@ -1,19 +1,20 @@
 import { IAsset } from "../Stores/Models/Asset.Model";
-import { IDock, IDockpart } from "../Stores/Models/Dock.Model";
-import { formatAssetDisplayName } from "./connectionEndpointRef";
+import { IDockpart } from "../Stores/Models/Dock.Model";
+import { IGroup } from "../Stores/Models/Group.Model";
 import { collectDockpartValueSnapshot, ValueSnapshotMap } from "./connectionSnapshot";
 import { resolveValueReference } from "./valueReferenceResolve";
 
+/**
+ * Positionierung einer Component in einer Kontext-Gruppe (VLAN, Netzwerk, …).
+ * Kontext ist keine Component — es werden nur referenzierte Feldwerte übernommen,
+ * nicht der Dockpart-Stack der Gruppe. Siehe Documents/Connection-Stack-Architektur.md
+ */
 export type ContextMembership = {
-	contextRef: string;
+	contextGroupRef: string;
 	contextLabelSnapshot?: string;
 };
 
 export type EffectiveDockpart = IDockpart & {
-	isInherited?: boolean;
-	inheritedFromContextRef?: string;
-	inheritedFromDockpartRef?: string;
-	inheritedContextLabelSnapshot?: string;
 	sourceAssetId?: string;
 };
 
@@ -22,7 +23,7 @@ export type EffectiveDock = {
 	type?: string;
 	label?: string;
 	dockparts: EffectiveDockpart[];
-	ownerType?: "COMPONENT" | "CONTEXT";
+	ownerType?: "COMPONENT";
 	ownerRef?: string;
 };
 
@@ -53,13 +54,19 @@ function cloneDockpart(part: IDockpart, overrides: Partial<EffectiveDockpart> = 
 function resolveEffectiveSettings(
 	part: IDockpart,
 	asset: IAsset,
-	allAssets: IAsset[]
+	allAssets: IAsset[],
+	allGroups: IGroup[]
 ): ValueSnapshotMap {
 	const raw = collectDockpartValueSnapshot(part);
 	const resolved: ValueSnapshotMap = {};
+	const memberships = asset.contextMemberships?.slice() ?? [];
 
 	for (const [key, value] of Object.entries(raw)) {
-		resolved[key] = resolveValueReference(value, allAssets, asset);
+		resolved[key] = resolveValueReference(value, {
+			assets: allAssets,
+			groups: allGroups,
+			contextMemberships: memberships,
+		});
 	}
 
 	return resolved;
@@ -76,73 +83,52 @@ function applyResolvedSettings(part: EffectiveDockpart, resolved: ValueSnapshotM
 	};
 }
 
-export function getEffectiveDocks(asset: IAsset, allAssets: IAsset[]): EffectiveDock[] {
-	const effectiveDocks: EffectiveDock[] = asset.docks.map((dock) => ({
+/**
+ * Liefert die Docks einer Component mit aufgelösten Settings (inkl. contextValueRef).
+ * Kontext-Gruppen liefern keine zusätzlichen Dockparts — nur Werte in den Settings.
+ */
+export function getEffectiveDocks(
+	asset: IAsset,
+	allAssets: IAsset[],
+	allGroups: IGroup[] = []
+): EffectiveDock[] {
+	return asset.docks.map((dock) => ({
 		id: String(dock.id),
 		type: dock.type,
 		label: dock.label,
 		dockparts: dock.dockparts.map((part) => {
 			const cloned = cloneDockpart(part, { sourceAssetId: asset.id });
-			return applyResolvedSettings(cloned, resolveEffectiveSettings(part, asset, allAssets));
+			return applyResolvedSettings(
+				cloned,
+				resolveEffectiveSettings(part, asset, allAssets, allGroups)
+			);
 		}),
 		ownerType: "COMPONENT" as const,
 		ownerRef: asset.id,
 	}));
+}
 
-	const memberships = ((asset as IAsset & { contextMemberships?: ContextMembership[] }).contextMemberships ??
-		[]) as ContextMembership[];
+export function getEffectiveDockpartsForAsset(
+	asset: IAsset,
+	allAssets: IAsset[],
+	allGroups: IGroup[] = []
+): EffectiveDockpart[] {
+	return getEffectiveDocks(asset, allAssets, allGroups).flatMap((dock) => dock.dockparts);
+}
 
-	for (const membership of memberships) {
-		const contextAsset = allAssets.find((entry) => entry.id === membership.contextRef);
-		if (!contextAsset) {
-			continue;
-		}
-
-		for (const contextDock of contextAsset.docks) {
-			for (const contextPart of contextDock.dockparts) {
-				const inheritedPart = cloneDockpart(contextPart, {
-					isInherited: true,
-					inheritedFromContextRef: contextAsset.id,
-					inheritedFromDockpartRef: String(contextPart.id),
-					inheritedContextLabelSnapshot:
-						membership.contextLabelSnapshot?.trim() || formatAssetDisplayName(contextAsset),
-					sourceAssetId: contextAsset.id,
-				});
-				const resolved = resolveEffectiveSettings(contextPart, contextAsset, allAssets);
-				const withValues = applyResolvedSettings(inheritedPart, resolved);
-
-				let targetDock = effectiveDocks.find((dock) => dock.type === contextDock.type);
-				if (!targetDock) {
-					targetDock = {
-						id: `inherited-${contextDock.id}`,
-						type: contextDock.type,
-						label: contextDock.label,
-						dockparts: [],
-						ownerType: "CONTEXT",
-						ownerRef: contextAsset.id,
-					};
-					effectiveDocks.push(targetDock);
-				}
-
-				targetDock.dockparts.push(withValues);
-			}
-		}
+export function formatContextMembershipLabel(membership: ContextMembership, groups: IGroup[]): string {
+	const group = groups.find((entry) => entry.id === membership.contextGroupRef);
+	if (group) {
+		return group.definition?.label?.trim() || group.definition?.name?.trim() || group.id;
 	}
-
-	return effectiveDocks;
-}
-
-export function getEffectiveDockpartsForAsset(asset: IAsset, allAssets: IAsset[]): EffectiveDockpart[] {
-	return getEffectiveDocks(asset, allAssets).flatMap((dock) => dock.dockparts);
-}
-
-export function isInheritedDockpart(dockpart: EffectiveDockpart | IDockpart): boolean {
-	return !!(dockpart as EffectiveDockpart).isInherited;
+	return membership.contextLabelSnapshot?.trim() || membership.contextGroupRef;
 }
 
 export function formatEffectiveDockpartLabel(dockpart: EffectiveDockpart | IDockpart): string {
-	const inherited = (dockpart as EffectiveDockpart).isInherited
-		? ` (geerbt aus ${(dockpart as EffectiveDockpart).inheritedContextLabelSnapshot ?? "Kontext"})`
-		: "";
-	return `${dockpart.label || dockpart.protocol || dockpart.type || dockpart.id}${inherited}`;
+	return dockpart.label || dockpart.protocol || dockpart.type || String(dockpart.id);
+}
+
+/** @deprecated Kontext erzeugt keine geerbten Dockparts — nur Werte in Settings. Immer false. */
+export function isInheritedDockpart(_dockpart: EffectiveDockpart | IDockpart): boolean {
+	return false;
 }

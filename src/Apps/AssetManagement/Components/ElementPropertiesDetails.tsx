@@ -151,7 +151,7 @@ const ElementPropertiesDetails: React.FC<ElementPropertiesDetailsProps> = () => 
 			)}
 
 			{activeElement && activeElement.class === "Asset" && (
-				<CardCollapse title="Kontext & Vererbung">
+				<CardCollapse title="Kontext-Gruppen">
 					<ContextMembershipMapping asset={activeElement as IAsset} canEdit={canEdit} />
 				</CardCollapse>
 			)}

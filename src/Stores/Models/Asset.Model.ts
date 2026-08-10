@@ -70,7 +70,7 @@ export const AssetModel = types.compose(
 			contextMemberships: types.optional(
 				types.array(
 					types.model({
-						contextRef: types.string,
+						contextGroupRef: types.string,
 						contextLabelSnapshot: types.optional(types.string, ""),
 					})
 				),

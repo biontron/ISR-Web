@@ -210,6 +210,7 @@ const SchemaEditorField: React.FC<FieldComponentProps> = ({
 
 	const isValueRefField =
 		schemaDefinitionField.fieldType === "valueRef" ||
+		schemaDefinitionField.fieldType === "contextValueRef" ||
 		schemaDefinitionField.fieldType === "componentRef";
 
 	if (isValueRefField) {

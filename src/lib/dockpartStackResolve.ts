@@ -2,6 +2,12 @@ import { IAsset } from "../Stores/Models/Asset.Model";
 import { IDock, IDockpart } from "../Stores/Models/Dock.Model";
 import { parseDockEndpointRef } from "./connectionEndpointRef";
 
+/**
+ * Auflösung von basedOn-Ketten (Protokoll-Stack zwischen Dockparts/Components).
+ * Kontext-Werte (VLAN-ID aus Kontext-Gruppe) werden hier nicht modelliert —
+ * siehe valueReferenceResolve / Documents/Connection-Stack-Architektur.md
+ */
+
 export type BasedOnEntry = {
 	dockpartId?: string | number;
 	componentRef?: string;

@@ -72,7 +72,11 @@ const SchemaEditorDockpartBasedOn: React.FC<SchemaEditorDockpartBasedOnProps> = 
 
 	return (
 		<div className="schema-dockpart-basedon">
-			<strong>basedOn</strong>
+			<strong>basedOn (Protokoll-Stack)</strong>
+			<div className="schema-dockpart-basedon__hint" style={{ marginBottom: 8, opacity: 0.85 }}>
+				Stack-Ebenen zwischen Dockparts/Components — nicht für Kontext-Werte (VLAN o. Ä.).
+				Kontext-Werte werden über <code>valueRef</code> / Kontext-Gruppen modelliert.
+			</div>
 			{entries.length === 0 ? (
 				<div className="schema-dockpart-basedon__empty">Keine Stack-Referenzen.</div>
 			) : (

@@ -1,8 +1,9 @@
 export {
 	getEffectiveDocks,
 	getEffectiveDockpartsForAsset,
-	isInheritedDockpart,
+	formatContextMembershipLabel,
 	formatEffectiveDockpartLabel,
+	isInheritedDockpart,
 	type ContextMembership,
 	type EffectiveDock,
 	type EffectiveDockpart,
