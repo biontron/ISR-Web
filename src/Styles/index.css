@@ -30,7 +30,7 @@ body,
   align-items: center;
   flex-shrink: 0;
   padding: 5px 20px;
-  background-color: #f0f2f5;
+  background-color: #8FA28A;
   border-bottom: 1px solid #d9d9d9;
 }
 
@@ -414,7 +414,7 @@ body,
 }
 
 .common-layout-errors-footer--minimized {
-  background: #f0f2f5;
+  background: #8FA28A;
 }
 
 .common-layout-errors-toolbar {
@@ -983,7 +983,7 @@ input[readonly] {
 
 .ant-tree-node-content-wrapper .tree-node--component,
 .tree-node--component {
-  background-color: #f9e37a;
+  background-color: #ff9900;
   border-radius: 5px;
   padding: 4px 5px 4px 2px;
 }

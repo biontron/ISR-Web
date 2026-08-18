@@ -77,7 +77,7 @@
 }
 
 .ant-layout .leftArea {
-  background-color: #3aa6d4;
+  background-color: #30AFFF;
 }
 
 .ant-layout .centerArea {
@@ -98,7 +98,7 @@
 }
 
 .ant-layout .centerArea.View {
-  background-color: #8e84f5;
+  background-color: #FEFDDF;
 }
 
 .ant-layout .centerArea .ant-tabs {
@@ -113,7 +113,7 @@
 }
 
 .ant-layout .rightArea {
-  background-color: #e6a800;
+  background-color: #FFCC4D;
   display: flex;
   flex-direction: column;
   min-height: 0;
@@ -289,10 +289,10 @@
 
 /* Farben */
 .preset-btn#screenmode-preset-default { background-color: #eeeeee; color: #000; }  /* D - Weißblau */
-.preset-btn#screenmode-preset-hirarchy { background-color: #3aa6d4; color: #000; }  /* S - Blau */
-.preset-btn#screenmode-preset-properties { background-color: #f2c200; color: #000; }   /* D - Hellblau */
-.preset-btn#screenmode-preset-relationship { background-color: #e6a800; color: #000; }   /* V - Gelb */
-.preset-btn#screenmode-fullscreen { background-color: #e6a800; color: #000; }  /* D - Weißblau */
+.preset-btn#screenmode-preset-hirarchy { background-color: #30afff; color: #000; }  /* S - Blau */
+.preset-btn#screenmode-preset-properties { background-color: #f0f0f0; color: #000; }   /* D - Hellblau */
+.preset-btn#screenmode-preset-relationship { background-color: #FFCC4D; color: #000; }   /* V - Gelb */
+.preset-btn#screenmode-fullscreen { background-color: #FFCC4D; color: #000; }  /* D - Weißblau */
 
 .graph-fullscreen-tabs-bar {
   display: flex;

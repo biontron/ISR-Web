@@ -116,14 +116,14 @@ const IaCTemplateManagement: React.FC = observer(() => {
 						<TemplateStore />
 					</div>
 				</Sider>
-				<Layout className="centerArea" style={{ width: `${sizes.center}%`, overflow: "hidden" }}>
+				<Sider className="centerArea" style={{ width: `${sizes.center}%`, overflow: "hidden" }}>
 					<div className="area-header" onClick={() => applyPreset("editor")}>
 						<span>TemplateEditor</span>
 					</div>
 					<div className="panel-body">
 						<TemplateEditor />
 					</div>
-				</Layout>
+				</Sider>
 				<Sider width={`${sizes.right}%`} className="rightArea" style={{ overflow: "hidden" }}>
 					<div className="area-header" onClick={() => applyPreset("run")}>
 						<span>TemplateRun</span>
