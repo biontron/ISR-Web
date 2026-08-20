@@ -1,8 +1,7 @@
 import React from "react";
 import { Button, Select, Space } from "antd";
 import { observer } from "mobx-react";
-import { runInAction } from "mobx";
-import { IAsset } from "../../../../Stores/Models/Asset.Model";
+import { IAsset, IContextMembership } from "../../../../Stores/Models/Asset.Model";
 import { IGroup } from "../../../../Stores/Models/Group.Model";
 import { rootStore } from "../../../../Stores/Root.Store";
 import { formatContextMembershipLabel } from "../../../../lib/effectiveDockparts";
@@ -24,23 +23,28 @@ const ContextMembershipMapping: React.FC<ContextMembershipMappingProps> = ({ ass
 		label: groupDisplayName(group),
 	}));
 
+	const toSnapshot = (entry: IContextMembership | { contextGroupRef: string; contextLabelSnapshot?: string }) => ({
+		contextGroupRef: entry.contextGroupRef ?? "",
+		contextLabelSnapshot: entry.contextLabelSnapshot ?? "",
+	});
+
 	const replaceMemberships = (
 		next: Array<{ contextGroupRef: string; contextLabelSnapshot?: string }>
 	) => {
 		if (!canEdit) {
 			return;
 		}
-		runInAction(() => {
-			asset.contextMemberships.replace(next as never[]);
-		});
+		asset.setContextMemberships(next);
 	};
 
 	const addMembership = () => {
-		replaceMemberships([...memberships, { contextGroupRef: "", contextLabelSnapshot: "" }]);
+		replaceMemberships([...memberships.map(toSnapshot), { contextGroupRef: "", contextLabelSnapshot: "" }]);
 	};
 
 	const removeMembership = (index: number) => {
-		replaceMemberships(memberships.filter((_, entryIndex) => entryIndex !== index));
+		replaceMemberships(
+			memberships.filter((_entry, entryIndex) => entryIndex !== index).map(toSnapshot)
+		);
 	};
 
 	const patchMembership = (
@@ -49,7 +53,7 @@ const ContextMembershipMapping: React.FC<ContextMembershipMappingProps> = ({ ass
 	) => {
 		replaceMemberships(
 			memberships.map((entry, entryIndex) =>
-				entryIndex === index ? { ...entry, ...patch } : entry
+				entryIndex === index ? { ...toSnapshot(entry), ...patch } : toSnapshot(entry)
 			)
 		);
 	};

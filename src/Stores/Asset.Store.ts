@@ -22,6 +22,7 @@ import {
 } from "../lib/restSnapshot";
 import { ISchemaModel } from "./Models/Schema.Model";
 import { resolveComponentDefinitionTypesForCreate } from "../lib/elementDefinitionTypes";
+import { isNewElementStatus } from "../lib/elementStaging";
 
 
 /**
@@ -50,12 +51,13 @@ export const AssetStore = types.compose("Asset", BaseStore, types.model({
 			try {
 				// Replace with your save logic (e.g., sending data to a server)
 				const data = self.assets.find(asset => asset.id === assetID);
+				const isCreate = isNewElementStatus(data?.status, data?.statusBeforeInvalid);
 				const url = `/${authStore.getDomain()}/environments/${config.environment}/assets${
-					data?.status !== "new" ? "/" + assetID : ""
+					isCreate ? "" : "/" + assetID
 				}`;
 
 				const response = yield api.request(url, {
-					method: data?.status !== "new" ? "PUT" : "POST",
+					method: isCreate ? "POST" : "PUT",
 					body: JSON.stringify(data),
 				});
 
@@ -198,8 +200,8 @@ export const AssetStore = types.compose("Asset", BaseStore, types.model({
 		});
 
 		console.log("Asset.Store - created new '" + schemaId + "' based on Template ", newAsset);
-		newAsset.setStatus("new");
 		self.assets.push(newAsset);
+		newAsset.setStatus("new");
 		return newAsset;
 	}
 

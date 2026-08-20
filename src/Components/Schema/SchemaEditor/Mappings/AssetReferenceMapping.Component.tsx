@@ -88,21 +88,14 @@ const AssetReferenceMapping: React.FC<{ element: ActiveElement }> = observer(({ 
 		const model = element as any;
 
 		if (typeof model.setElementIdRefs === "function") {
-			// Bevorzugt: richtige Action
 			model.setElementIdRefs(nextRefs);
 		} else {
-			// Fallback mit korrekter Action-Wrapper
 			model.beginEdit?.();
-
-			// WICHTIG: über setValueByPath oder direkte Action
 			if (typeof model.setValueByPath === "function") {
-				model.setValueByPath("elementIdRefs", nextRefs);   // falls vorhanden
+				model.setValueByPath("elementIdRefs", nextRefs);
 			} else {
-				model.elementIdRefs = nextRefs; // nur als letzter Ausweg
-			}
-
-			if (model.status !== "new" && typeof model.setStatus === "function") {
-				model.setStatus("changed");
+				model.elementIdRefs = nextRefs;
+				model.markTouched?.();
 			}
 		}
 	};

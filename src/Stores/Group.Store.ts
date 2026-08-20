@@ -13,6 +13,7 @@ import { IRootStore } from "./Root.Store";
 import { resolveGroupDefinitionTypesForCreate } from "../lib/elementDefinitionTypes";
 import {
 	captureElementStagingState,
+	isNewElementStatus,
 	isTouchedStatus,
 	restoreElementStagingState,
 } from "../lib/elementStaging";
@@ -139,13 +140,13 @@ export const GroupStore = types.compose("GroupStore", BaseStore, types.model({
 			try {
 				// Replace with your save logic (e.g., sending data to a server)
 				const data = self.groups.find(group => group.id === groupID);
-				// /api/{$env.Domain}/views/{$env.ViewId}/groups/{$env.GroupId}
+				const isCreate = isNewElementStatus(data?.status, data?.statusBeforeInvalid);
 				const url = `/${authStore.getDomain()}/views/${viewID}/groups${
-					data?.status !== "new" ? "/" + groupID : ""
+					isCreate ? "" : "/" + groupID
 				}`;
 
 				const response = yield api.request(url, {
-					method: data?.status !== "new" ? "PUT" : "POST",
+					method: isCreate ? "POST" : "PUT",
 					body: JSON.stringify(data),
 				});
 
@@ -204,8 +205,8 @@ export const GroupStore = types.compose("GroupStore", BaseStore, types.model({
 		// newGroup.definition.baseType = schema;
 		// newGroup.setBaseType(schema);
 		console.log("Group.Store - created new '" + schemaId + "' ", toJS(newGroup));
-		newGroup.setStatus("new");
 		self.groups.push(newGroup);
+		newGroup.setStatus("new");
 		return newGroup;
 	}
 

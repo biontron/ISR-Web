@@ -32,6 +32,7 @@ export const ElementDefinitionTagModel = types.model("ElementDefinitionTag", {
 });
 
 function markTouchedAfterMutation(self: { status: ElementStatus }): void {
+	// Gleiche Regel wie nextTouchedStatus: new/invalid bleiben (REST create/POST).
 	if (self.status === "new" || self.status === "invalid") {
 		return;
 	}
@@ -92,6 +93,11 @@ export const ElementModel = types
 			setStatus(newStatus: ElementStatus) {
 				console.log(`[ElementModel] setStatus → ${newStatus} (id: ${self.id})`);
 				self.status = newStatus;
+			},
+
+			/** Nach Mutation: new/invalid bleiben, sonst changed. */
+			markTouched() {
+				markTouchedAfterMutation(self);
 			},
 
 			restoreStagingState(

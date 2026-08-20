@@ -162,16 +162,6 @@ const ElementPropertiesDetails: React.FC<ElementPropertiesDetailsProps> = () => 
 					<AssetReferenceMapping element={activeElement} />
 				</CardCollapse>
 			)}
-
-			{/* Button: In den Bearbeitungsmodus wechseln */}
-			{!isReadOnly &&
-				activeElement?.status !== "edit" &&
-				activeElement?.status !== "changed" &&
-				activeElement?.status !== "new" && (
-				<Button type="primary" onClick={handleSwitchToEditMode}>
-					{langtext("general.edit_start")}
-				</Button>
-			)}
 		</Fragment>
 	);
 };
