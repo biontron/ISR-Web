@@ -107,7 +107,7 @@
 		"create_tab_components": "Technische Komponenten",
 		"create_tab_structure_empty": "Keine View-Group-Schemas für diesen Kontext.",
 		"create_tab_components_empty": "Keine Komponenten-Schemas für diesen Kontext.",
-		"tree_unlinked_components": "Unverknüpfte technische Komponenten",
+		"tree_unlinked_components": "Unverknüpfte technische Objekte",
 		"assetreference_filter_rules": "XPath-Filter",
 		"assetreference_filter_rules_hint": "JSON-Array von Filterregeln (filterRules am Element).",
 		"element_edit": "Element '@@name@@' bearbeiten",

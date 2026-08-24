@@ -21,7 +21,10 @@ import {
 	publishRestLoadReport,
 } from "../lib/restSnapshot";
 import { ISchemaModel } from "./Models/Schema.Model";
-import { resolveComponentDefinitionTypesForCreate } from "../lib/elementDefinitionTypes";
+import {
+	NEW_ELEMENT_DEFINITION_NAME,
+	resolveComponentDefinitionTypesForCreate,
+} from "../lib/elementDefinitionTypes";
 import { isNewElementStatus } from "../lib/elementStaging";
 
 
@@ -180,7 +183,7 @@ export const AssetStore = types.compose("Asset", BaseStore, types.model({
 				baseType: definitionTypes.baseType,
 				type: definitionTypes.type,
 				subType: definitionTypes.subType,
-				name: root.i18n.text("general.element_new_component"),
+				name: NEW_ELEMENT_DEFINITION_NAME,
 				label: root.i18n.text("general.element_new_component"),
 				description: ""
 			},

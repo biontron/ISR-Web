@@ -1,4 +1,5 @@
 import {
+	NEW_ELEMENT_DEFINITION_NAME,
 	findSchemaForDefinition,
 	isApplicationAssignedDefinitionField,
 	resolveAssetDefinitionTypesForCreate,
@@ -64,6 +65,10 @@ describe("elementDefinitionTypes", () => {
 		if (id === "DESKTOP") return desktopSchema;
 		return undefined;
 	};
+
+	it("Neuanlage verwendet definition.name 'New'", () => {
+		expect(NEW_ELEMENT_DEFINITION_NAME).toBe("New");
+	});
 
 	it("setzt bei Neuanlage storeType/baseType/type/subType 1:1 aus Schema (subType ≠ schema.id)", () => {
 		expect(resolveElementDefinitionTypesForCreate(desktopSchema)).toEqual({

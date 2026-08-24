@@ -40,6 +40,9 @@ export type ElementDefinitionForCreate = {
 	subType: string;
 };
 
+/** Fester `definition.name`-Platzhalter bei Neuanlage (logische und physische Gruppen). */
+export const NEW_ELEMENT_DEFINITION_NAME = "New";
+
 export function isAssetDefinitionDataPath(dataPath: string): boolean {
 	return dataPath === "definition" || dataPath.startsWith("definition.");
 }

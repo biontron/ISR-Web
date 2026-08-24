@@ -107,7 +107,7 @@
 		"create_tab_components": "Technical components",
 		"create_tab_structure_empty": "No view-group schemas for this context.",
 		"create_tab_components_empty": "No component schemas for this context.",
-		"tree_unlinked_components": "Unlinked technical components",
+		"tree_unlinked_components": "Unlinked technical objects",
 		"assetreference_filter_rules": "XPath filters",
 		"assetreference_filter_rules_hint": "JSON array of filter rules (element filterRules).",
 		"element_edit": "Edit element '@@name@@'",

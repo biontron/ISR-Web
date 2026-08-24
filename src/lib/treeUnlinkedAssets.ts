@@ -1,17 +1,8 @@
-import { getIdentifier } from "mobx-state-tree";
 import { IAsset } from "../Stores/Models/Asset.Model";
 import { IGroup } from "../Stores/Models/Group.Model";
 import { IRootStore } from "../Stores/Root.Store";
-
-function resolveElementRefId(ref: { id: unknown }): string | undefined {
-	if (typeof ref.id === "string" && ref.id.trim() !== "") {
-		return ref.id.trim();
-	}
-	if (ref.id) {
-		return getIdentifier(ref.id as IAsset) ?? undefined;
-	}
-	return undefined;
-}
+import { resolveElementRefId } from "./elementChildLinks";
+import { assetMatchesAnyFilterRule } from "./filterRulesMatch";
 
 /** Alle View-Organisationsgruppen unter einer View (rekursiv über parentIdRef). */
 export function collectViewGroupsUnderView(root: IRootStore, viewId: string): IGroup[] {
@@ -30,7 +21,27 @@ export function collectViewGroupsUnderView(root: IRootStore, viewId: string): IG
 	return groups;
 }
 
-/** Asset-IDs, die statisch über elementIdRefs an View-Gruppen dieser View hängen. */
+function addAssetAndOwnerDescendants(
+	root: IRootStore,
+	assetId: string,
+	linked: Set<string>
+) {
+	if (!assetId || linked.has(assetId)) {
+		return;
+	}
+	linked.add(assetId);
+	for (const asset of root.assets.assets) {
+		if (asset.ownerIdRef === assetId) {
+			addAssetAndOwnerDescendants(root, asset.id, linked);
+		}
+	}
+}
+
+/**
+ * Asset-IDs, die in der aktiven View im Baum hängen:
+ * Child-Ref (elementIdRefs), Parent-Ref (ownerIdRef auf Gruppe oder Stapel),
+ * XPath/filterRules an View-Gruppen, plus rekursive ownerIdRef-Nachfahren.
+ */
 export function collectLinkedAssetIdsForView(root: IRootStore, viewId: string): Set<string> {
 	const linked = new Set<string>();
 
@@ -38,7 +49,19 @@ export function collectLinkedAssetIdsForView(root: IRootStore, viewId: string): 
 		for (const ref of group.elementIdRefs) {
 			const assetId = resolveElementRefId(ref);
 			if (assetId) {
-				linked.add(assetId);
+				addAssetAndOwnerDescendants(root, assetId, linked);
+			}
+		}
+
+		for (const asset of root.assets.assets) {
+			if (asset.ownerIdRef === group.id) {
+				addAssetAndOwnerDescendants(root, asset.id, linked);
+			}
+		}
+
+		for (const asset of root.assets.assets) {
+			if (assetMatchesAnyFilterRule(asset, group.filterRules)) {
+				addAssetAndOwnerDescendants(root, asset.id, linked);
 			}
 		}
 	}
@@ -46,7 +69,7 @@ export function collectLinkedAssetIdsForView(root: IRootStore, viewId: string): 
 	return linked;
 }
 
-/** Komponenten ohne statische View-Group-Zuordnung (elementIdRefs) in der aktiven View. */
+/** Komponenten ohne Zuordnung (Parent-Ref, Child-Ref oder XPath) in der aktiven View. */
 export function collectUnlinkedAssetsForView(root: IRootStore, viewId: string | undefined): IAsset[] {
 	if (!viewId) {
 		return [];

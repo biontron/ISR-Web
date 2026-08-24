@@ -7,20 +7,19 @@ import React, { useEffect, useMemo, useState } from "react";
 import { observer } from "mobx-react";
 import { Checkbox, Button, List, Col, Row, Tabs, Input } from "antd";
 import { LeftOutlined, RightOutlined } from "@ant-design/icons";
-import { getIdentifier } from "mobx-state-tree";
 import { rootStore } from "../../../../Stores/Root.Store";
 import { ActiveElement } from "../../../../Interfaces/Element";
 import { IAsset } from "../../../../Stores/Models/Asset.Model";
+import { IGroup } from "../../../../Stores/Models/Group.Model";
 import SchemaSvgIcon from "../../../Schema/SchemaSvgIcon";
 import { useLangtext } from "../../../../lib/common";
+import {
+	isLogicalViewGroupElement,
+	LinkedChildElement,
+	resolveElementRefId,
+	toPlainElementIdRefs,
+} from "../../../../lib/elementChildLinks";
 
-function elementRefId(ref: { id: unknown }): string {
-	if (typeof ref.id === "string") return ref.id;
-	return getIdentifier(ref.id as IAsset) ?? "";
-}
-
-// Type Guard
-// === VERBESSERTER TYPE GUARD ===
 function hasReferenceMappingFields(
 	element: ActiveElement | undefined
 ): element is ActiveElement & {
@@ -29,19 +28,24 @@ function hasReferenceMappingFields(
 } {
 	if (!element) return false;
 	if (element.class !== "Group" && element.class !== "Asset") return false;
-
-	// Type assertion für TypeScript
 	return true;
+}
+
+function resolveRefElement(id: string): LinkedChildElement | undefined {
+	return (
+		rootStore.assets.assets.find((asset: IAsset) => asset.id === id) ??
+		rootStore.groups.groups.find((group: IGroup) => group.id === id)
+	);
 }
 
 const AssetReferenceMapping: React.FC<{ element: ActiveElement }> = observer(({ element }) => {
 	const langtext = useLangtext();
+	const showXPathTab = isLogicalViewGroupElement(element);
 
-	const [selectedPotential, setSelectedPotential] = useState<IAsset[]>([]);
+	const [selectedPotential, setSelectedPotential] = useState<LinkedChildElement[]>([]);
 	const [selectedConnected, setSelectedConnected] = useState<string[]>([]);
 	const [filterRulesText, setFilterRulesText] = useState("[]");
 
-	// === USEEFFECT ===
 	useEffect(() => {
 		if (!hasReferenceMappingFields(element)) {
 			setSelectedConnected([]);
@@ -49,17 +53,15 @@ const AssetReferenceMapping: React.FC<{ element: ActiveElement }> = observer(({ 
 			return;
 		}
 
-		// Felder sicherstellen
-		if (typeof (element as any).ensureMappingFields === "function") {
-			(element as any).ensureMappingFields();
+		if (typeof (element as { ensureMappingFields?: () => void }).ensureMappingFields === "function") {
+			(element as { ensureMappingFields: () => void }).ensureMappingFields();
 		}
 
-		// Explizites Mapping mit Type Cast
-		const refs = (element as any).elementIdRefs || [];
-		setSelectedConnected(refs.map((ref: any) => elementRefId(ref)));
+		const refs = toPlainElementIdRefs(element.elementIdRefs);
+		setSelectedConnected(refs.map((ref) => resolveElementRefId(ref)).filter((id): id is string => !!id));
 
 		try {
-			const rules = (element as any).filterRules || [];
+			const rules = element.filterRules || [];
 			setFilterRulesText(JSON.stringify(rules, null, 2));
 		} catch {
 			setFilterRulesText("[]");
@@ -69,23 +71,44 @@ const AssetReferenceMapping: React.FC<{ element: ActiveElement }> = observer(({ 
 	const connectedElements = useMemo(() => {
 		if (!hasReferenceMappingFields(element)) return [];
 
-		const refs = (element as any).elementIdRefs || [];
+		const refs = toPlainElementIdRefs(element.elementIdRefs);
+		const connected: LinkedChildElement[] = [];
+		for (const ref of refs) {
+			const id = resolveElementRefId(ref);
+			if (!id) {
+				continue;
+			}
+			const found = resolveRefElement(id);
+			if (found) {
+				connected.push(found);
+			}
+		}
+		return connected;
+	}, [element, rootStore.assets.assets.length, rootStore.groups.groups.length]);
 
-		return rootStore.assets.assets.filter((asset: IAsset) =>
-			refs.some((ref: any) => elementRefId(ref) === asset.id)
-		);
-	}, [element, rootStore.assets.assets.length]);
+	const connectedIds = useMemo(
+		() => new Set(connectedElements.map((item) => item.id)),
+		[connectedElements]
+	);
 
 	const potentialElements = useMemo(() => {
-		return rootStore.assets.assets.filter(
-			(asset: IAsset) => !connectedElements.some((connected) => connected.id === asset.id)
-		);
-	}, [connectedElements, rootStore.assets.assets.length]);
+		const candidates: LinkedChildElement[] = [
+			...rootStore.assets.assets,
+			...rootStore.groups.groups,
+		];
+		return candidates.filter((item) => item.id !== element?.id && !connectedIds.has(item.id));
+	}, [connectedIds, element?.id, rootStore.assets.assets.length, rootStore.groups.groups.length]);
 
 	const persistElementIdRefs = (nextRefs: Array<{ id: string }>) => {
 		if (!hasReferenceMappingFields(element)) return;
 
-		const model = element as any;
+		const model = element as {
+			setElementIdRefs?: (refs: Array<{ id: string }>) => void;
+			beginEdit?: () => void;
+			setValueByPath?: (path: string, value: unknown) => void;
+			markTouched?: () => void;
+			elementIdRefs?: unknown;
+		};
 
 		if (typeof model.setElementIdRefs === "function") {
 			model.setElementIdRefs(nextRefs);
@@ -103,23 +126,26 @@ const AssetReferenceMapping: React.FC<{ element: ActiveElement }> = observer(({ 
 	const persistFilterRules = (nextRules: unknown[]) => {
 		if (!hasReferenceMappingFields(element)) return;
 
-		if (typeof (element as any).setFilterRules === "function") {
-			(element as any).setFilterRules(nextRules);
+		if (typeof (element as { setFilterRules?: (rules: unknown[]) => void }).setFilterRules === "function") {
+			(element as { setFilterRules: (rules: unknown[]) => void }).setFilterRules(nextRules);
 		}
 	};
 
 	const shiftLeft = () => {
-		if (selectedPotential.length === 0) return;
+		if (selectedPotential.length === 0 || !hasReferenceMappingFields(element)) return;
 
-		const el = element as any;
-		const currentRefs: Array<{ id: string }> = el.elementIdRefs || [];
-		const existingIds = new Set(currentRefs.map(r => elementRefId(r)));
+		const currentRefs = toPlainElementIdRefs(element.elementIdRefs);
+		const existingIds = new Set(
+			currentRefs.map((ref) => resolveElementRefId(ref)).filter((id): id is string => !!id)
+		);
+		const nextRefs = currentRefs
+			.map((ref) => resolveElementRefId(ref))
+			.filter((id): id is string => !!id)
+			.map((id) => ({ id }));
 
-		const nextRefs = [...currentRefs];
-
-		selectedPotential.forEach((asset) => {
-			if (!existingIds.has(asset.id)) {
-				nextRefs.push({ id: asset.id });
+		selectedPotential.forEach((item) => {
+			if (!existingIds.has(item.id)) {
+				nextRefs.push({ id: item.id });
 			}
 		});
 
@@ -128,14 +154,13 @@ const AssetReferenceMapping: React.FC<{ element: ActiveElement }> = observer(({ 
 	};
 
 	const shiftRight = () => {
-		if (selectedConnected.length === 0) return;
+		if (selectedConnected.length === 0 || !hasReferenceMappingFields(element)) return;
 
-		const el = element as any;
 		const removeIds = new Set(selectedConnected);
-
-		const nextRefs = (el.elementIdRefs || []).filter(
-			(ref: any) => !removeIds.has(elementRefId(ref))
-		);
+		const nextRefs = toPlainElementIdRefs(element.elementIdRefs)
+			.map((ref) => resolveElementRefId(ref))
+			.filter((id): id is string => !!id && !removeIds.has(id))
+			.map((id) => ({ id }));
 
 		persistElementIdRefs(nextRefs);
 		setSelectedConnected([]);
@@ -155,36 +180,48 @@ const AssetReferenceMapping: React.FC<{ element: ActiveElement }> = observer(({ 
 		return null;
 	}
 
-	// ... Rest der Komponente (staticMapping + Tabs) bleibt gleich wie in meiner letzten Version
+	const renderLinkedList = (
+		items: LinkedChildElement[],
+		onToggle: (item: LinkedChildElement, checked: boolean) => void,
+		isChecked: (item: LinkedChildElement) => boolean
+	) => (
+		<List<LinkedChildElement>
+			dataSource={items}
+			renderItem={(item) => (
+				<List.Item>
+					<Checkbox
+						checked={isChecked(item)}
+						onChange={(e) => onToggle(item, e.target.checked)}
+					>
+						<SchemaSvgIcon
+							svgString={rootStore.configSchemas.getIconByDefinition(item?.definition)}
+							element={item}
+						/>
+						{"label" in item.definition && item.definition.label
+							? `${item.definition.label} (${item.definition.name})`
+							: item.definition.name}
+					</Checkbox>
+				</List.Item>
+			)}
+			style={{ maxHeight: 200, overflowY: "auto" }}
+		/>
+	);
 
 	const staticMapping = (
 		<Row gutter={[16, 16]} justify="start" align="top">
 			<Col span={11}>
-				<div>{langtext("general.assigned") || "Zugeordnet"}</div>
-				<List<IAsset>
-					dataSource={connectedElements}
-					renderItem={(item) => (
-						<List.Item>
-							<Checkbox
-								checked={selectedConnected.includes(item.id)}
-								onChange={(e) => {
-									if (e.target.checked) {
-										setSelectedConnected(prev => [...prev, item.id]);
-									} else {
-										setSelectedConnected(prev => prev.filter(id => id !== item.id));
-									}
-								}}
-							>
-								<SchemaSvgIcon
-									svgString={rootStore.configSchemas.getIconByDefinition(item?.definition)}
-									element={item}
-								/>
-								{item.definition.label} ({item.definition.name})
-							</Checkbox>
-						</List.Item>
-					)}
-					style={{ maxHeight: 200, overflowY: "auto" }}
-				/>
+				<div>{langtext("general.elementchilds_assigned")}</div>
+				{renderLinkedList(
+					connectedElements,
+					(item, checked) => {
+						if (checked) {
+							setSelectedConnected((prev) => [...prev, item.id]);
+						} else {
+							setSelectedConnected((prev) => prev.filter((id) => id !== item.id));
+						}
+					},
+					(item) => selectedConnected.includes(item.id)
+				)}
 			</Col>
 
 			<Col span={2} style={{ display: "flex", flexDirection: "column", justifyContent: "center" }}>
@@ -194,38 +231,29 @@ const AssetReferenceMapping: React.FC<{ element: ActiveElement }> = observer(({ 
 
 			<Col span={11}>
 				<div>{langtext("general.available") || "Verfügbar"}</div>
-				<List<IAsset>
-					dataSource={potentialElements}
-					renderItem={(item) => (
-						<List.Item>
-							<Checkbox
-								checked={selectedPotential.some(a => a.id === item.id)}
-								onChange={(e) => {
-									if (e.target.checked) {
-										setSelectedPotential(prev => [...prev, item]);
-									} else {
-										setSelectedPotential(prev => prev.filter(a => a.id !== item.id));
-									}
-								}}
-							>
-								<SchemaSvgIcon
-									svgString={rootStore.configSchemas.getIconByDefinition(item?.definition)}
-									element={item}
-								/>
-								{item.definition.label} ({item.definition.name})
-							</Checkbox>
-						</List.Item>
-					)}
-					style={{ maxHeight: 200, overflowY: "auto" }}
-				/>
+				{renderLinkedList(
+					potentialElements,
+					(item, checked) => {
+						if (checked) {
+							setSelectedPotential((prev) => [...prev, item]);
+						} else {
+							setSelectedPotential((prev) => prev.filter((entry) => entry.id !== item.id));
+						}
+					},
+					(item) => selectedPotential.some((entry) => entry.id === item.id)
+				)}
 			</Col>
 		</Row>
 	);
 
+	if (!showXPathTab) {
+		return staticMapping;
+	}
+
 	return (
 		<Tabs
 			items={[
-				{ key: "static", label: langtext("general.assetreference_assigned"), children: staticMapping },
+				{ key: "static", label: langtext("general.elementchilds_assigned"), children: staticMapping },
 				{
 					key: "xpath",
 					label: langtext("general.assetreference_filter_rules"),

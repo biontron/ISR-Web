@@ -42,6 +42,56 @@ describe("treeUnlinkedAssets", () => {
 		const unlinked = collectUnlinkedAssetsForView(root, "view1");
 		expect(unlinked.map((asset) => asset.id)).toEqual(["a-free"]);
 	});
+
+	it("Parent-Ref (ownerIdRef) und Stapel gelten als verknüpft", () => {
+		const stackedRoot = {
+			groups: {
+				groups: [
+					{
+						id: "g1",
+						parentIdRef: "view1",
+						elementIdRefs: [],
+					},
+				],
+			},
+			assets: {
+				assets: [
+					{ id: "a-owned", ownerIdRef: "g1", definition: { type: "DEVICE" } },
+					{ id: "a-stacked", ownerIdRef: "a-owned", definition: { type: "COMPONENT" } },
+					{ id: "a-free", ownerIdRef: null, definition: { type: "DEVICE" } },
+				],
+			},
+		} as any;
+
+		const linked = collectLinkedAssetIdsForView(stackedRoot, "view1");
+		expect(linked.has("a-owned")).toBe(true);
+		expect(linked.has("a-stacked")).toBe(true);
+		expect(linked.has("a-free")).toBe(false);
+	});
+
+	it("XPath/filterRules einer View-Gruppe zählen als Verknüpfung", () => {
+		const xpathRoot = {
+			groups: {
+				groups: [
+					{
+						id: "g1",
+						parentIdRef: "view1",
+						elementIdRefs: [],
+						filterRules: [{ xpath: "//DEVICE" }],
+					},
+				],
+			},
+			assets: {
+				assets: [
+					{ id: "a-device", definition: { type: "DEVICE" } },
+					{ id: "a-other", definition: { type: "SERVICE" } },
+				],
+			},
+		} as any;
+
+		const unlinked = collectUnlinkedAssetsForView(xpathRoot, "view1");
+		expect(unlinked.map((asset) => asset.id)).toEqual(["a-other"]);
+	});
 });
 
 describe("resolveTreeNodeSegment", () => {

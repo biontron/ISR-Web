@@ -19,6 +19,7 @@ import {
 	hasElementSettingsValidationErrors,
 } from "../../../lib/elementValidationChecks";
 import { resolveElementSettingsSchemaName } from "../../../lib/elementDefinitionTypes";
+import { isLogicalViewGroupElement } from "../../../lib/elementChildLinks";
 
 interface ElementPropertiesDetailsProps {}
 
@@ -143,8 +144,11 @@ const ElementPropertiesDetails: React.FC<ElementPropertiesDetailsProps> = () => 
 				<Divider>{langtext("general.element_links")}</Divider>
 			</Tooltip>
 
-			{/* Group child Reference Assignment (Hierarchy) */}
-			{activeElement && (activeElement.class === "View" || activeElement.class === "Group") && (
+			{/* Parent-Ref / Child-Ref — alle Elementarten in „Zugeordnete Elemente“ */}
+			{activeElement &&
+				(activeElement.class === "View" ||
+					activeElement.class === "Group" ||
+					activeElement.class === "Asset") && (
 				<CardCollapse title={langtext("general.groupreference_assignment")}>
 					<ElementChildMapping element={activeElement} />
 				</CardCollapse>
@@ -156,8 +160,10 @@ const ElementPropertiesDetails: React.FC<ElementPropertiesDetailsProps> = () => 
 				</CardCollapse>
 			)}
 
-			{/* Asset cross Reference Assignment (Stacking) */}
-			{activeElement && (activeElement.class === "Group" || activeElement.class === "Asset") && (
+			{/* Child-Ref + XPath nur bei logischen View-Gruppen */}
+			{activeElement &&
+				activeElement.class === "Group" &&
+				isLogicalViewGroupElement(activeElement) && (
 				<CardCollapse title={langtext("general.assetreference_assignment")}>
 					<AssetReferenceMapping element={activeElement} />
 				</CardCollapse>

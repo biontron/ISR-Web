@@ -207,7 +207,18 @@ export const GroupModel = types.compose(
 					.filter((id) => id !== "" && root.assets.assets.some((asset: IAsset) => asset.id === id));
 			},
 		}))
-);
+).actions((self) => ({
+	setElementIdRefs(refs: Array<{ id: string }>) {
+		self.beginEdit();
+		self.elementIdRefs.replace(refs);
+		self.markTouched();
+	},
+	setFilterRules(rules: unknown[]) {
+		self.beginEdit();
+		self.filterRules.replace(rules);
+		self.markTouched();
+	},
+}));
 
 // Typescript type / interface export
 export interface IGroup extends Instance<typeof GroupModel> {}

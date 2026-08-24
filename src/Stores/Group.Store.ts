@@ -10,7 +10,10 @@ import authStore from "./Auth.Store";
 import { toJS } from "mobx";
 import { generateResourceID } from "../lib/common";
 import { IRootStore } from "./Root.Store";
-import { resolveGroupDefinitionTypesForCreate } from "../lib/elementDefinitionTypes";
+import {
+	NEW_ELEMENT_DEFINITION_NAME,
+	resolveGroupDefinitionTypesForCreate,
+} from "../lib/elementDefinitionTypes";
 import {
 	captureElementStagingState,
 	isNewElementStatus,
@@ -182,7 +185,7 @@ export const GroupStore = types.compose("GroupStore", BaseStore, types.model({
 				baseType: definitionTypes.baseType,
 				type: definitionTypes.type,
 				subType: definitionTypes.subType,
-				name: root.i18n.text("general.element_new_group"),
+				name: NEW_ELEMENT_DEFINITION_NAME,
 				label: root.i18n.text("general.element_new_group"),
 				description: ""
 			},
