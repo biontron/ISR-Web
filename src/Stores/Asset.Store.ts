@@ -180,8 +180,8 @@ export const AssetStore = types.compose("Asset", BaseStore, types.model({
 				baseType: definitionTypes.baseType,
 				type: definitionTypes.type,
 				subType: definitionTypes.subType,
-				name: root.i18n.text("general.element_new_component"),
-				label: root.i18n.text("general.element_new_component"),
+				name: root.i18n.text("general.element_new_component_name"),
+				label: root.i18n.text("general.element_new_component_label"),
 				description: ""
 			},
 			ownerIdRef: parent?.id,

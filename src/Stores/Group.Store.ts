@@ -182,8 +182,8 @@ export const GroupStore = types.compose("GroupStore", BaseStore, types.model({
 				baseType: definitionTypes.baseType,
 				type: definitionTypes.type,
 				subType: definitionTypes.subType,
-				name: root.i18n.text("general.element_new_group"),
-				label: root.i18n.text("general.element_new_group"),
+				name: root.i18n.text("general.element_new_group_name"),
+				label: root.i18n.text("general.element_new_group_label"),
 				description: ""
 			},
 			parentIdRef: parent?.id,
