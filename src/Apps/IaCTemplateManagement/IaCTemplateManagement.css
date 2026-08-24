@@ -24,7 +24,7 @@
   align-items: center;
   gap: 8px;
   padding: 8px 12px;
-  background-color: #f0f2f5;
+  background-color: #8fa28a;
   border-bottom: 1px solid #d9d9d9;
   color: rgba(0, 0, 0, 0.88);
   flex-shrink: 0;
@@ -35,12 +35,12 @@
 }
 
 .iac-template-management-header .preset-btn#screenmode-preset-default {
-  background-color: #f2c200;
+  background-color: ##fefddf;
   color: #000;
 }
 
 .iac-template-management-header .preset-btn#screenmode-preset-store {
-  background-color: #3aa6d4;
+  background-color: #30afff;
   color: #000;
 }
 
