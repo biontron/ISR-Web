@@ -218,6 +218,8 @@ const SchemaSelectionDialog: React.FC<SchemaSelectionDialogProps> = ({
 
 	return (
 		<Modal
+			width="50%"
+			style={{ minWidth: 600 }}
 			title={
 				"Select Item for adding next to '" +
 				element.definition.name +
