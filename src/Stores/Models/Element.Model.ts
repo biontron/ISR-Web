@@ -32,6 +32,7 @@ export const ElementDefinitionTagModel = types.model("ElementDefinitionTag", {
 });
 
 function markTouchedAfterMutation(self: { status: ElementStatus }): void {
+	// Gleiche Regel wie nextTouchedStatus: new/invalid bleiben (REST create/POST).
 	if (self.status === "new" || self.status === "invalid") {
 		return;
 	}
@@ -92,6 +93,11 @@ export const ElementModel = types
 			setStatus(newStatus: ElementStatus) {
 				console.log(`[ElementModel] setStatus → ${newStatus} (id: ${self.id})`);
 				self.status = newStatus;
+			},
+
+			/** Nach Mutation: new/invalid bleiben, sonst changed. */
+			markTouched() {
+				markTouchedAfterMutation(self);
 			},
 
 			restoreStagingState(
@@ -186,10 +192,12 @@ export const ElementModel = types
 
 				if (elementClass === "Asset" && isArrayCollectionGroup(schemaItem)) {
 					const result = tryAssetArrayAdd(self as any, path, schemaItem, root);
-					if (result === "choose" || result === undefined) {
+					if (result === "choose") {
 						return;
 					}
-					if (tryAssetMstAppend(self as any, path, result)) {
+					const appendPath =
+						schemaItem.dataStructure.itemName === "docks" ? "docks" : path;
+					if (result && tryAssetMstAppend(self as any, appendPath, result)) {
 						markTouchedAfterMutation(self);
 						applyValidationSync();
 						return;

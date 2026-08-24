@@ -1,9 +1,9 @@
 /*
 # SPDX-License-Identifier: GPL-2.0*/
 
-import React, { ReactNode } from "react";
+import React, { ReactNode, useEffect } from "react";
 import { observer } from "mobx-react";
-import { useNavigate } from "react-router";
+import { useLocation, useNavigate } from "react-router";
 import { Menu, Dropdown } from "antd";
 import { DownOutlined } from "@ant-design/icons";
 import { rootStore } from "../../Stores/Root.Store";
@@ -20,25 +20,28 @@ interface CommonLayoutProps {
 const CommonLayout: React.FC<CommonLayoutProps> = observer(({ children }) => {
 	const langtext = useLangtext();
 	const navigate = useNavigate();
+	const location = useLocation();
+
+	useEffect(() => {
+		const lang = new URLSearchParams(location.search).get("lang");
+		if (
+			lang &&
+			rootStore.i18n.availableLanguages.includes(lang) &&
+			lang !== rootStore.i18n.lang
+		) {
+			rootStore.i18n.setLanguage(lang);
+		}
+	}, [location.search]);
 
 	function handleLanguageChange(e: React.ChangeEvent<HTMLSelectElement>) {
 		const selectedLang = e.target.value;
-		const basePath = `${authStore.getDomain()}/am?lang=${selectedLang}`;
-		const { activeView, activeElement } = rootStore.ui;
-
-		switch (activeElement?.class) {
-			case "View":
-				navigate(`${basePath}/${activeView?.id}`);
-				break;
-			case "Group":
-			case "Asset":
-				navigate(
-					`${basePath}/${activeView?.id}/element/${activeElement?.id}`
-				);
-				break;
-			default:
-				navigate(`${basePath}`);
-		}
+		rootStore.i18n.setLanguage(selectedLang);
+		const nextSearch = new URLSearchParams(location.search);
+		nextSearch.set("lang", selectedLang);
+		navigate(
+			{ pathname: location.pathname, search: nextSearch.toString() },
+			{ replace: true }
+		);
 	}
 
 	const handleClearStoredData = () => {

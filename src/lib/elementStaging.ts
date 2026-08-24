@@ -4,6 +4,16 @@ export function isTouchedStatus(status: ElementStatus | undefined): boolean {
 	return !!status && status !== "untouched";
 }
 
+export function nextTouchedStatus(status: ElementStatus): ElementStatus {
+	if (status === "new" || status === "invalid") {
+		return status;
+	}
+	if (status === "edit" || status === "untouched") {
+		return "changed";
+	}
+	return status;
+}
+
 export function touchKindFromStatus(
 	status: ElementStatus,
 	statusBeforeInvalid?: ElementStatus | null
@@ -25,7 +35,7 @@ export function touchKindFromStatus(
 }
 
 export function isNewElementStatus(
-	status: ElementStatus,
+	status: ElementStatus | undefined,
 	statusBeforeInvalid?: ElementStatus | null
 ): boolean {
 	return status === "new" || (status === "invalid" && statusBeforeInvalid === "new");

@@ -30,16 +30,26 @@ export function collectViewGroupsUnderView(root: IRootStore, viewId: string): IG
 	return groups;
 }
 
-/** Asset-IDs, die statisch über elementIdRefs an View-Gruppen dieser View hängen. */
+/** Asset-IDs, die statisch an dieser View hängen (ownerIdRef oder elementIdRefs). */
 export function collectLinkedAssetIdsForView(root: IRootStore, viewId: string): Set<string> {
 	const linked = new Set<string>();
+	const viewGroups = collectViewGroupsUnderView(root, viewId);
+	const parentIds = new Set<string>([viewId, ...viewGroups.map((group) => group.id)]);
 
-	for (const group of collectViewGroupsUnderView(root, viewId)) {
+	for (const group of viewGroups) {
 		for (const ref of group.elementIdRefs) {
 			const assetId = resolveElementRefId(ref);
 			if (assetId) {
 				linked.add(assetId);
 			}
+		}
+	}
+
+	for (const asset of root.assets.assets) {
+		const ownerId =
+			typeof asset.ownerIdRef === "string" ? asset.ownerIdRef.trim() : "";
+		if (ownerId && parentIds.has(ownerId)) {
+			linked.add(asset.id);
 		}
 	}
 

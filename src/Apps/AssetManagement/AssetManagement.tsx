@@ -13,6 +13,7 @@ import {
 	ElementGraphMap,
 } from "./Components/ElementGraph.Component";
 import ElementPropertiesDetails from "./Components/ElementPropertiesDetails";
+import ElementPropertiesAssignments from "./Components/ElementPropertiesAssignments";
 import { ElementPropertiesConnections } from "./Components/ElementPropertiesConnections";
 import { ElementPropertiesControls } from "./Components/ElementPropertiesControls";
 import { BreadCrumbs } from "./Components/BreadCrumbs";
@@ -187,7 +188,7 @@ const AssetManagement = observer(() => {
 					<ElementTree />
 				</Sider>
 
-				{/* CENTER - PROPERTIES / Eigenschaften */}
+				{/* CENTER - ELEMENT */}
 				<Layout className={`centerArea ${propertiesFrameClass} ${activeElement?.class}`} style={{ width: `${getSizes().center}%` }}>
 					<div className="area-header" onClick={() => applyPreset("properties")}>
 						<span>{langtext("general.screenmode_properties_title")}</span>
@@ -196,6 +197,13 @@ const AssetManagement = observer(() => {
 						<TabPane tab={langtext("general.details_tab_details")} key="1">
 							{activeElement && <ElementPropertiesDetails />}
 						</TabPane>
+						{(activeElement?.class === "View" ||
+							activeElement?.class === "Group" ||
+							activeElement?.class === "Asset") && (
+							<TabPane tab={langtext("general.details_tab_assignments")} key="assignments">
+								{activeElement && <ElementPropertiesAssignments />}
+							</TabPane>
+						)}
 						{activeElement?.class === "Asset" && (
 							<TabPane tab={langtext("general.details_tab_connections")} key="2">
 								{activeElement && <ElementPropertiesConnections />}

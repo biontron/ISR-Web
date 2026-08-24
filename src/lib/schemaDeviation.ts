@@ -43,6 +43,14 @@ export function isArrayCollectionGroup(group: ISchemaGroupModel): boolean {
 	return group.collectionType === "array";
 }
 
+/** maxUsage <= 0 bedeutet unbegrenzt (wie in XSD/REST oft für Arrays). */
+export function canAddCollectionEntry(maxUsage: number, currentCount: number): boolean {
+	if (!Number.isFinite(maxUsage) || maxUsage <= 0) {
+		return true;
+	}
+	return currentCount < maxUsage;
+}
+
 /** Datenpfad zu einer Schema-Gruppe (ANY-PROPERTIES/ANY-DEFINITION-Wrapper berücksichtigen). */
 export function buildSchemaDataPath(
 	pathPrefix: string,

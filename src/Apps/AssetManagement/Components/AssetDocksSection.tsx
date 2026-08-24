@@ -27,12 +27,16 @@ const AssetDocksSection: React.FC<AssetDocksSectionProps> = ({ asset, canEdit })
 	);
 
 	const requestChooseOnAdd = useCallback((request: SchemaChooseOnAddRequest) => {
+		if (request.path === "docks" || request.group.dataStructure.itemName === "docks") {
+			asset.addDock(request.group.items);
+			return;
+		}
 		if (request.path.match(/^docks\[\d+\]\.dockparts$/)) {
 			setDockpartChooseRequest(request);
 			return;
 		}
 		request.onCancel();
-	}, []);
+	}, [asset]);
 
 	const handleDockpartSelect = (schemaIds: string[]) => {
 		if (!dockpartChooseRequest || schemaIds.length === 0) {

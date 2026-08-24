@@ -138,23 +138,17 @@ export const AssetModel = types.compose(
 			? buildDockEntryFromSchemaItems(self as IAsset, "docks", schemaItems)
 			: { id: `d${Math.random().toString(36).slice(2, 11)}`, type: "", dockparts: [] };
 		self.docks.push(entry as any);
-		if (self.status !== "new") {
-			self.status = "changed";
-		}
+		self.markTouched();
 	},
 	removeDock(dockIndex: number) {
 		self.beginEdit();
 		self.docks.splice(dockIndex, 1);
-		if (self.status !== "new") {
-			self.status = "changed";
-		}
+		self.markTouched();
 	},
 	appendDockEntry(entry: Record<string, unknown>) {
 		self.beginEdit();
 		self.docks.push(entry as any);
-		if (self.status !== "new") {
-			self.status = "changed";
-		}
+		self.markTouched();
 	},
 	appendDockpartEntry(dockIndex: number, entry: Record<string, unknown>) {
 		if (!self.docks[dockIndex]) {
@@ -162,9 +156,7 @@ export const AssetModel = types.compose(
 		}
 		self.beginEdit();
 		self.docks[dockIndex].dockparts.push(entry as any);
-		if (self.status !== "new") {
-			self.status = "changed";
-		}
+		self.markTouched();
 	},
 	addDockpart(dockIndex: number, schemaId: string) {
 		const root = getRoot(self) as IRootStore;
@@ -174,16 +166,12 @@ export const AssetModel = types.compose(
 		}
 		self.beginEdit();
 		self.docks[dockIndex].dockparts.push(snapshot as any);
-		if (self.status !== "new") {
-			self.status = "changed";
-		}
+		self.markTouched();
 	},
 	removeDockpart(dockIndex: number, partIndex: number) {
 		self.beginEdit();
 		self.docks[dockIndex].dockparts.splice(partIndex, 1);
-		if (self.status !== "new") {
-			self.status = "changed";
-		}
+		self.markTouched();
 	},
 	/** Legt bei Bedarf ein Dock an und hängt genau ein Dockpart-Element ein */
 	addDockpartToAsset(schemaType: string) {
@@ -197,40 +185,42 @@ export const AssetModel = types.compose(
 		const root = getRoot(self) as IRootStore;
 		const snapshot = buildDockpartEntry(self as IAsset, dockIndex, schemaType, root);
 		self.docks[dockIndex].dockparts.push(snapshot as any);
-		if (self.status !== "new") {
-			self.status = "changed";
-		}
+		self.markTouched();
 	},
 	// Neue Actions für Cross-Referencing
 	ensureMappingFields() {
+		const refsMissing = !self.elementIdRefs || self.elementIdRefs.length === undefined;
+		const rulesMissing = !self.filterRules || self.filterRules.length === undefined;
+		if (!refsMissing && !rulesMissing) {
+			return;
+		}
+
 		self.beginEdit();
-
-		if (!self.elementIdRefs || self.elementIdRefs.length === undefined) {
-			self.elementIdRefs.replace([]);   // ← WICHTIG: .replace()
+		if (refsMissing) {
+			self.elementIdRefs.replace([]);
 		}
-		if (!self.filterRules || self.filterRules.length === undefined) {
-			self.filterRules.replace([]);     // ← WICHTIG: .replace()
+		if (rulesMissing) {
+			self.filterRules.replace([]);
 		}
-
-		if (self.status !== "new") {
-			self.status = "changed";
-		}
+		self.markTouched();
 	},
 
 	setElementIdRefs(refs: Array<{ id: string }>) {
 		self.beginEdit();
 		self.elementIdRefs.replace(refs);     // ← .replace() statt direkte Zuweisung
-		if (self.status !== "new") {
-			self.status = "changed";
-		}
+		self.markTouched();
 	},
 
 	setFilterRules(rules: unknown[]) {
 		self.beginEdit();
 		self.filterRules.replace(rules);      // ← .replace()
-		if (self.status !== "new") {
-			self.status = "changed";
-		}
+		self.markTouched();
+	},
+
+	setOwnerIdRef(ownerId: string | null) {
+		self.beginEdit();
+		self.ownerIdRef = ownerId;
+		self.markTouched();
 	},
 }));
 

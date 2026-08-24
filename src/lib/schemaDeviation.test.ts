@@ -14,6 +14,7 @@ import {
 	isOptionalGroupWithoutInstances,
 	isFixedObjectGroup,
 	isVariableGroup,
+	canAddCollectionEntry,
 	buildSchemaDataPath,
 	resolveSchemaValidationScope,
 	shouldValidateGroupContents,
@@ -504,6 +505,20 @@ describe("schemaDeviation", () => {
 			expect(
 				findStructuralMissingInScope(data, schemaItems, "docks[0].dockparts[0]")
 			).toEqual([]);
+		});
+	});
+
+	describe("canAddCollectionEntry", () => {
+		it("erlaubt Einträge wenn maxUsage unbegrenzt (<= 0) ist", () => {
+			expect(canAddCollectionEntry(0, 0)).toBe(true);
+			expect(canAddCollectionEntry(0, 5)).toBe(true);
+			expect(canAddCollectionEntry(-1, 2)).toBe(true);
+		});
+
+		it("stoppt bei erreichtem maxUsage", () => {
+			expect(canAddCollectionEntry(20, 0)).toBe(true);
+			expect(canAddCollectionEntry(20, 19)).toBe(true);
+			expect(canAddCollectionEntry(20, 20)).toBe(false);
 		});
 	});
 

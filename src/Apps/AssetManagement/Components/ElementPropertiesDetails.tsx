@@ -5,14 +5,10 @@
 import { Button, Divider, Tooltip } from "antd";
 import React, { Fragment } from "react";
 import SchemaEditor from "../../../Components/Schema/SchemaEditor/SchemaEditor.Component";
-import CardCollapse from "./CardCollapse.Component";
 import { useLangtext } from "../../../lib/common";
 import { rootStore } from "../../../Stores/Root.Store";
 import { observer } from "mobx-react";
-import { IAsset } from "../../../Stores/Models/Asset.Model";
 import { isTreeElement } from "../../../Interfaces/Element";
-import ElementChildMapping from "../../../Components/Schema/SchemaEditor/Mappings/ElementChildMapping.Component";
-import AssetReferenceMapping from "../../../Components/Schema/SchemaEditor/Mappings/AssetReferenceMapping.Component";
 import { buildElementStatusClass } from "../../../lib/elementStatusStyle";
 import {
 	hasElementSettingsValidationErrors,
@@ -136,24 +132,6 @@ const ElementPropertiesDetails: React.FC<ElementPropertiesDetailsProps> = () => 
 						/>
 					</div>
 				</section>
-			)}
-
-			<Tooltip title={langtext("general.element_links")}>
-				<Divider>{langtext("general.element_links")}</Divider>
-			</Tooltip>
-
-			{/* Group child Reference Assignment (Hierarchy) */}
-			{activeElement && (activeElement.class === "View" || activeElement.class === "Group") && (
-				<CardCollapse title={langtext("general.groupreference_assignment")}>
-					<ElementChildMapping element={activeElement} />
-				</CardCollapse>
-			)}
-
-			{/* Asset cross Reference Assignment (Stacking) */}
-			{activeElement && (activeElement.class === "Group" || activeElement.class === "Asset") && (
-				<CardCollapse title={langtext("general.assetreference_assignment")}>
-					<AssetReferenceMapping element={activeElement} />
-				</CardCollapse>
 			)}
 
 			{/* Button: In den Bearbeitungsmodus wechseln */}

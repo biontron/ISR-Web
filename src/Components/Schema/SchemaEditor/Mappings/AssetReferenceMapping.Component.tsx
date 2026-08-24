@@ -3,230 +3,250 @@
 	LICENSE AGREEMENT — siehe Projekt-Header
 	========================================================================
 */
-import React, { useEffect, useMemo, useState } from "react";
+import React, { useState } from "react";
 import { observer } from "mobx-react";
-import { Checkbox, Button, List, Col, Row, Tabs, Input } from "antd";
-import { LeftOutlined, RightOutlined } from "@ant-design/icons";
-import { getIdentifier } from "mobx-state-tree";
+import { Checkbox, Button, List, Col, Row, Tabs, Input, Empty } from "antd";
+import { LeftOutlined, RightOutlined, DeleteOutlined, PlusOutlined } from "@ant-design/icons";
 import { rootStore } from "../../../../Stores/Root.Store";
 import { ActiveElement } from "../../../../Interfaces/Element";
 import { IAsset } from "../../../../Stores/Models/Asset.Model";
+import { IGroup } from "../../../../Stores/Models/Group.Model";
+import { IView } from "../../../../Stores/Models/View.Model";
 import SchemaSvgIcon from "../../../Schema/SchemaSvgIcon";
 import { useLangtext } from "../../../../lib/common";
+import {
+	addXPathFilterRule,
+	AssignableTreeElement,
+	collectAssignedElements,
+	collectUnassignedElements,
+	readXPathExpression,
+	removeXPathFilterRule,
+} from "../../../../lib/elementAssignments";
+import {
+	collectFilterAvailableElements,
+	collectFilterMatchedElements,
+} from "../../../../lib/elementXPathFilter";
 
-function elementRefId(ref: { id: unknown }): string {
-	if (typeof ref.id === "string") return ref.id;
-	return getIdentifier(ref.id as IAsset) ?? "";
+type MappingParent = IView | IGroup | IAsset;
+
+function hasAssignmentParent(
+	element: ActiveElement | undefined
+): element is MappingParent {
+	return element?.class === "View" || element?.class === "Group" || element?.class === "Asset";
 }
 
-// Type Guard
-// === VERBESSERTER TYPE GUARD ===
-function hasReferenceMappingFields(
-	element: ActiveElement | undefined
-): element is ActiveElement & {
-	elementIdRefs: Array<{ id: unknown }>;
-	filterRules: unknown[];
-} {
-	if (!element) return false;
-	if (element.class !== "Group" && element.class !== "Asset") return false;
+function hasFilterRules(
+	element: MappingParent
+): element is MappingParent & { filterRules: unknown[]; setFilterRules?: (rules: unknown[]) => void } {
+	return element.class === "View" || element.class === "Group";
+}
 
-	// Type assertion für TypeScript
-	return true;
+function assignChild(child: AssignableTreeElement, parentId: string) {
+	if (child.class === "Group") {
+		(child as IGroup).setParentIdRef(parentId);
+		return;
+	}
+	(child as IAsset).setOwnerIdRef(parentId);
+}
+
+function unassignChild(child: AssignableTreeElement) {
+	if (child.class === "Group") {
+		(child as IGroup).setParentIdRef(undefined);
+		return;
+	}
+	(child as IAsset).setOwnerIdRef(null);
 }
 
 const AssetReferenceMapping: React.FC<{ element: ActiveElement }> = observer(({ element }) => {
 	const langtext = useLangtext();
+	const canEdit = !rootStore.ui.isReadOnly;
 
-	const [selectedPotential, setSelectedPotential] = useState<IAsset[]>([]);
-	const [selectedConnected, setSelectedConnected] = useState<string[]>([]);
-	const [filterRulesText, setFilterRulesText] = useState("[]");
+	const [selectedAssignedIds, setSelectedAssignedIds] = useState<string[]>([]);
+	const [selectedAvailableIds, setSelectedAvailableIds] = useState<string[]>([]);
+	const [xpathDraft, setXpathDraft] = useState("");
 
-	// === USEEFFECT ===
-	useEffect(() => {
-		if (!hasReferenceMappingFields(element)) {
-			setSelectedConnected([]);
-			setFilterRulesText("[]");
-			return;
-		}
+	const assignedElements = hasAssignmentParent(element)
+		? collectAssignedElements(rootStore, element.id)
+		: [];
+	const availableElements = hasAssignmentParent(element)
+		? collectUnassignedElements(rootStore, element.id)
+		: [];
 
-		// Felder sicherstellen
-		if (typeof (element as any).ensureMappingFields === "function") {
-			(element as any).ensureMappingFields();
-		}
-
-		// Explizites Mapping mit Type Cast
-		const refs = (element as any).elementIdRefs || [];
-		setSelectedConnected(refs.map((ref: any) => elementRefId(ref)));
-
-		try {
-			const rules = (element as any).filterRules || [];
-			setFilterRulesText(JSON.stringify(rules, null, 2));
-		} catch {
-			setFilterRulesText("[]");
-		}
-	}, [element]);
-
-	const connectedElements = useMemo(() => {
-		if (!hasReferenceMappingFields(element)) return [];
-
-		const refs = (element as any).elementIdRefs || [];
-
-		return rootStore.assets.assets.filter((asset: IAsset) =>
-			refs.some((ref: any) => elementRefId(ref) === asset.id)
-		);
-	}, [element, rootStore.assets.assets.length]);
-
-	const potentialElements = useMemo(() => {
-		return rootStore.assets.assets.filter(
-			(asset: IAsset) => !connectedElements.some((connected) => connected.id === asset.id)
-		);
-	}, [connectedElements, rootStore.assets.assets.length]);
-
-	const persistElementIdRefs = (nextRefs: Array<{ id: string }>) => {
-		if (!hasReferenceMappingFields(element)) return;
-
-		const model = element as any;
-
-		if (typeof model.setElementIdRefs === "function") {
-			// Bevorzugt: richtige Action
-			model.setElementIdRefs(nextRefs);
-		} else {
-			// Fallback mit korrekter Action-Wrapper
-			model.beginEdit?.();
-
-			// WICHTIG: über setValueByPath oder direkte Action
-			if (typeof model.setValueByPath === "function") {
-				model.setValueByPath("elementIdRefs", nextRefs);   // falls vorhanden
-			} else {
-				model.elementIdRefs = nextRefs; // nur als letzter Ausweg
-			}
-
-			if (model.status !== "new" && typeof model.setStatus === "function") {
-				model.setStatus("changed");
-			}
-		}
-	};
-
-	const persistFilterRules = (nextRules: unknown[]) => {
-		if (!hasReferenceMappingFields(element)) return;
-
-		if (typeof (element as any).setFilterRules === "function") {
-			(element as any).setFilterRules(nextRules);
-		}
-	};
-
-	const shiftLeft = () => {
-		if (selectedPotential.length === 0) return;
-
-		const el = element as any;
-		const currentRefs: Array<{ id: string }> = el.elementIdRefs || [];
-		const existingIds = new Set(currentRefs.map(r => elementRefId(r)));
-
-		const nextRefs = [...currentRefs];
-
-		selectedPotential.forEach((asset) => {
-			if (!existingIds.has(asset.id)) {
-				nextRefs.push({ id: asset.id });
-			}
-		});
-
-		persistElementIdRefs(nextRefs);
-		setSelectedPotential([]);
-	};
-
-	const shiftRight = () => {
-		if (selectedConnected.length === 0) return;
-
-		const el = element as any;
-		const removeIds = new Set(selectedConnected);
-
-		const nextRefs = (el.elementIdRefs || []).filter(
-			(ref: any) => !removeIds.has(elementRefId(ref))
-		);
-
-		persistElementIdRefs(nextRefs);
-		setSelectedConnected([]);
-	};
-
-	const applyFilterRules = () => {
-		try {
-			const parsed = JSON.parse(filterRulesText);
-			if (!Array.isArray(parsed)) throw new Error("Must be array");
-			persistFilterRules(parsed);
-		} catch (error) {
-			console.error("Invalid filterRules JSON", error);
-		}
-	};
-
-	if (!hasReferenceMappingFields(element)) {
+	if (!hasAssignmentParent(element)) {
 		return null;
 	}
 
-	// ... Rest der Komponente (staticMapping + Tabs) bleibt gleich wie in meiner letzten Version
+	const toggleSelection = (ids: string[], id: string, checked: boolean) =>
+		checked ? [...ids, id] : ids.filter((item) => item !== id);
 
-	const staticMapping = (
+	const selectedAssigned = assignedElements.filter((item) =>
+		selectedAssignedIds.includes(item.id)
+	);
+	const selectedAvailable = availableElements.filter((item) =>
+		selectedAvailableIds.includes(item.id)
+	);
+
+	const shiftLeft = () => {
+		if (!canEdit || selectedAvailable.length === 0) {
+			return;
+		}
+		selectedAvailable.forEach((child) => assignChild(child, element.id));
+		setSelectedAvailableIds([]);
+	};
+
+	const shiftRight = () => {
+		if (!canEdit || selectedAssigned.length === 0) {
+			return;
+		}
+		selectedAssigned.forEach((child) => unassignChild(child));
+		setSelectedAssignedIds([]);
+	};
+
+	const persistFilterRules = (nextRules: unknown[]) => {
+		if (!hasFilterRules(element) || typeof element.setFilterRules !== "function") {
+			return;
+		}
+		element.setFilterRules(nextRules);
+	};
+
+	const addXPath = () => {
+		if (!hasFilterRules(element) || !canEdit) {
+			return;
+		}
+		persistFilterRules(addXPathFilterRule([...element.filterRules], xpathDraft));
+		setXpathDraft("");
+	};
+
+	const deleteXPath = (index: number) => {
+		if (!hasFilterRules(element) || !canEdit) {
+			return;
+		}
+		persistFilterRules(removeXPathFilterRule([...element.filterRules], index));
+	};
+
+	const renderElementRow = (
+		item: AssignableTreeElement,
+		selectedIds?: string[],
+		onToggle?: (id: string, checked: boolean) => void
+	) => {
+		const label = (
+			<>
+				<SchemaSvgIcon
+					svgString={rootStore.configSchemas.getIconByDefinition(item.definition)}
+					element={item}
+				/>
+				{item.definition.name}
+				{item.class === "Group" ? " (View-Gruppe)" : " (Asset)"}
+			</>
+		);
+
+		if (!onToggle || !selectedIds) {
+			return <List.Item>{label}</List.Item>;
+		}
+
+		return (
+			<List.Item>
+				<Checkbox
+					checked={selectedIds.includes(item.id)}
+					disabled={!canEdit}
+					onChange={(event) => onToggle(item.id, event.target.checked)}
+				>
+					{label}
+				</Checkbox>
+			</List.Item>
+		);
+	};
+
+	const renderElementLists = (
+		leftTitle: string,
+		leftItems: AssignableTreeElement[],
+		rightTitle: string,
+		rightItems: AssignableTreeElement[],
+		options?: {
+			leftSelectedIds?: string[];
+			rightSelectedIds?: string[];
+			onToggleLeft?: (id: string, checked: boolean) => void;
+			onToggleRight?: (id: string, checked: boolean) => void;
+			actions?: React.ReactNode;
+		}
+	) => (
 		<Row gutter={[16, 16]} justify="start" align="top">
 			<Col span={11}>
-				<div>{langtext("general.assigned") || "Zugeordnet"}</div>
-				<List<IAsset>
-					dataSource={connectedElements}
-					renderItem={(item) => (
-						<List.Item>
-							<Checkbox
-								checked={selectedConnected.includes(item.id)}
-								onChange={(e) => {
-									if (e.target.checked) {
-										setSelectedConnected(prev => [...prev, item.id]);
-									} else {
-										setSelectedConnected(prev => prev.filter(id => id !== item.id));
-									}
-								}}
-							>
-								<SchemaSvgIcon
-									svgString={rootStore.configSchemas.getIconByDefinition(item?.definition)}
-									element={item}
-								/>
-								{item.definition.label} ({item.definition.name})
-							</Checkbox>
-						</List.Item>
-					)}
-					style={{ maxHeight: 200, overflowY: "auto" }}
+				<div>{leftTitle}</div>
+				<List<AssignableTreeElement>
+					dataSource={leftItems}
+					locale={{ emptyText: <Empty description={leftTitle} /> }}
+					renderItem={(item) =>
+						renderElementRow(item, options?.leftSelectedIds, options?.onToggleLeft)
+					}
+					style={{ maxHeight: 280, overflowY: "auto" }}
 				/>
 			</Col>
 
 			<Col span={2} style={{ display: "flex", flexDirection: "column", justifyContent: "center" }}>
-				<Button icon={<LeftOutlined />} type="primary" onClick={shiftLeft} style={{ marginBottom: 8 }} />
-				<Button icon={<RightOutlined />} type="primary" onClick={shiftRight} style={{ marginBottom: 8 }} />
+				{options?.actions}
 			</Col>
 
 			<Col span={11}>
-				<div>{langtext("general.available") || "Verfügbar"}</div>
-				<List<IAsset>
-					dataSource={potentialElements}
-					renderItem={(item) => (
-						<List.Item>
-							<Checkbox
-								checked={selectedPotential.some(a => a.id === item.id)}
-								onChange={(e) => {
-									if (e.target.checked) {
-										setSelectedPotential(prev => [...prev, item]);
-									} else {
-										setSelectedPotential(prev => prev.filter(a => a.id !== item.id));
-									}
-								}}
-							>
-								<SchemaSvgIcon
-									svgString={rootStore.configSchemas.getIconByDefinition(item?.definition)}
-									element={item}
-								/>
-								{item.definition.label} ({item.definition.name})
-							</Checkbox>
-						</List.Item>
-					)}
-					style={{ maxHeight: 200, overflowY: "auto" }}
+				<div>{rightTitle}</div>
+				<List<AssignableTreeElement>
+					dataSource={rightItems}
+					locale={{ emptyText: <Empty description={rightTitle} /> }}
+					renderItem={(item) =>
+						renderElementRow(item, options?.rightSelectedIds, options?.onToggleRight)
+					}
+					style={{ maxHeight: 280, overflowY: "auto" }}
 				/>
 			</Col>
 		</Row>
+	);
+
+	const staticMapping = renderElementLists(
+		langtext("general.assetreference_assigned"),
+		assignedElements,
+		langtext("general.assetreference_available"),
+		availableElements,
+		{
+			leftSelectedIds: selectedAssignedIds,
+			rightSelectedIds: selectedAvailableIds,
+			onToggleLeft: (id, checked) =>
+				setSelectedAssignedIds((prev) => toggleSelection(prev, id, checked)),
+			onToggleRight: (id, checked) =>
+				setSelectedAvailableIds((prev) => toggleSelection(prev, id, checked)),
+			actions: (
+				<>
+					<Button
+						icon={<LeftOutlined />}
+						type="primary"
+						onClick={shiftLeft}
+						disabled={!canEdit || selectedAvailable.length === 0}
+						style={{ marginBottom: 8 }}
+					/>
+					<Button
+						icon={<RightOutlined />}
+						type="primary"
+						onClick={shiftRight}
+						disabled={!canEdit || selectedAssigned.length === 0}
+					/>
+				</>
+			),
+		}
+	);
+
+	if (element.class === "Asset") {
+		return staticMapping;
+	}
+
+	const xpathRules = hasFilterRules(element) ? [...element.filterRules] : [];
+	const filterMatchedElements = collectFilterMatchedElements(
+		rootStore,
+		element.id,
+		xpathRules
+	);
+	const filterAvailableElements = collectFilterAvailableElements(
+		rootStore,
+		element.id,
+		xpathRules
 	);
 
 	return (
@@ -241,18 +261,58 @@ const AssetReferenceMapping: React.FC<{ element: ActiveElement }> = observer(({ 
 							<p className="schema-editor-empty__message">
 								{langtext("general.assetreference_filter_rules_hint")}
 							</p>
-							<Input.TextArea
-								value={filterRulesText}
-								onChange={(e) => setFilterRulesText(e.target.value)}
-								autoSize={{ minRows: 6, maxRows: 16 }}
-								style={{ fontFamily: "monospace", fontSize: 12 }}
+							<List
+								dataSource={xpathRules}
+								locale={{ emptyText: langtext("general.assetreference_filter_empty") }}
+								renderItem={(rule, index) => (
+									<List.Item
+										actions={[
+											<Button
+												key="delete"
+												type="text"
+												danger
+												icon={<DeleteOutlined />}
+												disabled={!canEdit}
+												onClick={() => deleteXPath(index)}
+											>
+												{langtext("general.delete")}
+											</Button>,
+										]}
+									>
+										<code>{readXPathExpression(rule) || String(rule)}</code>
+									</List.Item>
+								)}
 							/>
-							<Button type="primary" onClick={applyFilterRules} style={{ marginTop: 8 }}>
-								{langtext("edit_store")}
-							</Button>
+							<Row gutter={8} style={{ marginTop: 8, marginBottom: 16 }}>
+								<Col flex="auto">
+									<Input
+										value={xpathDraft}
+										disabled={!canEdit}
+										placeholder={langtext("general.assetreference_filter_placeholder")}
+										onChange={(event) => setXpathDraft(event.target.value)}
+										onPressEnter={addXPath}
+									/>
+								</Col>
+								<Col>
+									<Button
+										type="primary"
+										icon={<PlusOutlined />}
+										disabled={!canEdit || xpathDraft.trim() === ""}
+										onClick={addXPath}
+									>
+										{langtext("general.add")}
+									</Button>
+								</Col>
+							</Row>
+							{renderElementLists(
+								langtext("general.assetreference_filter_matched"),
+								filterMatchedElements,
+								langtext("general.assetreference_filter_available"),
+								filterAvailableElements
+							)}
 						</>
-					)
-				}
+					),
+				},
 			]}
 		/>
 	);

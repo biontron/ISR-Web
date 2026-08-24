@@ -38,6 +38,20 @@ describe("treeUnlinkedAssets", () => {
 		expect(linked.has("a-free")).toBe(false);
 	});
 
+	it("collectLinkedAssetIdsForView zählt ownerIdRef zur View/Gruppe", () => {
+		const withOwner = {
+			...root,
+			assets: {
+				assets: [
+					...root.assets.assets,
+					{ id: "a-owned", ownerIdRef: "view1" },
+				],
+			},
+		} as any;
+		const linked = collectLinkedAssetIdsForView(withOwner, "view1");
+		expect(linked.has("a-owned")).toBe(true);
+	});
+
 	it("collectUnlinkedAssetsForView liefert nur freie Assets", () => {
 		const unlinked = collectUnlinkedAssetsForView(root, "view1");
 		expect(unlinked.map((asset) => asset.id)).toEqual(["a-free"]);

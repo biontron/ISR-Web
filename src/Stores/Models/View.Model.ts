@@ -2,10 +2,10 @@
 # Infrastructure Repository (ISR) / Infrastruktur Repository (ISR)
 # SPDX-License-Identifier: GPL-2.0 
 */
-import { Instance, applySnapshot, getRoot, types } from "mobx-state-tree";
+import { Instance, getRoot, types } from "mobx-state-tree";
 import { IGroup } from "./Group.Model";
+import { IAsset } from "./Asset.Model";
 import ElementModel, { ElementDefinitionTagModel } from "./Element.Model";
-import { IRootStore } from "../Root.Store";
 import { resolveTreeNodeElementType } from "../../lib/treeNodeDisplay";
 
 
@@ -64,7 +64,7 @@ export const ViewModel = types.compose(
 			childrenAsTreeNodes() {
 				const root = getRoot(self) as any;
 				if (!root.groups.groups) {
-					return {
+					return [{
 						key: "",
 						class: "VIEW",
 						title: "ERROR VIEW",
@@ -73,9 +73,9 @@ export const ViewModel = types.compose(
 						description: "",
 						status: "untouched",
 						children: [],
-					};
+					}];
 				}
-				return root.groups.groups
+				const groupNodes = root.groups.groups
 					.filter(
 						(element: IGroup) => element.parentIdRef === self.id
 					)
@@ -96,6 +96,24 @@ export const ViewModel = types.compose(
 							children: element.childrenAsTreeNodes(),
 						};
 					});
+				const assetNodes = (root.assets?.assets ?? [])
+					.filter((asset: IAsset) => asset.ownerIdRef === self.id)
+					.map((element: IAsset) => ({
+						key: element.id,
+						class: element.class,
+						title: element.definition?.name,
+						storeType: element.definition?.storeType,
+						baseType: element.definition.baseType,
+						subType: element.definition.subType,
+						elementType:
+							resolveTreeNodeElementType(root, element.definition) ||
+							element.definition.type,
+						description: element.definition.description,
+						label: element.definition.label,
+						status: element.status,
+						children: element.childrenAsTreeNodes(),
+					}));
+				return [...groupNodes, ...assetNodes];
 			},
 
 			/**
@@ -103,16 +121,22 @@ export const ViewModel = types.compose(
 			 */
 			children() {
 				const root = getRoot(self) as any;
-				return root.groups.groups
-					.filter(
-						(element: IGroup) => element.parentIdRef === self.id
-					)
-					.map((element: IGroup) => {
-						return element;
-					});
+				const groups = root.groups.groups.filter(
+					(element: IGroup) => element.parentIdRef === self.id
+				);
+				const assets = (root.assets?.assets ?? []).filter(
+					(asset: IAsset) => asset.ownerIdRef === self.id
+				);
+				return [...groups, ...assets];
 			},
 		}))
-);
+).actions((self) => ({
+	setFilterRules(rules: unknown[]) {
+		self.beginEdit();
+		self.filterRules.replace(rules);
+		self.markTouched();
+	},
+}));
 
 // Build custom resolver for Views - This is need to lazily set the activeView when the router changes
 export const ViewLazyRef = types.maybeNull(

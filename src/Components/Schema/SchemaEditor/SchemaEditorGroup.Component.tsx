@@ -13,6 +13,7 @@ import {
 	getGroupUsageCount,
 	hasSchemaValidationErrorsInScope,
 	isArrayCollectionGroup,
+	canAddCollectionEntry,
 	isGroupStructurallyMissing,
 	isGroupUsageOutOfBounds,
 	isFixedObjectGroup,
@@ -165,8 +166,7 @@ const SchemaEditorGroup: React.FC<SchemaEditorGroupProps> = ({
 			elementDataFragment === undefined ||
 			elementDataFragment === null ||
 			!Array.isArray(elementDataFragment) ||
-			(schemaDefinitionGroup.maxUsage > 0 &&
-				elementDataFragment.length < schemaDefinitionGroup.maxUsage));
+			canAddCollectionEntry(schemaDefinitionGroup.maxUsage, elementDataFragment.length));
 
 	const handleAdd = () => {
 		if (!elementData) {

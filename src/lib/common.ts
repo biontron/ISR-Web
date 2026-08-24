@@ -89,6 +89,8 @@ export function formatSchemaFieldDisplayValue(
  */
 export function useLangtext () {
 	const i18n = rootStore.i18n;
+	void i18n.lang;
+	void i18n.bundle.size;
 	return i18n.text;
 }
 

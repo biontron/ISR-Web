@@ -11,6 +11,7 @@ import authStore from "./Auth.Store";
 import { generateResourceID } from "../lib/common";
 import { IRootStore } from "./Root.Store";
 import { resolveViewDefinitionTypesForCreate } from "../lib/elementDefinitionTypes";
+import { isNewElementStatus } from "../lib/elementStaging";
 import api from "../lib/api";
 import {
 	createRestLoadFailureReport,
@@ -86,8 +87,8 @@ export const ViewStore = types.compose("ViewStore", BaseStore, types.model({
 		});
 
 		console.log("View.Store - created new '" + schemaId + "' based on Template ", newView);
-		newView.setStatus("new");
 		self.views.push(newView);
+		newView.setStatus("new");
 		return newView;
 	}
 
@@ -102,10 +103,11 @@ export const ViewStore = types.compose("ViewStore", BaseStore, types.model({
 			try {
 				// Replace with your save logic (e.g., sending data to a server)
 				const data = self.views.find(view => view.id === viewID);
-				const url = `/${authStore.getDomain()}/views${data?.status !== "new" ? "/" + viewID : ""}`;
+				const isCreate = isNewElementStatus(data?.status, data?.statusBeforeInvalid);
+				const url = `/${authStore.getDomain()}/views${isCreate ? "" : "/" + viewID}`;
 
 				const response = yield api.request(url, {
-					method: data?.status !== "new" ? "PUT" : "POST",
+					method: isCreate ? "POST" : "PUT",
 					body: JSON.stringify(data),
 				});
 

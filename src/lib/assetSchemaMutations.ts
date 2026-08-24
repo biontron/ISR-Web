@@ -59,7 +59,12 @@ export function buildDockEntryFromSchemaItems(
 		entry.dockparts = [];
 	}
 
-	return entry;
+	return {
+		id: String(entry.id ?? ""),
+		type: String(entry.type ?? ""),
+		label: typeof entry.label === "string" ? entry.label : "",
+		dockparts: entry.dockparts,
+	};
 }
 
 export function buildDockpartEntry(
@@ -105,8 +110,8 @@ export function tryAssetArrayAdd(
 		return "choose";
 	}
 
-	if (path === "docks") {
-		return buildDockEntryFromSchemaItems(asset, path, group.items);
+	if (path === "docks" || group.dataStructure.itemName === "docks") {
+		return buildDockEntryFromSchemaItems(asset, "docks", group.items);
 	}
 
 	return buildDefaultEntryFromSchemaItems(group.items as any, {
