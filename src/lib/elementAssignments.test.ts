@@ -6,6 +6,7 @@ import {
 	isStaticallyUnassigned,
 	readXPathExpression,
 	removeXPathFilterRule,
+	unassignElementFromParent,
 	wouldCreateAssignmentCycle,
 } from "./elementAssignments";
 
@@ -56,6 +57,34 @@ describe("elementAssignments", () => {
 	it("wouldCreateAssignmentCycle erkennt Asset-Zyklen", () => {
 		expect(wouldCreateAssignmentCycle(asset("a-parent") as any, "a-child", root)).toBe(true);
 		expect(wouldCreateAssignmentCycle(asset("a-free") as any, "view1", root)).toBe(false);
+	});
+
+	it("unassignElementFromParent löst Parent-Ref und entfernt Child-Ref", () => {
+		const child: {
+			id: string;
+			class: "Asset";
+			ownerIdRef: string | null;
+			setOwnerIdRef: (ownerId: string | null) => void;
+		} = {
+			id: "a1",
+			class: "Asset",
+			ownerIdRef: "g1",
+			setOwnerIdRef(ownerId: string | null) {
+				this.ownerIdRef = ownerId;
+			},
+		};
+		const parent = {
+			id: "g1",
+			elementIdRefs: [{ id: "a1" }, { id: "a2" }],
+			setElementIdRefs(refs: Array<{ id: string }>) {
+				this.elementIdRefs = refs;
+			},
+		};
+
+		unassignElementFromParent(child as any, parent);
+
+		expect(child.ownerIdRef).toBeNull();
+		expect(parent.elementIdRefs).toEqual([{ id: "a2" }]);
 	});
 
 	it("XPath-Regeln anlegen und löschen", () => {

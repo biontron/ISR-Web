@@ -3,7 +3,7 @@ import {
 	resolveGroupDefinitionTypesForCreate,
 } from "./elementDefinitionTypes";
 import { ISchemaModel } from "../Stores/Models/Schema.Model";
-import { collectLinkedAssetIdsForView, collectUnlinkedAssetsForView } from "./treeUnlinkedAssets";
+import { collectLinkedAssetIdsForView, collectUnlinkedAssetsForView, collectUnlinkedElementsForView } from "./treeUnlinkedAssets";
 import { resolveTreeNodeSegment } from "./treeNodeDisplay";
 
 describe("treeUnlinkedAssets", () => {
@@ -55,6 +55,46 @@ describe("treeUnlinkedAssets", () => {
 	it("collectUnlinkedAssetsForView liefert nur freie Assets", () => {
 		const unlinked = collectUnlinkedAssetsForView(root, "view1");
 		expect(unlinked.map((asset) => asset.id)).toEqual(["a-free"]);
+	});
+
+	it("collectUnlinkedElementsForView enthält freie View-Folder und Assets", () => {
+		const withFreeFolder = {
+			...root,
+			views: { views: [{ id: "view1" }, { id: "view2" }] },
+			groups: {
+				groups: [
+					...root.groups.groups,
+					{ id: "g-free", parentIdRef: undefined, elementIdRefs: [] },
+					{ id: "g-free-child", parentIdRef: "g-free", elementIdRefs: [] },
+					{ id: "g-empty-parent", parentIdRef: "", elementIdRefs: [] },
+					{ id: "g-other-view", parentIdRef: "view2", elementIdRefs: [] },
+				],
+			},
+		} as any;
+		expect(collectUnlinkedElementsForView(withFreeFolder, "view1").map((item) => item.id)).toEqual([
+			"g-free",
+			"g-empty-parent",
+			"a-free",
+		]);
+	});
+
+	it("gestapelte ownerIdRef-Kinder gelten als verknüpft", () => {
+		const stackedRoot = {
+			groups: {
+				groups: [{ id: "g1", parentIdRef: "view1", elementIdRefs: [{ id: "a-parent" }] }],
+			},
+			assets: {
+				assets: [
+					{ id: "a-parent", ownerIdRef: null },
+					{ id: "a-child", ownerIdRef: "a-parent" },
+					{ id: "a-free", ownerIdRef: null },
+				],
+			},
+		} as any;
+		const linked = collectLinkedAssetIdsForView(stackedRoot, "view1");
+		expect(linked.has("a-parent")).toBe(true);
+		expect(linked.has("a-child")).toBe(true);
+		expect(linked.has("a-free")).toBe(false);
 	});
 });
 

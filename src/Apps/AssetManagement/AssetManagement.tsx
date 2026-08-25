@@ -181,11 +181,13 @@ const AssetManagement = observer(() => {
 
 			<Layout className="asset-management-content" style={{ flex: 1, minHeight: 0, overflow: "hidden" }}>
 				{/* LEFT - TREE / Hirachy */}
-				<Sider width={`${getSizes().left}%`} style={{ overflow: "auto" }} className="leftArea">
+				<Sider width={`${getSizes().left}%`} className="leftArea">
 					<div className="area-header" onClick={() => applyPreset("hirarchy")}>
 						<span>{langtext("general.screenmode_hirarchy_title")}</span>
 					</div>
-					<ElementTree />
+					<div className="leftArea-body">
+						<ElementTree />
+					</div>
 				</Sider>
 
 				{/* CENTER - ELEMENT */}

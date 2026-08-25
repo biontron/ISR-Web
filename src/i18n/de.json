@@ -110,7 +110,7 @@
 		"create_tab_components": "Technische Komponenten",
 		"create_tab_structure_empty": "Keine View-Group-Schemas für diesen Kontext.",
 		"create_tab_components_empty": "Keine Komponenten-Schemas für diesen Kontext.",
-		"tree_unlinked_components": "Unverknüpfte technische Komponenten",
+		"tree_unlinked_components": "Unverknüpfte Elemente",
 		"assetreference_filter_rules": "XPath-Filter",
 		"assetreference_filter_rules_hint": "Ein XPath gegen die XML-Darstellung eines Elements (Kontextknoten ist <element>). Nur nicht fest verknüpfte Elemente (ohne parentIdRef/ownerIdRef) werden zugeordnet. Beispiele: definition/type='DEVICE' · definition/subType='DESKTOP' · definition/tags/tag='Client' · starts-with(definition/name,'is-')",
 		"assetreference_filter_placeholder": "z. B. definition/type='DEVICE'",

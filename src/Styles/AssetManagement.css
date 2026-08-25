@@ -78,6 +78,32 @@
 
 .ant-layout .leftArea {
   background-color: #30afff;
+  display: flex;
+  flex-direction: column;
+  align-self: stretch;
+  height: 100%;
+  min-height: 0;
+  overflow: hidden;
+}
+
+.ant-layout .leftArea > .ant-layout-sider-children {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  min-height: 0;
+  overflow: hidden;
+}
+
+.leftArea .area-header {
+  flex-shrink: 0;
+}
+
+.leftArea-body {
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
 }
 
 .ant-layout .centerArea {

@@ -85,6 +85,8 @@ const router = createBrowserRouter([
 				children: [
 					{
 						path: "/:domain/am/:view",
+						shouldRevalidate: ({ currentParams, nextParams }) =>
+							currentParams.view !== nextParams.view,
 						loader: async ({ params }) => {
 							rootStore.ui.setActiveView(params.view as any);
 							await rootStore.groups.load(params.view!);
@@ -96,8 +98,6 @@ const router = createBrowserRouter([
 							{
 								path: "/:domain/am/:view/element/:element",
 								loader: async ({ params }) => {
-									rootStore.ui.setActiveView(params.view as any);
-									await rootStore.groups.load(params.view!);
 									rootStore.ui.setActiveElementById(params.element as any);
 									return null;
 								},

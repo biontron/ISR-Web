@@ -10,13 +10,13 @@ describe("change-mode toolbar save", () => {
 		expect(canSaveElementStatus("untouched")).toBe(false);
 	});
 
-	it("Speichern bleibt aktiv, wenn nur ein Kind geändert ist", () => {
-		expect(shouldEnableChangeModeSave("untouched", true)).toBe(true);
-		expect(shouldEnableChangeModeSave("untouched", false)).toBe(false);
-		expect(shouldEnableChangeModeSave("changed", false)).toBe(true);
+	it("Speichern ist inaktiv, wenn nur ein Kind geändert ist", () => {
+		expect(shouldEnableChangeModeSave("untouched")).toBe(false);
+		expect(shouldEnableChangeModeSave("changed")).toBe(true);
+		expect(shouldEnableChangeModeSave("new")).toBe(true);
 	});
 
-	it("resolveChangeModeSaveRefs nimmt das aktive Element, sonst alle Touched", () => {
+	it("resolveChangeModeSaveRefs speichert nur das aktive Element, nicht Children", () => {
 		const changedAsset = {
 			id: "a1",
 			status: "changed",
@@ -30,9 +30,7 @@ describe("change-mode toolbar save", () => {
 			connections: { connections: [] },
 		} as any;
 
-		expect(resolveChangeModeSaveRefs(root, root.views.views[0]).map((ref) => ref.id)).toEqual([
-			"a1",
-		]);
+		expect(resolveChangeModeSaveRefs(root, root.views.views[0]).map((ref) => ref.id)).toEqual([]);
 		expect(resolveChangeModeSaveRefs(root, changedAsset as any).map((ref) => ref.id)).toEqual([
 			"a1",
 		]);

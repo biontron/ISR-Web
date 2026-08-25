@@ -2,10 +2,10 @@
 # Infrastructure Repository (ISR) / Infrastruktur Repository (ISR)
 # SPDX-License-Identifier: GPL-2.0 
 */
-import { Select, Button, Col, Row, Tree, Divider, List } from "antd";
+import { Select, Button, Col, Row, Tree, List } from "antd";
 import { observer } from "mobx-react";
 import { resolveIdentifier } from "mobx-state-tree";
-import { Fragment, useState, useEffect } from "react";
+import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import authStore from "../../../Stores/Auth.Store";
 import { AssetModel } from "../../../Stores/Models/Asset.Model";
@@ -29,8 +29,7 @@ import {
 	resolveTreeNodeSegment,
 	treeNodeSegmentClassName,
 } from "../../../lib/treeNodeDisplay";
-import { collectUnlinkedAssetsForView } from "../../../lib/treeUnlinkedAssets";
-import { IAsset } from "../../../Stores/Models/Asset.Model";
+import { collectUnlinkedElementsForView, UnlinkedTreeElement } from "../../../lib/treeUnlinkedAssets";
 
 
 type Props = {};
@@ -76,20 +75,20 @@ export const ElementTree = observer((props: Props) => {
 		}
 	}
 
-	function renderAssetRow(asset: IAsset) {
-		const nodeData: ITreeNode = {
-			key: asset.id,
-			class: asset.class,
-			title: asset.definition?.name,
-			storeType: asset.definition?.storeType,
-			baseType: asset.definition.baseType,
-			subType: asset.definition.subType,
-			elementType: asset.definition.type,
-			description: asset.definition.description,
-			label: asset.definition.label,
-			status: asset.status,
+	function elementToTreeNode(element: UnlinkedTreeElement): ITreeNode {
+		const definition = element.definition;
+		return {
+			key: element.id,
+			class: element.class,
+			title: definition?.name,
+			storeType: definition?.storeType,
+			baseType: definition?.baseType,
+			subType: definition?.subType,
+			elementType: definition?.type,
+			description: definition?.description,
+			label: definition && "label" in definition ? String(definition.label ?? "") : "",
+			status: element.status,
 		};
-		return renderNodeTitle(nodeData);
 	}
 
 	/**
@@ -177,6 +176,7 @@ export const ElementTree = observer((props: Props) => {
 							<Descriptions className="element-info-descriptions" items={items} layout="horizontal" bordered column={1} size="small" />
 						</>
 					}
+					getPopupContainer={() => document.body}
 				>
 					<span>&#160;{nodeData.title ?? "???"}</span>
 				</Tooltip>
@@ -187,10 +187,11 @@ export const ElementTree = observer((props: Props) => {
 
 	const viewClasses = `${activeElement?.status === "new" || activeElement?.status === "edit" || activeElement?.status === "changed" || activeElement?.status === "invalid" ? "EditMode" : ""} ${rootStore.ui.activeView?.id === activeElement?.id ? "ActiveElement" : ""}`;
 
-	const unlinkedAssets = collectUnlinkedAssetsForView(rootStore, activeView?.id);
+	const unlinkedElements = collectUnlinkedElementsForView(rootStore, activeView?.id);
 
 	return (
-		<Fragment>
+		<div className="element-tree">
+			<div className="element-tree__scroll">
 			{/* <ContainerEditDialog open={openEditDialog} setOpen={setOpenEditDialog} /> */}
 			<Row gutter={[16, 16]}>
 				<Col span={24}>
@@ -247,33 +248,31 @@ export const ElementTree = observer((props: Props) => {
 						// defaultExpandedKeys={["abc","xyz"]}
 					/>
 				</Col>
-				<Col span={24}>
-					{unlinkedAssets.length > 0 ? (
-						<>
-							<Divider orientation="left" className="element-tree-unlinked-divider">
-								{langtext("general.tree_unlinked_components")}
-							</Divider>
-							<div className="element-tree-unlinked-panel">
-								<List
-									size="small"
-									dataSource={unlinkedAssets}
-									renderItem={(asset) => (
-										<List.Item
-											className={`element-tree-unlinked-item ${selectedKeys.includes(asset.id) ? "element-tree-unlinked-item--selected" : ""}`}
-											onClick={() => {
-												setSelectedKeys([asset.id]);
-												navigateToElement(asset.id);
-											}}
-										>
-											{renderAssetRow(asset)}
-										</List.Item>
-									)}
-								/>
-							</div>
-						</>
-					) : null}
-				</Col>
 			</Row>
-		</Fragment>
+			</div>
+			<div className="element-tree-unlinked">
+				<div className="element-tree-unlinked__title">
+					{langtext("general.tree_unlinked_components")}
+				</div>
+				<div className="element-tree-unlinked__panel">
+					<List
+						size="small"
+						locale={{ emptyText: "—" }}
+						dataSource={unlinkedElements}
+						renderItem={(element) => (
+							<List.Item
+								className={`element-tree-unlinked-item ${selectedKeys.includes(element.id) ? "element-tree-unlinked-item--selected" : ""}`}
+								onClick={() => {
+									setSelectedKeys([element.id]);
+									navigateToElement(element.id);
+								}}
+							>
+								{renderNodeTitle(elementToTreeNode(element))}
+							</List.Item>
+						)}
+					/>
+				</div>
+			</div>
+		</div>
 	);
 });

@@ -2,6 +2,7 @@ import { getIdentifier } from "mobx-state-tree";
 import { IAsset } from "../Stores/Models/Asset.Model";
 import { IGroup } from "../Stores/Models/Group.Model";
 import { IRootStore } from "../Stores/Root.Store";
+import { readGroupParentId } from "./elementAssignments";
 
 function resolveElementRefId(ref: { id: unknown }): string | undefined {
 	if (typeof ref.id === "string" && ref.id.trim() !== "") {
@@ -19,7 +20,7 @@ export function collectViewGroupsUnderView(root: IRootStore, viewId: string): IG
 
 	function walk(parentId: string) {
 		for (const group of root.groups.groups) {
-			if (group.parentIdRef === parentId) {
+			if (readGroupParentId(group) === parentId) {
 				groups.push(group);
 				walk(group.id);
 			}
@@ -30,7 +31,25 @@ export function collectViewGroupsUnderView(root: IRootStore, viewId: string): IG
 	return groups;
 }
 
-/** Asset-IDs, die statisch an dieser View hängen (ownerIdRef oder elementIdRefs). */
+function addAssetAndOwnerDescendants(
+	root: IRootStore,
+	assetId: string,
+	linked: Set<string>
+) {
+	if (!assetId || linked.has(assetId)) {
+		return;
+	}
+	linked.add(assetId);
+	for (const asset of root.assets.assets) {
+		const ownerId =
+			typeof asset.ownerIdRef === "string" ? asset.ownerIdRef.trim() : "";
+		if (ownerId === assetId) {
+			addAssetAndOwnerDescendants(root, asset.id, linked);
+		}
+	}
+}
+
+/** Asset-IDs, die in der View-Hierarchie hängen (parentIdRef, ownerIdRef, elementIdRefs). */
 export function collectLinkedAssetIdsForView(root: IRootStore, viewId: string): Set<string> {
 	const linked = new Set<string>();
 	const viewGroups = collectViewGroupsUnderView(root, viewId);
@@ -40,7 +59,7 @@ export function collectLinkedAssetIdsForView(root: IRootStore, viewId: string): 
 		for (const ref of group.elementIdRefs) {
 			const assetId = resolveElementRefId(ref);
 			if (assetId) {
-				linked.add(assetId);
+				addAssetAndOwnerDescendants(root, assetId, linked);
 			}
 		}
 	}
@@ -49,14 +68,49 @@ export function collectLinkedAssetIdsForView(root: IRootStore, viewId: string): 
 		const ownerId =
 			typeof asset.ownerIdRef === "string" ? asset.ownerIdRef.trim() : "";
 		if (ownerId && parentIds.has(ownerId)) {
-			linked.add(asset.id);
+			addAssetAndOwnerDescendants(root, asset.id, linked);
 		}
 	}
 
 	return linked;
 }
 
-/** Komponenten ohne statische View-Group-Zuordnung (elementIdRefs) in der aktiven View. */
+function collectKnownParentIds(root: IRootStore, viewId: string): Set<string> {
+	const ids = new Set<string>([viewId]);
+	for (const group of root.groups.groups) {
+		ids.add(group.id);
+	}
+	const views = root.views?.views;
+	if (views) {
+		for (const view of views) {
+			ids.add(view.id);
+		}
+	}
+	return ids;
+}
+
+/** Ausgehängte View-Folder (ohne gültigen Parent, nicht im Tree der aktiven View). */
+export function collectUnlinkedGroupsForView(root: IRootStore, viewId: string | undefined): IGroup[] {
+	if (!viewId) {
+		return [];
+	}
+
+	const linkedIds = new Set(collectViewGroupsUnderView(root, viewId).map((group) => group.id));
+	const knownParents = collectKnownParentIds(root, viewId);
+
+	return root.groups.groups.filter((group) => {
+		if (linkedIds.has(group.id)) {
+			return false;
+		}
+		const parentId = readGroupParentId(group);
+		if (!parentId) {
+			return true;
+		}
+		return !knownParents.has(parentId);
+	});
+}
+
+/** Komponenten ohne Zuordnung in der aktiven View. */
 export function collectUnlinkedAssetsForView(root: IRootStore, viewId: string | undefined): IAsset[] {
 	if (!viewId) {
 		return [];
@@ -64,4 +118,17 @@ export function collectUnlinkedAssetsForView(root: IRootStore, viewId: string | 
 
 	const linked = collectLinkedAssetIdsForView(root, viewId);
 	return root.assets.assets.filter((asset) => !linked.has(asset.id));
+}
+
+export type UnlinkedTreeElement = IGroup | IAsset;
+
+/** Unverknüpfte View-Folder und technische Elemente der aktiven View. */
+export function collectUnlinkedElementsForView(
+	root: IRootStore,
+	viewId: string | undefined
+): UnlinkedTreeElement[] {
+	return [
+		...collectUnlinkedGroupsForView(root, viewId),
+		...collectUnlinkedAssetsForView(root, viewId),
+	];
 }

@@ -1,7 +1,7 @@
 /*
 # SPDX-License-Identifier: GPL-2.0*/
 
-import { Instance, flow, getRoot, getSnapshot, types, SnapshotIn } from "mobx-state-tree";
+import { Instance, applySnapshot, flow, getRoot, getSnapshot, types, SnapshotIn } from "mobx-state-tree";
 import { BaseStore, IBaseStore } from "./Base.Store";
 import { GroupModel, IGroup } from "./Models/Group.Model";
 import { IConfig } from "./Models/Config.Model";
@@ -40,14 +40,20 @@ function snapshotPendingGroups(groups: readonly IGroup[]): PendingGroupRestoreEn
 }
 
 function restorePendingGroups(
-	target: { push: (item: IGroup) => void; some: (fn: (group: IGroup) => boolean) => boolean },
+	target: {
+		push: (item: IGroup) => void;
+		find: (fn: (group: IGroup) => boolean) => IGroup | undefined;
+	},
 	pendingEntries: PendingGroupRestoreEntry[]
 ) {
 	for (const entry of pendingEntries) {
-		if (target.some((group) => group.id === entry.snapshot.id)) {
-			continue;
-		}
 		try {
+			const existing = target.find((group) => group.id === entry.snapshot.id);
+			if (existing) {
+				applySnapshot(existing, entry.snapshot);
+				restoreElementStagingState(existing, entry.staging);
+				continue;
+			}
 			const group = GroupModel.create(entry.snapshot);
 			restoreElementStagingState(group, entry.staging);
 			target.push(group);

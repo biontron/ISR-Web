@@ -213,6 +213,11 @@ export const GroupModel = types.compose(
 		self.parentIdRef = parentId;
 		self.markTouched();
 	},
+	setElementIdRefs(refs: Array<{ id: string }>) {
+		self.beginEdit();
+		self.elementIdRefs.replace(refs);
+		self.markTouched();
+	},
 	setFilterRules(rules: unknown[]) {
 		self.beginEdit();
 		self.filterRules.replace(rules);

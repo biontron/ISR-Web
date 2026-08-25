@@ -20,24 +20,23 @@ export function canDiscardElementStatus(status?: ElementStatus): boolean {
 	return canSaveElementStatus(status);
 }
 
-/** Toolbar: Speichern/Verwerfen auch bei Zuordnungen am Kind, während Parent aktiv bleibt. */
+/** Toolbar: Speichern/Verwerfen nur für das Active Element, nicht für Children. */
 export function shouldEnableChangeModeSave(
-	activeStatus: ElementStatus | undefined,
-	hasTouched: boolean
+	activeStatus: ElementStatus | undefined
 ): boolean {
-	return canSaveElementStatus(activeStatus) || hasTouched;
+	return canSaveElementStatus(activeStatus);
 }
 
-/** Aktives Element, sonst alle offenen Änderungen (z. B. ownerIdRef/parentIdRef am Kind). */
+/** Nur das Active Element — geänderte Children bleiben ungespeichert. */
 export function resolveChangeModeSaveRefs(
 	root: IRootStore,
 	activeElement: IElement | undefined
 ): TouchedObjectRef[] {
-	if (activeElement && canSaveElementStatus(activeElement.status)) {
-		const ref = findTouchedRefById(root, activeElement.id);
-		return ref ? [ref] : [];
+	if (!activeElement || !canSaveElementStatus(activeElement.status)) {
+		return [];
 	}
-	return collectTouchedObjects(root);
+	const ref = findTouchedRefById(root, activeElement.id);
+	return ref ? [ref] : [];
 }
 
 export function findTouchedRefById(

@@ -21,10 +21,7 @@ import { hasTouchedObjects } from "../../lib/touchedObjects";
 import { stageDelete, isNewElementStatus } from "../../lib/elementStaging";
 import {
 	discardElement,
-	discardTouchedRefs,
-	resolveChangeModeSaveRefs,
 	saveElement,
-	saveTouchedRefs,
 	shouldEnableChangeModeSave,
 } from "../../lib/activityStatusActions";
 import { hasJsonInspectTarget, resolveJsonInspectTarget } from "../../lib/jsonInspectResolve";
@@ -61,18 +58,15 @@ const ChangeModeToolbar: React.FC = () => {
 		}
 	};
 
-	const canSaveToolbar = shouldEnableChangeModeSave(activeElement?.status, hasTouched);
+	const canSaveToolbar = shouldEnableChangeModeSave(activeElement?.status);
 
 	const handleSave = async () => {
+		if (!activeElement) {
+			return;
+		}
 		setSaving(true);
 		try {
-			const refs = resolveChangeModeSaveRefs(rootStore, activeElement as any);
-			const { saved, failed } =
-				refs.length > 0
-					? await saveTouchedRefs(rootStore, refs)
-					: activeElement
-						? await saveElement(rootStore, activeElement)
-						: { saved: 0, failed: [] };
+			const { saved, failed } = await saveElement(rootStore, activeElement);
 			if (failed.length > 0) {
 				message.error(langtext("general.activity_status_save_summary", {
 					saved: String(saved),
@@ -87,11 +81,6 @@ const ChangeModeToolbar: React.FC = () => {
 	};
 
 	const handleDiscard = () => {
-		const refs = resolveChangeModeSaveRefs(rootStore, activeElement as any);
-		if (refs.length > 0) {
-			discardTouchedRefs(rootStore, refs);
-			return;
-		}
 		if (activeElement) {
 			discardElement(rootStore, activeElement);
 		}

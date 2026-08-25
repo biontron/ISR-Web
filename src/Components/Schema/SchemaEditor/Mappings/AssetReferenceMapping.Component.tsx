@@ -17,10 +17,12 @@ import { useLangtext } from "../../../../lib/common";
 import {
 	addXPathFilterRule,
 	AssignableTreeElement,
+	assignElementToParent,
 	collectAssignedElements,
 	collectUnassignedElements,
 	readXPathExpression,
 	removeXPathFilterRule,
+	unassignElementFromParent,
 } from "../../../../lib/elementAssignments";
 import {
 	collectFilterAvailableElements,
@@ -39,22 +41,6 @@ function hasFilterRules(
 	element: MappingParent
 ): element is MappingParent & { filterRules: unknown[]; setFilterRules?: (rules: unknown[]) => void } {
 	return element.class === "View" || element.class === "Group";
-}
-
-function assignChild(child: AssignableTreeElement, parentId: string) {
-	if (child.class === "Group") {
-		(child as IGroup).setParentIdRef(parentId);
-		return;
-	}
-	(child as IAsset).setOwnerIdRef(parentId);
-}
-
-function unassignChild(child: AssignableTreeElement) {
-	if (child.class === "Group") {
-		(child as IGroup).setParentIdRef(undefined);
-		return;
-	}
-	(child as IAsset).setOwnerIdRef(null);
 }
 
 const AssetReferenceMapping: React.FC<{ element: ActiveElement }> = observer(({ element }) => {
@@ -90,7 +76,7 @@ const AssetReferenceMapping: React.FC<{ element: ActiveElement }> = observer(({ 
 		if (!canEdit || selectedAvailable.length === 0) {
 			return;
 		}
-		selectedAvailable.forEach((child) => assignChild(child, element.id));
+		selectedAvailable.forEach((child) => assignElementToParent(child, element.id));
 		setSelectedAvailableIds([]);
 	};
 
@@ -98,7 +84,7 @@ const AssetReferenceMapping: React.FC<{ element: ActiveElement }> = observer(({ 
 		if (!canEdit || selectedAssigned.length === 0) {
 			return;
 		}
-		selectedAssigned.forEach((child) => unassignChild(child));
+		selectedAssigned.forEach((child) => unassignElementFromParent(child, element));
 		setSelectedAssignedIds([]);
 	};
 

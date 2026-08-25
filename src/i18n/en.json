@@ -110,7 +110,7 @@
 		"create_tab_components": "Technical components",
 		"create_tab_structure_empty": "No view-group schemas for this context.",
 		"create_tab_components_empty": "No component schemas for this context.",
-		"tree_unlinked_components": "Unlinked technical components",
+		"tree_unlinked_components": "Unlinked elements",
 		"assetreference_filter_rules": "XPath filters",
 		"assetreference_filter_rules_hint": "An XPath against the XML form of an element (context node is <element>). Only elements without a static parentIdRef/ownerIdRef are assigned. Examples: definition/type='DEVICE' · definition/subType='DESKTOP' · definition/tags/tag='Client' · starts-with(definition/name,'is-')",
 		"assetreference_filter_placeholder": "e.g. definition/type='DEVICE'",

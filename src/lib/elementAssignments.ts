@@ -37,6 +37,55 @@ export function isStaticallyUnassigned(element: AssignableTreeElement): boolean 
 	return readAssetOwnerId(element as IAsset) === undefined;
 }
 
+export type AssignmentParent = {
+	id: string;
+	elementIdRefs?: Array<{ id: unknown }>;
+	setElementIdRefs?: (refs: Array<{ id: string }>) => void;
+};
+
+function resolveElementRefId(ref: { id: unknown }): string | undefined {
+	return isNonEmptyId(ref.id) ? ref.id.trim() : undefined;
+}
+
+export function assignElementToParent(child: AssignableTreeElement, parentId: string): void {
+	if (child.class === "Group") {
+		(child as IGroup).setParentIdRef(parentId);
+		return;
+	}
+	(child as IAsset).setOwnerIdRef(parentId);
+}
+
+/** Parent-Ref lösen und Child-Ref (elementIdRefs) am aktuellen Parent entfernen. */
+export function unassignElementFromParent(
+	child: AssignableTreeElement,
+	parent: AssignmentParent
+): void {
+	if (isAssignedToParent(child, parent.id)) {
+		if (child.class === "Group") {
+			(child as IGroup).setParentIdRef(undefined);
+		} else {
+			(child as IAsset).setOwnerIdRef(null);
+		}
+	}
+
+	const refs = parent.elementIdRefs;
+	if (!refs || typeof parent.setElementIdRefs !== "function") {
+		return;
+	}
+
+	const current = Array.prototype.slice.call(refs) as Array<{ id: unknown }>;
+	const next = current
+		.map(resolveElementRefId)
+		.filter((id): id is string => !!id && id !== child.id)
+		.map((id) => ({ id }));
+
+	if (next.length === current.length) {
+		return;
+	}
+
+	parent.setElementIdRefs(next);
+}
+
 function walkAssetOwnerChain(
 	startId: string,
 	assets: ReadonlyArray<Pick<IAsset, "id" | "ownerIdRef">>
