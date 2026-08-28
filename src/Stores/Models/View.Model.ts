@@ -6,7 +6,10 @@ import { Instance, getRoot, types } from "mobx-state-tree";
 import { IGroup } from "./Group.Model";
 import { IAsset } from "./Asset.Model";
 import ElementModel, { ElementDefinitionTagModel } from "./Element.Model";
-import { resolveTreeNodeElementType } from "../../lib/treeNodeDisplay";
+import { assignableElementToTreeNode } from "../../lib/treeNodeDisplay";
+import { collectFilterMatchedElementsExcluding } from "../../lib/elementXPathFilter";
+import { FilterRuleModel } from "./FilterRule.Model";
+import { normalizeFilterRules } from "../../lib/filterRuleNormalize";
 
 
 /**
@@ -26,7 +29,7 @@ export const ViewModel = types.compose(
 				description: types.string,
 				tags: types.optional(types.array(ElementDefinitionTagModel), []),
 			}),
-			filterRules: types.array(types.frozen()),
+			filterRules: types.array(FilterRuleModel),
 			attachments: types.array(types.frozen()),
 			properties: types.model({
 				responsibles: types.array(
@@ -75,45 +78,25 @@ export const ViewModel = types.compose(
 						children: [],
 					}];
 				}
-				const groupNodes = root.groups.groups
-					.filter(
-						(element: IGroup) => element.parentIdRef === self.id
-					)
-					.map((element: IGroup) => {
-						return {
-							key: element.id,
-							class: element.class,
-							title: element.definition.name,
-							storeType: element.definition.storeType,
-							baseType: element.definition.baseType,
-							subType: element.definition.subType,
-							elementType:
-								resolveTreeNodeElementType(root, element.definition) ||
-								element.definition.type,
-							description: element?.definition.description,
-							label: element?.definition?.label ?? "",
-							status: element?.status,
-							children: element.childrenAsTreeNodes(),
-						};
-					});
-				const assetNodes = (root.assets?.assets ?? [])
-					.filter((asset: IAsset) => asset.ownerIdRef === self.id)
-					.map((element: IAsset) => ({
-						key: element.id,
-						class: element.class,
-						title: element.definition?.name,
-						storeType: element.definition?.storeType,
-						baseType: element.definition.baseType,
-						subType: element.definition.subType,
-						elementType:
-							resolveTreeNodeElementType(root, element.definition) ||
-							element.definition.type,
-						description: element.definition.description,
-						label: element.definition.label,
-						status: element.status,
-						children: element.childrenAsTreeNodes(),
-					}));
-				return [...groupNodes, ...assetNodes];
+				const staticGroups = root.groups.groups.filter(
+					(element: IGroup) => element.parentIdRef === self.id
+				);
+				const staticAssets = (root.assets?.assets ?? []).filter(
+					(asset: IAsset) => asset.ownerIdRef === self.id
+				);
+				const existingIds = [
+					...staticGroups.map((element: IGroup) => element.id),
+					...staticAssets.map((asset: IAsset) => asset.id),
+				];
+				const filterMatched = collectFilterMatchedElementsExcluding(
+					root,
+					self.id,
+					self.filterRules,
+					existingIds
+				);
+				return [...staticGroups, ...staticAssets, ...filterMatched].map((element: IGroup | IAsset) =>
+					assignableElementToTreeNode(root, element)
+				);
 			},
 
 			/**
@@ -127,13 +110,19 @@ export const ViewModel = types.compose(
 				const assets = (root.assets?.assets ?? []).filter(
 					(asset: IAsset) => asset.ownerIdRef === self.id
 				);
-				return [...groups, ...assets];
+				const filterMatched = collectFilterMatchedElementsExcluding(
+					root,
+					self.id,
+					self.filterRules,
+					[...groups.map((element: IGroup) => element.id), ...assets.map((asset: IAsset) => asset.id)]
+				);
+				return [...groups, ...assets, ...filterMatched];
 			},
 		}))
 ).actions((self) => ({
 	setFilterRules(rules: unknown[]) {
 		self.beginEdit();
-		self.filterRules.replace(rules);
+		self.filterRules.replace(normalizeFilterRules(rules));
 		self.markTouched();
 	},
 }));

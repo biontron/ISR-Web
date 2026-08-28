@@ -23,7 +23,9 @@ import {
 	readXPathExpression,
 	removeXPathFilterRule,
 	unassignElementFromParent,
+	updateXPathFilterRule,
 } from "../../../../lib/elementAssignments";
+import { filterRuleDescription } from "../../../../lib/filterRuleNormalize";
 import {
 	collectFilterAvailableElements,
 	collectFilterMatchedElements,
@@ -50,6 +52,7 @@ const AssetReferenceMapping: React.FC<{ element: ActiveElement }> = observer(({ 
 	const [selectedAssignedIds, setSelectedAssignedIds] = useState<string[]>([]);
 	const [selectedAvailableIds, setSelectedAvailableIds] = useState<string[]>([]);
 	const [xpathDraft, setXpathDraft] = useState("");
+	const [descriptionDraft, setDescriptionDraft] = useState("");
 
 	const assignedElements = hasAssignmentParent(element)
 		? collectAssignedElements(rootStore, element.id)
@@ -99,8 +102,9 @@ const AssetReferenceMapping: React.FC<{ element: ActiveElement }> = observer(({ 
 		if (!hasFilterRules(element) || !canEdit) {
 			return;
 		}
-		persistFilterRules(addXPathFilterRule([...element.filterRules], xpathDraft));
+		persistFilterRules(addXPathFilterRule([...element.filterRules], xpathDraft, descriptionDraft));
 		setXpathDraft("");
+		setDescriptionDraft("");
 	};
 
 	const deleteXPath = (index: number) => {
@@ -265,11 +269,36 @@ const AssetReferenceMapping: React.FC<{ element: ActiveElement }> = observer(({ 
 											</Button>,
 										]}
 									>
-										<code>{readXPathExpression(rule) || String(rule)}</code>
+										<div style={{ width: "100%" }}>
+											<Input
+												value={filterRuleDescription(rule)}
+												disabled={!canEdit}
+												placeholder={langtext("general.assetreference_filter_description_placeholder")}
+												onChange={(event) =>
+													persistFilterRules(
+														updateXPathFilterRule([...xpathRules], index, {
+															description: event.target.value,
+														})
+													)
+												}
+												style={{ marginBottom: 6 }}
+											/>
+											<code>{readXPathExpression(rule) || String(rule)}</code>
+										</div>
 									</List.Item>
 								)}
 							/>
-							<Row gutter={8} style={{ marginTop: 8, marginBottom: 16 }}>
+							<Row gutter={8} style={{ marginTop: 8, marginBottom: 8 }}>
+								<Col span={24}>
+									<Input
+										value={descriptionDraft}
+										disabled={!canEdit}
+										placeholder={langtext("general.assetreference_filter_description_placeholder")}
+										onChange={(event) => setDescriptionDraft(event.target.value)}
+									/>
+								</Col>
+							</Row>
+							<Row gutter={8} style={{ marginBottom: 16 }}>
 								<Col flex="auto">
 									<Input
 										value={xpathDraft}

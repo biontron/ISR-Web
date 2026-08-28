@@ -159,3 +159,35 @@ export function resolveTreeNodeElementType(
 ): string {
 	return resolveElementTypeDisplay(definition, root.configSchemas.schemaCompat);
 }
+
+type TreeAssignableElement = {
+	id: string;
+	class?: string;
+	status?: string;
+	definition?: ElementDefinitionTypeFields & {
+		name?: string;
+		label?: string;
+		description?: string;
+	};
+	childrenAsTreeNodes: () => ITreeNode[];
+};
+
+export function assignableElementToTreeNode(
+	root: IRootStore,
+	element: TreeAssignableElement
+): ITreeNode {
+	const definition = element.definition;
+	return {
+		key: element.id,
+		class: element.class,
+		title: definition?.name ?? "",
+		storeType: definition?.storeType,
+		baseType: definition?.baseType,
+		subType: definition?.subType,
+		elementType: resolveTreeNodeElementType(root, definition) || definition?.type,
+		description: definition?.description,
+		label: definition?.label ?? "",
+		status: element.status,
+		children: element.childrenAsTreeNodes(),
+	};
+}

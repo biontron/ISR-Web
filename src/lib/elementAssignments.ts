@@ -1,11 +1,13 @@
 import { IAsset } from "../Stores/Models/Asset.Model";
 import { IGroup } from "../Stores/Models/Group.Model";
 import { IRootStore } from "../Stores/Root.Store";
+import { filterRuleExpression, toFilterRuleRecord } from "./filterRuleNormalize";
 
 export type AssignableTreeElement = IGroup | IAsset;
 
 export type XPathFilterRule = {
 	xpath: string;
+	description: string;
 };
 
 function isNonEmptyId(value: unknown): value is string {
@@ -160,24 +162,18 @@ export function collectUnassignedElements(
 }
 
 export function readXPathExpression(rule: unknown): string {
-	if (typeof rule === "string") {
-		return rule.trim();
-	}
-	if (rule && typeof rule === "object") {
-		const record = rule as Record<string, unknown>;
-		const value = record.xpath ?? record.expression ?? record.filter;
-		if (typeof value === "string") {
-			return value.trim();
-		}
-	}
-	return "";
+	return filterRuleExpression(rule);
 }
 
-export function toXPathFilterRule(expression: string): XPathFilterRule {
-	return { xpath: expression.trim() };
+export function toXPathFilterRule(expression: string, description = ""): XPathFilterRule {
+	return toFilterRuleRecord(expression, description);
 }
 
-export function addXPathFilterRule(rules: unknown[], expression: string): unknown[] {
+export function addXPathFilterRule(
+	rules: unknown[],
+	expression: string,
+	description = ""
+): unknown[] {
 	const xpath = expression.trim();
 	if (!xpath) {
 		return rules;
@@ -185,7 +181,27 @@ export function addXPathFilterRule(rules: unknown[], expression: string): unknow
 	if (rules.some((rule) => readXPathExpression(rule) === xpath)) {
 		return rules;
 	}
-	return [...rules, toXPathFilterRule(xpath)];
+	return [...rules, toXPathFilterRule(xpath, description.trim())];
+}
+
+export function updateXPathFilterRule(
+	rules: unknown[],
+	index: number,
+	patch: { xpath?: string; description?: string }
+): unknown[] {
+	if (index < 0 || index >= rules.length) {
+		return rules;
+	}
+	return rules.map((rule, ruleIndex) => {
+		const current = toFilterRuleRecord(rule);
+		if (ruleIndex !== index) {
+			return current;
+		}
+		return {
+			xpath: patch.xpath !== undefined ? patch.xpath.trim() : current.xpath,
+			description: patch.description !== undefined ? patch.description : current.description,
+		};
+	});
 }
 
 export function removeXPathFilterRule(rules: unknown[], index: number): unknown[] {

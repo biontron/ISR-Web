@@ -7,6 +7,7 @@ import {
 	readXPathExpression,
 	removeXPathFilterRule,
 	unassignElementFromParent,
+	updateXPathFilterRule,
 	wouldCreateAssignmentCycle,
 } from "./elementAssignments";
 
@@ -88,9 +89,28 @@ describe("elementAssignments", () => {
 	});
 
 	it("XPath-Regeln anlegen und löschen", () => {
-		const added = addXPathFilterRule([], "//asset[type='DEVICE']");
+		const added = addXPathFilterRule([], "//asset[type='DEVICE']", "Geräte");
+		expect(added[0]).toEqual({ xpath: "//asset[type='DEVICE']", description: "Geräte" });
 		expect(readXPathExpression(added[0])).toBe("//asset[type='DEVICE']");
 		expect(addXPathFilterRule(added, "//asset[type='DEVICE']")).toEqual(added);
 		expect(removeXPathFilterRule(added, 0)).toEqual([]);
+	});
+
+	it("aktualisiert die Beschreibung einer Regel", () => {
+		const added = addXPathFilterRule([], "definition/type='DEVICE'");
+		const updated = updateXPathFilterRule(added, 0, { description: "Virtuelle Maschinen" });
+		expect(updated[0]).toEqual({
+			xpath: "definition/type='DEVICE'",
+			description: "Virtuelle Maschinen",
+		});
+	});
+
+	it("liest xpath und legacy filterRule", () => {
+		expect(readXPathExpression({ xpath: "definition/type='DEVICE'" })).toBe(
+			"definition/type='DEVICE'"
+		);
+		expect(readXPathExpression({ filterRule: "definition/subType='DESKTOP'" })).toBe(
+			"definition/subType='DESKTOP'"
+		);
 	});
 });

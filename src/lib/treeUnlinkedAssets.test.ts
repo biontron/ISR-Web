@@ -78,6 +78,67 @@ describe("treeUnlinkedAssets", () => {
 		]);
 	});
 
+	it("XPath-Treffer sind im Tree sichtbar und nicht unverknüpft, ohne Parent-Ref", () => {
+		const xpathRoot = {
+			views: {
+				views: [{ id: "view1", filterRules: [{ xpath: "definition/type='DEVICE'", description: "Geräte" }] }],
+			},
+			groups: {
+				groups: [
+					{
+						id: "g1",
+						class: "Group",
+						parentIdRef: "view1",
+						elementIdRefs: [],
+						filterRules: [],
+						definition: { type: "AREA", name: "Folder", subType: "", description: "" },
+					},
+					{
+						id: "g-xpath",
+						class: "Group",
+						parentIdRef: undefined,
+						elementIdRefs: [],
+						filterRules: [],
+						definition: { type: "DEVICE", name: "Dyn-Folder", subType: "", description: "" },
+					},
+				],
+			},
+			assets: {
+				assets: [
+					{
+						id: "a-xpath",
+						class: "Asset",
+						ownerIdRef: null,
+						definition: {
+							type: "DEVICE",
+							name: "dyn-device",
+							subType: "DESKTOP",
+							description: "",
+							tags: [],
+						},
+					},
+					{
+						id: "a-other",
+						class: "Asset",
+						ownerIdRef: null,
+						definition: {
+							type: "PRINTER",
+							name: "hp",
+							subType: "",
+							description: "",
+							tags: [],
+						},
+					},
+				],
+			},
+		} as any;
+		expect(collectUnlinkedElementsForView(xpathRoot, "view1").map((item) => item.id)).toEqual([
+			"a-other",
+		]);
+		expect(xpathRoot.assets.assets[0].ownerIdRef).toBe(null);
+		expect(xpathRoot.groups.groups[1].parentIdRef).toBeUndefined();
+	});
+
 	it("gestapelte ownerIdRef-Kinder gelten als verknüpft", () => {
 		const stackedRoot = {
 			groups: {

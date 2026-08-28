@@ -6,12 +6,20 @@ import {
 	IConnection,
 } from "../Stores/Models/Connection.Model";
 import { SchemaBaseType } from "./schemaDomain";
+import { rewriteFilterRulesInSnapshot } from "./filterRuleNormalize";
 
 export interface JsonInspectTarget {
 	title: string;
 	kind: string;
 	current: unknown;
 	baseline?: unknown;
+}
+
+function inspectSnapshot(element: { class?: string }, snapshot: unknown): unknown {
+	if (element.class === "Group" || element.class === "View") {
+		return rewriteFilterRulesInSnapshot(snapshot);
+	}
+	return snapshot;
 }
 
 function elementBaseline(element: IElement): unknown | undefined {
@@ -23,7 +31,7 @@ function elementBaseline(element: IElement): unknown | undefined {
 	if (status !== "edit" && status !== "changed") {
 		return undefined;
 	}
-	return snapshot;
+	return inspectSnapshot(element, snapshot);
 }
 
 function resolveFromAssetManagement(root: IRootStore): JsonInspectTarget | null {
@@ -32,7 +40,7 @@ function resolveFromAssetManagement(root: IRootStore): JsonInspectTarget | null 
 		return null;
 	}
 
-	const current = getSnapshot(element);
+	const current = inspectSnapshot(element, getSnapshot(element));
 	const baseline = elementBaseline(element as IElement);
 	const name =
 		"definition" in element && element.definition && "name" in element.definition

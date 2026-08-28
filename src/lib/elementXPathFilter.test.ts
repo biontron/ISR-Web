@@ -1,6 +1,7 @@
 import {
 	collectFilterAvailableElements,
 	collectFilterMatchedElements,
+	collectFilterMatchedElementsExcluding,
 	elementMatchesXPath,
 	elementToFilterXml,
 } from "./elementXPathFilter";
@@ -46,6 +47,26 @@ describe("elementXPathFilter", () => {
 		).toBe(true);
 	});
 
+	it("wertet match() und matches() als Regulärausdruck aus", () => {
+		const asset = device("A-1");
+		expect(elementMatchesXPath(asset as never, "match(definition/name, 'is-.*')")).toBe(true);
+		expect(elementMatchesXPath(asset as never, "matches(definition/name, '^is-')")).toBe(true);
+		expect(elementMatchesXPath(asset as never, "fn:matches(definition/name, '^IS-', 'i')")).toBe(
+			true
+		);
+		expect(elementMatchesXPath(asset as never, "match(definition/name, '^hp-')")).toBe(false);
+		expect(
+			elementMatchesXPath(
+				asset as never,
+				"definition/type='DEVICE' and match(definition/name, '^is-')"
+			)
+		).toBe(true);
+		expect(elementMatchesXPath(asset as never, "not(match(definition/subType, 'PRINTER'))")).toBe(
+			true
+		);
+		expect(elementMatchesXPath(asset as never, "match(definition/tags/tag, 'Client')")).toBe(true);
+	});
+
 	it("teilt unzugeordnete Elemente in Treffer und Verfügbare", () => {
 		const root = {
 			groups: {
@@ -69,7 +90,7 @@ describe("elementXPathFilter", () => {
 			},
 		} as never;
 
-		const rules = [{ xpath: "definition/subType='DESKTOP'" }];
+		const rules = [{ xpath: "definition/subType='DESKTOP'", description: "Desktops" }];
 		expect(collectFilterMatchedElements(root, "view1", rules).map((item) => item.id)).toEqual([
 			"a-device",
 		]);
@@ -77,5 +98,13 @@ describe("elementXPathFilter", () => {
 			"g-free",
 			"a-printer",
 		]);
+		expect(
+			collectFilterMatchedElementsExcluding(root, "view1", rules, ["a-device"]).map(
+				(item) => item.id
+			)
+		).toEqual([]);
+		expect(root.assets.assets.find((asset: { id: string }) => asset.id === "a-device")?.ownerIdRef).toBe(
+			null
+		);
 	});
 });

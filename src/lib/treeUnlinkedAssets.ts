@@ -2,7 +2,8 @@ import { getIdentifier } from "mobx-state-tree";
 import { IAsset } from "../Stores/Models/Asset.Model";
 import { IGroup } from "../Stores/Models/Group.Model";
 import { IRootStore } from "../Stores/Root.Store";
-import { readGroupParentId } from "./elementAssignments";
+import { readAssetOwnerId, readGroupParentId } from "./elementAssignments";
+import { collectFilterMatchedElements } from "./elementXPathFilter";
 
 function resolveElementRefId(ref: { id: unknown }): string | undefined {
 	if (typeof ref.id === "string" && ref.id.trim() !== "") {
@@ -75,6 +76,73 @@ export function collectLinkedAssetIdsForView(root: IRootStore, viewId: string): 
 	return linked;
 }
 
+function readFilterRules(element: { filterRules?: unknown[] } | undefined): unknown[] {
+	return element?.filterRules ?? [];
+}
+
+function findView(
+	root: IRootStore,
+	viewId: string
+): { id: string; filterRules?: unknown[] } | undefined {
+	return root.views?.views?.find((view: { id: string }) => view.id === viewId);
+}
+
+/**
+ * Elemente, die nur über XPath-Filter im Tree der View sichtbar sind (ohne parentIdRef/ownerIdRef).
+ */
+export function collectFilterVisibleIdsForView(root: IRootStore, viewId: string): Set<string> {
+	const visible = new Set<string>();
+	const walkedParents = new Set<string>();
+
+	const addVisibleAsset = (assetId: string) => {
+		addAssetAndOwnerDescendants(root, assetId, visible);
+	};
+
+	const addVisibleGroup = (group: IGroup) => {
+		if (visible.has(group.id) && walkedParents.has(group.id)) {
+			return;
+		}
+		visible.add(group.id);
+		for (const child of root.groups.groups) {
+			if (readGroupParentId(child) === group.id) {
+				addVisibleGroup(child);
+			}
+		}
+		for (const ref of group.elementIdRefs ?? []) {
+			const assetId = resolveElementRefId(ref);
+			if (assetId) {
+				addVisibleAsset(assetId);
+			}
+		}
+		for (const asset of root.assets.assets) {
+			if (readAssetOwnerId(asset) === group.id) {
+				addVisibleAsset(asset.id);
+			}
+		}
+		walkParent(group.id, readFilterRules(group));
+	};
+
+	function walkParent(parentId: string, rules: unknown[]) {
+		if (walkedParents.has(parentId)) {
+			return;
+		}
+		walkedParents.add(parentId);
+		for (const element of collectFilterMatchedElements(root, parentId, rules)) {
+			if (element.class === "Group") {
+				addVisibleGroup(element as IGroup);
+			} else {
+				addVisibleAsset(element.id);
+			}
+		}
+	}
+
+	walkParent(viewId, readFilterRules(findView(root, viewId)));
+	for (const group of collectViewGroupsUnderView(root, viewId)) {
+		walkParent(group.id, readFilterRules(group));
+	}
+	return visible;
+}
+
 function collectKnownParentIds(root: IRootStore, viewId: string): Set<string> {
 	const ids = new Set<string>([viewId]);
 	for (const group of root.groups.groups) {
@@ -96,10 +164,11 @@ export function collectUnlinkedGroupsForView(root: IRootStore, viewId: string | 
 	}
 
 	const linkedIds = new Set(collectViewGroupsUnderView(root, viewId).map((group) => group.id));
+	const xpathVisible = collectFilterVisibleIdsForView(root, viewId);
 	const knownParents = collectKnownParentIds(root, viewId);
 
 	return root.groups.groups.filter((group) => {
-		if (linkedIds.has(group.id)) {
+		if (linkedIds.has(group.id) || xpathVisible.has(group.id)) {
 			return false;
 		}
 		const parentId = readGroupParentId(group);
@@ -117,7 +186,10 @@ export function collectUnlinkedAssetsForView(root: IRootStore, viewId: string | 
 	}
 
 	const linked = collectLinkedAssetIdsForView(root, viewId);
-	return root.assets.assets.filter((asset) => !linked.has(asset.id));
+	const xpathVisible = collectFilterVisibleIdsForView(root, viewId);
+	return root.assets.assets.filter(
+		(asset) => !linked.has(asset.id) && !xpathVisible.has(asset.id)
+	);
 }
 
 export type UnlinkedTreeElement = IGroup | IAsset;

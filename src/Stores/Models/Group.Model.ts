@@ -7,7 +7,10 @@ import { ITreeNode } from "../../Interfaces/Tree";
 import { IRootStore } from "../Root.Store";
 import { AssetModel, IAsset } from "./Asset.Model";
 import ElementModel, { ElementDefinitionTagModel } from "./Element.Model";
-import { resolveTreeNodeElementType } from "../../lib/treeNodeDisplay";
+import { assignableElementToTreeNode } from "../../lib/treeNodeDisplay";
+import { collectFilterMatchedElementsExcluding } from "../../lib/elementXPathFilter";
+import { FilterRuleModel } from "./FilterRule.Model";
+import { normalizeFilterRules } from "../../lib/filterRuleNormalize";
 
 function resolveAssetIdFromRef(ref: { id: unknown }): string | undefined {
 	if (typeof ref.id === "string" && ref.id !== "") {
@@ -54,23 +57,6 @@ function collectGroupAssets(group: { id: string; elementIdRefs: Array<{ id: unkn
 	return Array.from(assetById.values());
 }
 
-function assetToTreeNode(root: IRootStore, element: IAsset): ITreeNode {
-	return {
-		key: element.id,
-		class: element.class,
-		title: element.definition?.name,
-		storeType: element.definition?.storeType,
-		baseType: element.definition.baseType,
-		subType: element.definition.subType,
-		elementType:
-			resolveTreeNodeElementType(root, element.definition) || element.definition.type,
-		description: element.definition.description,
-		label: element.definition.label,
-		status: element.status,
-		children: element.childrenAsTreeNodes() as ITreeNode[],
-	};
-}
-
 /**
  * A single group model which will have links and filters attached to it
  */
@@ -95,7 +81,7 @@ export const GroupModel = types.compose(
 					id: types.string,
 				})
 			),
-			filterRules: types.array(types.frozen()),
+			filterRules: types.array(FilterRuleModel),
 			attachments: types.array(types.frozen()),
 			properties: types.model({
 				responsibles: types.array(
@@ -138,10 +124,21 @@ export const GroupModel = types.compose(
 
 				const groupSnapshot = getSnapshot(self) as { elementIdRefs?: Array<{ id: string }> };
 				const referencedAssets = collectGroupAssets(self, root, groupSnapshot);
+				const existingIds = [
+					...groupChildren.map((group: IGroup) => group.id),
+					...referencedAssets.map((asset: IAsset) => asset.id),
+				];
+				const filterMatched = collectFilterMatchedElementsExcluding(
+					root,
+					self.id,
+					self.filterRules,
+					existingIds
+				);
 
 				const childrenCombined: Array<IGroup | IAsset> = [
 					...groupChildren,
 					...referencedAssets,
+					...filterMatched,
 				];
 
 				return childrenCombined.map((element) => {
@@ -158,26 +155,7 @@ export const GroupModel = types.compose(
 						};
 					}
 
-					if (element.class === "Asset") {
-						return assetToTreeNode(root, element as IAsset);
-					}
-
-					const group = element as IGroup;
-					return {
-						key: group.id,
-						class: group.class,
-						title: group.definition?.name,
-						storeType: group.definition?.storeType,
-						baseType: group.definition?.baseType,
-						subType: group.definition?.subType,
-						elementType:
-							resolveTreeNodeElementType(root, group.definition) ||
-							group.definition?.type,
-						description: group.definition.description,
-						label: group.definition?.label ?? "",
-						status: group.status,
-						children: group.childrenAsTreeNodes(),
-					};
+					return assignableElementToTreeNode(root, element);
 				});
 			},
 
@@ -193,8 +171,17 @@ export const GroupModel = types.compose(
 
 				const groupSnapshot = getSnapshot(self) as { elementIdRefs?: Array<{ id: string }> };
 				const referencedAssets = collectGroupAssets(self, root, groupSnapshot);
+				const filterMatched = collectFilterMatchedElementsExcluding(
+					root,
+					self.id,
+					self.filterRules,
+					[
+						...groupChildren.map((group: IGroup) => group.id),
+						...referencedAssets.map((asset: IAsset) => asset.id),
+					]
+				);
 
-				return [...groupChildren, ...referencedAssets] as IGroup[];
+				return [...groupChildren, ...referencedAssets, ...filterMatched] as IGroup[];
 			},
 
 			/**
@@ -220,7 +207,7 @@ export const GroupModel = types.compose(
 	},
 	setFilterRules(rules: unknown[]) {
 		self.beginEdit();
-		self.filterRules.replace(rules);
+		self.filterRules.replace(normalizeFilterRules(rules));
 		self.markTouched();
 	},
 }));
