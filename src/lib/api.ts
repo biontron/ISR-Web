@@ -20,6 +20,13 @@ import {
 	iacTemplatesListUri,
 } from "./iacRestUris";
 import { serializeResponseHeaders } from "./storeFailureFormat";
+import {
+	classifyLoginHttpFailure,
+	isLoginNetworkFailure,
+	loginFailureFromNetwork,
+	LoginAttemptResult,
+	parseLoginErrorCode,
+} from "./loginAttempt";
 
 // TODO: use local or session storage, based on user preference
 const storage: Storage = localStorage;
@@ -124,37 +131,55 @@ class Api {
 
 	/**
 	 * Login to the API
-	 * @param username
-	 * @param password
-	 * @param domain
-	 * @returns true if login was successful, false if login was unsuccessful
+	 * @returns ok:true bei Token, sonst klassifizierter Fehler (Credentials, Domain, Verbindung)
 	 */
-	public async login(username: string, password: string, domain: string) {
+	public async login(username: string, password: string, domain: string): Promise<LoginAttemptResult> {
 		const body = JSON.stringify({
 			username,
 			password,
 		});
-		const response = await this.request(`/${domain}/login`, {
-			method: "POST",
-			body,
-		});
-		if (response.ok) {
-			const data = await response.json();
 
-			if (data.token) {
-				storage.setItem("token", data.token);
-				// ToDo: Workaround: `Basic ${basicAuth}`
-				storage.setItem("token", window.btoa(username + ":" + password));
-				return true;
-			} else {
-				throw new Error("Invalid login token received");
+		try {
+			const response = await this.request(`/${domain}/login`, {
+				method: "POST",
+				body,
+			});
+			if (response.ok) {
+				const data = await response.json();
+
+				if (data.token) {
+					storage.setItem("token", data.token);
+					// ToDo: Workaround: `Basic ${basicAuth}`
+					storage.setItem("token", window.btoa(username + ":" + password));
+					return { ok: true };
+				}
+
+				return { ok: false, kind: "server", detail: "Invalid login token received" };
 			}
-		} else if (response.status === 405) {
-			return false;
-		} else {
+
 			const text = await response.text();
-			console.error("Server error:", response.status, text);
-			throw new Error(`HTTP ${response.status}: ${text}`);
+			const errorCode = parseLoginErrorCode(text);
+			const kind = classifyLoginHttpFailure(response.status, text);
+			if (kind === "server") {
+				console.error("Server error:", response.status, text);
+			}
+			return {
+				ok: false,
+				kind,
+				status: response.status,
+				errorCode,
+				detail: text.trim() || undefined,
+			};
+		} catch (error) {
+			if (isLoginNetworkFailure(error)) {
+				return loginFailureFromNetwork(error);
+			}
+			console.error("Login failed:", error);
+			return {
+				ok: false,
+				kind: "server",
+				detail: error instanceof Error ? error.message : String(error),
+			};
 		}
 	}
 

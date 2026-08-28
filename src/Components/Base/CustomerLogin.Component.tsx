@@ -4,12 +4,10 @@
 import React, { useState } from "react";
 import { observer } from "mobx-react";
 import { useNavigate } from "react-router-dom";
-import { Card, Form, Input, Button, Typography, AutoComplete, Checkbox } from "antd";
+import { Card, Form, Input, Button, AutoComplete, Checkbox, Alert } from "antd";
 import { rootStore } from "../../Stores/Root.Store";
 import authStore from "../../Stores/Auth.Store";
 import { useLangtext } from "../../lib/common";
-
-const { Text, Title, Paragraph } = Typography;
 
 const CustomerLogin: React.FC = observer(() => {
 	const navigate = useNavigate();
@@ -36,15 +34,11 @@ const CustomerLogin: React.FC = observer(() => {
 	};
 
 	const handleLogin = async (values: any) => {
-		const { username, password, domain, remember } = values;
-		try {
-			await authStore.login(username, password, domain);
-			if (authStore.isLoggedIn()) {
-				setDomainOptions(authStore.knownDomains.map((domain: string) => ({ value: domain })));
-				navigate(`/${authStore.getDomain()}/am`);
-			}
-		} catch (error) {
-			console.error("Authentication failed:", error);
+		const { username, password, domain } = values;
+		await authStore.login(username, password, domain);
+		if (authStore.isLoggedIn()) {
+			setDomainOptions(authStore.knownDomains.map((domain: string) => ({ value: domain })));
+			navigate(`/${authStore.getDomain()}/am`);
 		}
 	};
 
@@ -115,11 +109,14 @@ const CustomerLogin: React.FC = observer(() => {
 							{langtext("general.account_login")}
 						</Button>
 					</Form.Item>
-					{(lastMessage !== "") &&
-						<div className="login-message">
-							{lastMessage}
-						</div>
-					}
+					{lastMessage !== "" && (
+						<Alert
+							className="login-message"
+							type={authStore.lastMessageType === "success" ? "success" : "error"}
+							message={lastMessage}
+							showIcon
+						/>
+					)}
 				</Form>
 			</Card>
 		</div>

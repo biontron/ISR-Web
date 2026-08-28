@@ -175,6 +175,8 @@
 		"login_invalid": "Anmeldung fehlgeschlagen: Ungültige Zugangsdaten",
 		"login_success": "Anmeldung erfolgreich",
 		"login_denied": "Anmeldung ungültig",
+		"login_domain_denied": "Anmeldung fehlgeschlagen: Ungültige Domäne",
+		"login_connection_error": "Verbindungsfehler",
 		"login_error": "Anmeldung fehlgeschlagen",
 		"schema_select_prompt": "Schema in der Tabelle auswählen",
 		"schema_details_heading": "Schema-Details",

@@ -17,6 +17,10 @@ body,
   height: 100%;
 }
 
+.login-message {
+  margin-top: 8px;
+}
+
 .common-layout {
   display: flex;
   flex-direction: column;

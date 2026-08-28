@@ -1,9 +1,16 @@
 /*
 # SPDX-License-Identifier: GPL-2.0*/
 
-import { observable, action, makeObservable } from "mobx";
+import { observable, action, makeObservable, runInAction } from "mobx";
 import { rootStore } from "./Root.Store";
 import api from "../lib/api";
+import {
+	formatLoginFailureMessage,
+	isLoginNetworkFailure,
+	loginFailureFromNetwork,
+} from "../lib/loginAttempt";
+
+export type LoginMessageType = "success" | "error";
 
 export class AuthStore {
 	public isAuthenticated: boolean = false;
@@ -12,7 +19,8 @@ export class AuthStore {
 	public knownDomains: string[] = [];
 	public shouldRemember: boolean = true;
 	public username: string | undefined = undefined;
-	private lastMessage = "";
+	public lastMessage = "";
+	public lastMessageType: LoginMessageType | undefined = undefined;
 
 	constructor() {
 		makeObservable(this, {
@@ -22,10 +30,12 @@ export class AuthStore {
 			knownDomains: observable,
 			shouldRemember: observable,
 			username: observable,
+			lastMessage: observable,
+			lastMessageType: observable,
 			login: action,
 			logout: action,
 			setDomain: action,
-			setShouldRemember: action
+			setShouldRemember: action,
 		});
 		this.loadFromLocalStorage();
 	}
@@ -107,29 +117,50 @@ export class AuthStore {
 		}
 	}
 
+	private setLoginMessage(message: string, type: LoginMessageType | undefined) {
+		this.lastMessage = message;
+		this.lastMessageType = type;
+	}
+
 	/**
 	 * Anmeldung mit Benutzername und Passwort und Generierung eines JWT
 	 */
 	public async login(username: string, password: string, domain: string) {
-		this.lastMessage = "";
+		this.setLoginMessage("", undefined);
 
 		try {
-			const loginSuccess = await api.login(username, password, domain);
+			const result = await api.login(username, password, domain);
 
-			if (loginSuccess) {
-				this.isAuthenticated = true;
-				this.username = username;
-				this.setDomain(domain);
-				this.lastMessage = rootStore.i18n.text("general.login_success");
-				this.saveToLocalStorage();
-			} else {
-				this.lastMessage = rootStore.i18n.text("general.login_denied");
-				console.log("Login invalid");
-			}
+			runInAction(() => {
+				if (result.ok) {
+					this.isAuthenticated = true;
+					this.username = username;
+					this.setDomain(domain);
+					this.setLoginMessage(rootStore.i18n.text("general.login_success"), "success");
+					this.saveToLocalStorage();
+					return;
+				}
+
+				this.setLoginMessage(
+					formatLoginFailureMessage(result, (key) => rootStore.i18n.text(key)),
+					"error"
+				);
+			});
 		} catch (error) {
-			this.lastMessage = `${rootStore.i18n.text("general.login_error")}: ${error}`;
 			console.error("Login failed:", error);
-			throw error;
+			runInAction(() => {
+				const failure = isLoginNetworkFailure(error)
+					? loginFailureFromNetwork(error)
+					: {
+							ok: false as const,
+							kind: "server" as const,
+							detail: error instanceof Error ? error.message : String(error),
+					  };
+				this.setLoginMessage(
+					formatLoginFailureMessage(failure, (key) => rootStore.i18n.text(key)),
+					"error"
+				);
+			});
 		}
 	}
 
@@ -141,7 +172,7 @@ export class AuthStore {
 			const logoutResponse = await api.logout();
 			if (logoutResponse) {
 				this.isAuthenticated = false;
-				this.lastMessage = "";
+				this.setLoginMessage("", undefined);
 				this.username = undefined;
 				this.clearLocalStorage();
 			} else {

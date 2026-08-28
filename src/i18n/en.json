@@ -175,6 +175,8 @@
 		"login_invalid": "Login failed: Invalid credentials",
 		"login_success": "Login successful",
 		"login_denied": "Login invalid",
+		"login_domain_denied": "Login failed: Invalid domain",
+		"login_connection_error": "Connection error",
 		"login_error": "Login failed",
 		"schema_select_prompt": "Select a schema in the table",
 		"schema_details_heading": "Schema details",
