@@ -22,7 +22,54 @@ type FilterableElement = {
 	definition?: FilterDefinition;
 	ownerIdRef?: string | null;
 	parentIdRef?: string | null;
+	docks?: unknown;
+	settings?: unknown;
 };
+
+type FilterXmlOptions = {
+	includeDocks?: boolean;
+};
+
+const XML_NAME = /^[A-Za-z_][\w.-]*$/;
+
+function unwrapFilterValue(value: unknown): unknown {
+	if (value == null || typeof value !== "object") {
+		return value;
+	}
+	const record = value as { toJSON?: () => unknown };
+	if (typeof record.toJSON === "function") {
+		try {
+			return record.toJSON();
+		} catch {
+			return value;
+		}
+	}
+	return value;
+}
+
+function valueToXml(name: string, value: unknown): string {
+	if (!XML_NAME.test(name)) {
+		return "";
+	}
+	const plain = unwrapFilterValue(value);
+	if (plain == null || plain === "") {
+		return `<${name}/>`;
+	}
+	if (Array.isArray(plain)) {
+		return plain.map((item) => valueToXml(name, item)).join("");
+	}
+	if (typeof plain === "object") {
+		const children = Object.entries(plain as Record<string, unknown>)
+			.map(([key, child]) => valueToXml(key, child))
+			.join("");
+		return `<${name}>${children}</${name}>`;
+	}
+	return xmlLeaf(name, plain);
+}
+
+export function xpathNeedsDocks(expression: string): boolean {
+	return /(^|[^A-Za-z_])docks([\s/\[\]]|$)/.test(expression);
+}
 
 function escapeXml(value: unknown): string {
 	return String(value ?? "")
@@ -54,11 +101,14 @@ function tagsToXml(tags: FilterDefinition["tags"]): string {
 	return items ? `<tags>${items}</tags>` : "<tags/>";
 }
 
-export function elementToFilterXml(element: FilterableElement): string {
+export function elementToFilterXml(
+	element: FilterableElement,
+	options: FilterXmlOptions = {}
+): string {
 	const definition = element.definition ?? {};
 	const parentRef =
 		element.class === "Group" ? element.parentIdRef : element.ownerIdRef;
-	return [
+	const parts = [
 		"<element>",
 		xmlLeaf("id", element.id),
 		"<definition>",
@@ -72,8 +122,24 @@ export function elementToFilterXml(element: FilterableElement): string {
 		tagsToXml(definition.tags),
 		"</definition>",
 		xmlLeaf(element.class === "Group" ? "parentIdRef" : "ownerIdRef", parentRef),
-		"</element>",
-	].join("");
+	];
+	if (options.includeDocks && element.docks != null) {
+		parts.push(valueToXml("docks", element.docks));
+	}
+	parts.push("</element>");
+	return parts.join("");
+}
+
+function parseFilterDocument(
+	element: FilterableElement,
+	options: FilterXmlOptions
+): Document | null {
+	const xml = elementToFilterXml(element, options);
+	const doc = new DOMParser().parseFromString(xml, "application/xml");
+	if (doc.querySelector("parsererror")) {
+		return null;
+	}
+	return doc;
 }
 
 function xpathResultIsMatch(result: XPathResult): boolean {
@@ -252,15 +318,9 @@ export function rewriteXPathMatchFunctions(expression: string, doc: Document): s
 	return current;
 }
 
-export function elementMatchesXPath(element: FilterableElement, expression: string): boolean {
+export function elementMatchesXPathOnDocument(doc: Document, expression: string): boolean {
 	const xpath = expression.trim();
 	if (!xpath) {
-		return false;
-	}
-
-	const xml = elementToFilterXml(element);
-	const doc = new DOMParser().parseFromString(xml, "application/xml");
-	if (doc.querySelector("parsererror")) {
 		return false;
 	}
 
@@ -279,6 +339,19 @@ export function elementMatchesXPath(element: FilterableElement, expression: stri
 	}
 }
 
+export function elementMatchesXPath(element: FilterableElement, expression: string): boolean {
+	const xpath = expression.trim();
+	if (!xpath) {
+		return false;
+	}
+
+	const doc = parseFilterDocument(element, { includeDocks: xpathNeedsDocks(xpath) });
+	if (!doc) {
+		return false;
+	}
+	return elementMatchesXPathOnDocument(doc, xpath);
+}
+
 export function elementMatchesAnyXPath(
 	element: FilterableElement,
 	rules: unknown[]
@@ -287,7 +360,51 @@ export function elementMatchesAnyXPath(
 	if (expressions.length === 0) {
 		return false;
 	}
-	return expressions.some((xpath) => elementMatchesXPath(element, xpath));
+	const doc = parseFilterDocument(element, {
+		includeDocks: expressions.some(xpathNeedsDocks),
+	});
+	if (!doc) {
+		return false;
+	}
+	return expressions.some((xpath) => elementMatchesXPathOnDocument(doc, xpath));
+}
+
+function partitionUnassignedByXPath(
+	unassigned: AssignableTreeElement[],
+	rules: unknown[]
+): { matched: AssignableTreeElement[]; available: AssignableTreeElement[] } {
+	const expressions = rules.map(readXPathExpression).filter(Boolean);
+	if (expressions.length === 0) {
+		return { matched: [], available: unassigned };
+	}
+
+	const includeDocks = expressions.some(xpathNeedsDocks);
+	const matched: AssignableTreeElement[] = [];
+	const available: AssignableTreeElement[] = [];
+
+	for (const element of unassigned) {
+		const doc = parseFilterDocument(element, { includeDocks });
+		if (doc && expressions.some((xpath) => elementMatchesXPathOnDocument(doc, xpath))) {
+			matched.push(element);
+		} else {
+			available.push(element);
+		}
+	}
+
+	return { matched, available };
+}
+
+export function collectFilterElementPartition(
+	root: Pick<IRootStore, "groups" | "assets">,
+	parentId: string,
+	rules: unknown[]
+): { matched: AssignableTreeElement[]; available: AssignableTreeElement[] } {
+	const expressions = rules.map(readXPathExpression).filter(Boolean);
+	const unassigned = collectUnassignedElements(root, parentId);
+	if (expressions.length === 0) {
+		return { matched: [], available: unassigned };
+	}
+	return partitionUnassignedByXPath(unassigned, rules);
 }
 
 export function collectFilterMatchedElements(
@@ -298,9 +415,7 @@ export function collectFilterMatchedElements(
 	if (rules.map(readXPathExpression).every((xpath) => xpath === "")) {
 		return [];
 	}
-	return collectUnassignedElements(root, parentId).filter((element) =>
-		elementMatchesAnyXPath(element, rules)
-	);
+	return collectFilterElementPartition(root, parentId, rules).matched;
 }
 
 export function collectFilterAvailableElements(
@@ -308,12 +423,7 @@ export function collectFilterAvailableElements(
 	parentId: string,
 	rules: unknown[]
 ): AssignableTreeElement[] {
-	const matchedIds = new Set(
-		collectFilterMatchedElements(root, parentId, rules).map((element) => element.id)
-	);
-	return collectUnassignedElements(root, parentId).filter(
-		(element) => !matchedIds.has(element.id)
-	);
+	return collectFilterElementPartition(root, parentId, rules).available;
 }
 
 /** XPath-Treffer, die noch nicht als statische Kinder im Tree stehen — Parent-Refs bleiben unverändert. */

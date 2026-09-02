@@ -47,6 +47,37 @@ describe("elementXPathFilter", () => {
 		).toBe(true);
 	});
 
+	it("serialisiert docks/dockparts/settings und wertet matches() auf IP-Adressen aus", () => {
+		const asset = {
+			...device("A-net"),
+			docks: [
+				{
+					id: "d0",
+					type: "ETH",
+					dockparts: [
+						{ id: "p0", settings: { address: { ip: "10.0.0.1" } } },
+						{ id: "p1", settings: { address: { ip: "192.168.40.23" } } },
+					],
+				},
+				{
+					id: "d1",
+					type: "ETH",
+					dockparts: [{ id: "p2", settings: { address: { ip: "10.1.1.1" } } }],
+				},
+			],
+		};
+		const xml = elementToFilterXml(asset as never, { includeDocks: true });
+		expect(xml).toContain("<ip>192.168.40.23</ip>");
+		const xpath = "matches(docks[1]/dockparts[2]/settings/address/ip, '192\\.168\\.40\\..*')";
+		expect(elementMatchesXPath(asset as never, xpath)).toBe(true);
+		expect(
+			elementMatchesXPath(
+				asset as never,
+				"matches(docks[1]/dockparts[1]/settings/address/ip, '192\\.168\\.40\\..*')"
+			)
+		).toBe(false);
+	});
+
 	it("wertet match() und matches() als Regulärausdruck aus", () => {
 		const asset = device("A-1");
 		expect(elementMatchesXPath(asset as never, "match(definition/name, 'is-.*')")).toBe(true);
@@ -88,7 +119,7 @@ describe("elementXPathFilter", () => {
 					{ ...device("a-linked"), ownerIdRef: "view1" },
 				],
 			},
-		} as never;
+		} as any;
 
 		const rules = [{ xpath: "definition/subType='DESKTOP'", description: "Desktops" }];
 		expect(collectFilterMatchedElements(root, "view1", rules).map((item) => item.id)).toEqual([

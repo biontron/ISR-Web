@@ -112,7 +112,7 @@
 		"create_tab_components_empty": "No component schemas for this context.",
 		"tree_unlinked_components": "Unlinked elements",
 		"assetreference_filter_rules": "XPath filters",
-		"assetreference_filter_rules_hint": "A relative XPath against the XML form of an element (context node is <element>). Only elements without a static parentIdRef/ownerIdRef are assigned. Examples: definition/type='DEVICE' · definition/tags/tag='Client' · starts-with(definition/name,'is-') · match(definition/name,'^is-')",
+		"assetreference_filter_rules_hint": "A relative XPath against the XML form of an element (context node is <element>). Only elements without a static parentIdRef/ownerIdRef are assigned. Examples: definition/type='DEVICE' · definition/tags/tag='Client' · starts-with(definition/name,'is-') · match(definition/name,'^is-')  · matches(docks[1]/dockparts[2]/settings/address/ip, '192\\.168\\.40\\..*')",
 		"assetreference_filter_placeholder": "e.g. match(definition/name,'^is-')",
 		"assetreference_filter_description_placeholder": "Description, e.g. Virtual machines",
 		"assetreference_filter_empty": "No XPath filters yet",

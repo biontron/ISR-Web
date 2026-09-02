@@ -27,8 +27,7 @@ import {
 } from "../../../../lib/elementAssignments";
 import { filterRuleDescription } from "../../../../lib/filterRuleNormalize";
 import {
-	collectFilterAvailableElements,
-	collectFilterMatchedElements,
+	collectFilterElementPartition,
 } from "../../../../lib/elementXPathFilter";
 
 type MappingParent = IView | IGroup | IAsset;
@@ -53,6 +52,7 @@ const AssetReferenceMapping: React.FC<{ element: ActiveElement }> = observer(({ 
 	const [selectedAvailableIds, setSelectedAvailableIds] = useState<string[]>([]);
 	const [xpathDraft, setXpathDraft] = useState("");
 	const [descriptionDraft, setDescriptionDraft] = useState("");
+	const [activeTab, setActiveTab] = useState("static");
 
 	const assignedElements = hasAssignmentParent(element)
 		? collectAssignedElements(rootStore, element.id)
@@ -228,19 +228,17 @@ const AssetReferenceMapping: React.FC<{ element: ActiveElement }> = observer(({ 
 	}
 
 	const xpathRules = hasFilterRules(element) ? [...element.filterRules] : [];
-	const filterMatchedElements = collectFilterMatchedElements(
-		rootStore,
-		element.id,
-		xpathRules
-	);
-	const filterAvailableElements = collectFilterAvailableElements(
-		rootStore,
-		element.id,
-		xpathRules
-	);
+	const filterPartition = activeTab === "xpath"
+		? collectFilterElementPartition(rootStore, element.id, xpathRules)
+		: { matched: [] as AssignableTreeElement[], available: [] as AssignableTreeElement[] };
+	const filterMatchedElements = filterPartition.matched;
+	const filterAvailableElements = filterPartition.available;
 
 	return (
 		<Tabs
+			activeKey={activeTab}
+			onChange={setActiveTab}
+			destroyInactiveTabPane
 			items={[
 				{ key: "static", label: langtext("general.assetreference_assigned"), children: staticMapping },
 				{

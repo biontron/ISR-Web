@@ -158,13 +158,17 @@ function collectKnownParentIds(root: IRootStore, viewId: string): Set<string> {
 }
 
 /** Ausgehängte View-Folder (ohne gültigen Parent, nicht im Tree der aktiven View). */
-export function collectUnlinkedGroupsForView(root: IRootStore, viewId: string | undefined): IGroup[] {
+export function collectUnlinkedGroupsForView(
+	root: IRootStore,
+	viewId: string | undefined,
+	xpathVisibleIds?: Set<string>
+): IGroup[] {
 	if (!viewId) {
 		return [];
 	}
 
 	const linkedIds = new Set(collectViewGroupsUnderView(root, viewId).map((group) => group.id));
-	const xpathVisible = collectFilterVisibleIdsForView(root, viewId);
+	const xpathVisible = xpathVisibleIds ?? collectFilterVisibleIdsForView(root, viewId);
 	const knownParents = collectKnownParentIds(root, viewId);
 
 	return root.groups.groups.filter((group) => {
@@ -180,13 +184,17 @@ export function collectUnlinkedGroupsForView(root: IRootStore, viewId: string | 
 }
 
 /** Komponenten ohne Zuordnung in der aktiven View. */
-export function collectUnlinkedAssetsForView(root: IRootStore, viewId: string | undefined): IAsset[] {
+export function collectUnlinkedAssetsForView(
+	root: IRootStore,
+	viewId: string | undefined,
+	xpathVisibleIds?: Set<string>
+): IAsset[] {
 	if (!viewId) {
 		return [];
 	}
 
 	const linked = collectLinkedAssetIdsForView(root, viewId);
-	const xpathVisible = collectFilterVisibleIdsForView(root, viewId);
+	const xpathVisible = xpathVisibleIds ?? collectFilterVisibleIdsForView(root, viewId);
 	return root.assets.assets.filter(
 		(asset) => !linked.has(asset.id) && !xpathVisible.has(asset.id)
 	);
@@ -199,8 +207,9 @@ export function collectUnlinkedElementsForView(
 	root: IRootStore,
 	viewId: string | undefined
 ): UnlinkedTreeElement[] {
+	const xpathVisible = viewId ? collectFilterVisibleIdsForView(root, viewId) : new Set<string>();
 	return [
-		...collectUnlinkedGroupsForView(root, viewId),
-		...collectUnlinkedAssetsForView(root, viewId),
+		...collectUnlinkedGroupsForView(root, viewId, xpathVisible),
+		...collectUnlinkedAssetsForView(root, viewId, xpathVisible),
 	];
 }
