@@ -39,13 +39,9 @@ const SchemaEditorDockpartHeader: React.FC<SchemaEditorDockpartHeaderProps> = ({
 
 	const title = interpolateTitleTemplate(
 		"#{id} {type} / {version} - {label}",
-		{
-			id: dockpart.id,
-			type: dockpart.type,
-			version: dockpart.version,
-			label: dockpart.label,
-		},
-		dockpart.type || langtext("schema_editor.dockpart_header")
+		dockpart,
+		dockpart.type || langtext("schema_editor.dockpart_header"),
+		{ root: elementData }
 	);
 
 	const allowed = resolveAllowedLowerTypes(dockpart.type || dockpart.protocol, schemas);

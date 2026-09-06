@@ -371,9 +371,22 @@ const SchemaEditorGroup: React.FC<SchemaEditorGroupProps> = ({
 		/>
 	);
 
+	const groupLabel = getLanguageText(schemaDefinitionGroup.formProperties.label);
+	const titleTemplate = schemaDefinitionGroup.formProperties.titleTemplate;
+	const titleContext = { root: elementData, basePath: path };
+
 	const renderArrayEntry = (arrayIndex: number, total: number) => {
 		const entryPath = `${path}[${arrayIndex}]`;
-		const entryTitle = langtext("schema_editor.entry_label", { index: arrayIndex + 1 });
+		const entryValue = Array.isArray(elementDataFragment)
+			? elementDataFragment[arrayIndex]
+			: undefined;
+		const fallbackEntryTitle = langtext("schema_editor.entry_label", { index: arrayIndex + 1 });
+		const entryTitle = titleTemplate
+			? interpolateTitleTemplate(titleTemplate, entryValue, fallbackEntryTitle, {
+					root: elementData,
+					basePath: entryPath,
+				})
+			: fallbackEntryTitle;
 		const controls =
 			editAllowed ? (
 				<SchemaEditorGroupEntryControls
@@ -385,10 +398,6 @@ const SchemaEditorGroup: React.FC<SchemaEditorGroupProps> = ({
 					onRemove={() => handleRemoveEntry(arrayIndex)}
 				/>
 			) : null;
-
-		const entryValue = Array.isArray(elementDataFragment)
-			? elementDataFragment[arrayIndex]
-			: undefined;
 
 		return (
 			<div
@@ -506,11 +515,23 @@ const SchemaEditorGroup: React.FC<SchemaEditorGroupProps> = ({
 		return renderChildItems(childPathPrefix, childPathPrefix);
 	};
 
-	const groupLabel = getLanguageText(schemaDefinitionGroup.formProperties.label);
-	const titleTemplate = schemaDefinitionGroup.formProperties.titleTemplate;
-	const groupTitle = titleTemplate
-		? interpolateTitleTemplate(titleTemplate, elementDataFragment, groupLabel)
-		: groupLabel;
+	const groupTitle = (() => {
+		if (!titleTemplate) {
+			return groupLabel;
+		}
+		if (isArrayGroup && Array.isArray(elementDataFragment)) {
+			const parts = elementDataFragment
+				.map((entry, index) =>
+					interpolateTitleTemplate(titleTemplate, entry, "", {
+						root: elementData,
+						basePath: `${path}[${index}]`,
+					})
+				)
+				.filter(Boolean);
+			return parts.length > 0 ? parts.join(" · ") : groupLabel;
+		}
+		return interpolateTitleTemplate(titleTemplate, elementDataFragment, groupLabel, titleContext);
+	})();
 
 	return (
 		<CardCollapse
