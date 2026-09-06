@@ -462,36 +462,34 @@ describe("schemaDeviation", () => {
 			expect(findStructuralMissingInScope(data, schemaItems, "")).toEqual([]);
 		});
 
-		it("Dockpart: Kernfelder und settings.address gelten als zulässig", () => {
-			const addressGroup = createGroup(
-				"address",
+		it("Dockpart: Kernfelder und settings.ip gelten als zulässig", () => {
+			const settingsGroup = createGroup(
+				"settings",
 				[
 					createField("ip", 1),
 					createField("netmask", 1),
-					createField("type", 1),
 				],
 				"map",
 				1,
 				1
 			);
-			const schemaItems = [addressGroup];
+			const schemaItems = [settingsGroup];
 			const data = {
 				docks: [
 					{
 						dockparts: [
 							{
 								id: "dp1",
-								type: "IPv4",
+								type: "IP",
 								label: "IPv4",
+								notes: "",
 								protocol: "IP",
-								versions: [],
+								version: "4",
 								basedOn: [],
+								state: { value: "", timestamp: "", reportedBy: "" },
 								settings: {
-									address: {
-										type: "V4",
-										netmask: "24",
-										ip: "",
-									},
+									ip: "",
+									netmask: "24",
 								},
 							},
 						],

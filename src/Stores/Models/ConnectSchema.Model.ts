@@ -18,6 +18,7 @@ export const ConnectSchemaModel = types.compose(
 		]),
 		baseType: types.enumeration<ElementKindType>("ElementKindType", [
 			"GROUP",
+			"VIEWGROUP",
 			"COMPONENT",
 			"CONNECTION",
 			"TEMPLATE",
@@ -27,6 +28,15 @@ export const ConnectSchemaModel = types.compose(
 		name: MultilingualText,
 		description: MultilingualText,
 		order: types.number,
+		definition: types.optional(
+			types.model({
+				id: types.optional(types.string, ""),
+				type: types.optional(types.string, ""),
+				versions: types.optional(types.array(types.string), []),
+				label: types.optional(types.string, ""),
+			}),
+			{}
+		),
 		parent: types.model({
 			whitelist: types.array(types.string),
 			blacklist: types.array(types.string),

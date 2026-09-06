@@ -5,6 +5,7 @@ import React, { useEffect } from "react";
 import { observer } from "mobx-react";
 import CardCollapse from "../../../Apps/AssetManagement/Components/CardCollapse.Component";
 import { getLanguageText, useLangtext } from "../../../lib/common";
+import { interpolateTitleTemplate } from "../../../lib/titleTemplate";
 import { getValueByPath } from "../../../lib/path";
 import {
 	buildSchemaDataPath,
@@ -135,26 +136,6 @@ const SchemaEditorGroup: React.FC<SchemaEditorGroupProps> = ({
 
 	const childPathPrefix = path;
 	const isDockpartsArray = isDockpartsChooseGroup(schemaDefinitionGroup);
-	const structuralScopePaths =
-		shouldShowChildren &&
-		(isSchemaItemsList || isArrayCollectionGroup(schemaDefinitionGroup)) &&
-		Array.isArray(elementDataFragment)
-			? elementDataFragment.map((_, index) => `${path}[${index}]`)
-			: shouldShowChildren
-				? [childPathPrefix]
-				: [];
-	const structuralMissingEntries = isGroupMissing
-		? [{ path, kind: "group" as const }]
-		: isDockpartsArray
-			? []
-			: structuralScopePaths.flatMap((scopePath) =>
-				findStructuralMissingInScope(elementData, schemaDefinitionGroup.items, scopePath)
-			);
-	const extraDataEntries = isDockpartsArray
-		? []
-		: structuralScopePaths.flatMap((scopePath) =>
-			findExtraPathsInScope(elementData, schemaDefinitionGroup.items, scopePath)
-		);
 
 	const editAllowed = canEdit;
 	const isArrayGroup = isArrayCollectionGroup(schemaDefinitionGroup);
@@ -525,16 +506,20 @@ const SchemaEditorGroup: React.FC<SchemaEditorGroupProps> = ({
 		return renderChildItems(childPathPrefix, childPathPrefix);
 	};
 
-	const groupBody = renderGroupBody();
+	const groupLabel = getLanguageText(schemaDefinitionGroup.formProperties.label);
+	const titleTemplate = schemaDefinitionGroup.formProperties.titleTemplate;
+	const groupTitle = titleTemplate
+		? interpolateTitleTemplate(titleTemplate, elementDataFragment, groupLabel)
+		: groupLabel;
 
 	return (
 		<CardCollapse
-			title={getLanguageText(schemaDefinitionGroup.formProperties.label)}
+			title={groupTitle}
+			defaultCollapsed={schemaDefinitionGroup.formProperties.collapsed === true}
 			hasContentError={isGroupMissing}
 			hasContentWarning={!isGroupMissing && isUsageOutOfBounds}
 			depth={depth}
 			mstPath={canEdit ? path : undefined}
-			mstValue={canEdit ? elementDataFragment : undefined}
 			schemaPath={canEdit ? schemaPath : undefined}
 			schemaTypeLabel={canEdit ? formatSchemaGroupTypeLabel(schemaDefinitionGroup) : undefined}
 			actionElement={
@@ -551,10 +536,36 @@ const SchemaEditorGroup: React.FC<SchemaEditorGroupProps> = ({
 				) : undefined
 			}
 		>
-			{groupBody ? <div className={groupClassName}>{groupBody}</div> : null}
-
-			<SchemaEditorStructuralMissing entries={structuralMissingEntries} />
-			<SchemaEditorExtraData entries={extraDataEntries} />
+			{() => {
+				const groupBody = renderGroupBody();
+				const structuralScopePaths =
+					shouldShowChildren &&
+					(isSchemaItemsList || isArrayCollectionGroup(schemaDefinitionGroup)) &&
+					Array.isArray(elementDataFragment)
+						? elementDataFragment.map((_, index) => `${path}[${index}]`)
+						: shouldShowChildren
+							? [childPathPrefix]
+							: [];
+				const structuralMissingEntries = isGroupMissing
+					? [{ path, kind: "group" as const }]
+					: isDockpartsArray
+						? []
+						: structuralScopePaths.flatMap((scopePath) =>
+							findStructuralMissingInScope(elementData, schemaDefinitionGroup.items, scopePath)
+						);
+				const extraDataEntries = isDockpartsArray
+					? []
+					: structuralScopePaths.flatMap((scopePath) =>
+						findExtraPathsInScope(elementData, schemaDefinitionGroup.items, scopePath)
+					);
+				return (
+					<>
+						{groupBody ? <div className={groupClassName}>{groupBody}</div> : null}
+						<SchemaEditorStructuralMissing entries={structuralMissingEntries} />
+						<SchemaEditorExtraData entries={extraDataEntries} />
+					</>
+				);
+			}}
 		</CardCollapse>
 	);
 };

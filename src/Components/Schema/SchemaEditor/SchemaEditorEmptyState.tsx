@@ -9,6 +9,7 @@ import { useLangtext } from "../../../lib/common";
 export type SchemaEditorEmptyReason =
 	| "no_element"
 	| "no_schema"
+	| "no_dockpart_schema"
 	| "no_fields"
 	| "no_view_settings";
 
@@ -33,12 +34,16 @@ const SchemaEditorEmptyState: React.FC<SchemaEditorEmptyStateProps> = ({
 		);
 	}
 
-	const messageKey =
+	const message =
 		reason === "no_element"
-			? "schema_editor.no_element"
+			? langtext("schema_editor.no_element")
 			: reason === "no_schema"
-				? "schema_editor.no_schema"
-				: "schema_editor.no_fields";
+				? langtext("schema_editor.no_schema")
+				: reason === "no_dockpart_schema"
+					? langtext("schema_editor.no_dockpart_schema", {
+							type: detail || "—",
+						})
+					: langtext("schema_editor.no_fields");
 
 	return (
 		<div className="schema-editor-empty">
@@ -46,8 +51,8 @@ const SchemaEditorEmptyState: React.FC<SchemaEditorEmptyStateProps> = ({
 				image={<FileExclamationOutlined style={{ fontSize: 48, color: "#faad14" }} />}
 				description={
 					<>
-						<div>{langtext(messageKey)}</div>
-						{detail ? (
+						<div>{message}</div>
+						{detail && reason !== "no_dockpart_schema" ? (
 							<div style={{ marginTop: 8, color: "rgba(0,0,0,0.45)", fontSize: 12 }}>
 								{detail}
 							</div>

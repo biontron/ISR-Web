@@ -13,11 +13,12 @@ export const SCHEMA_STORE_TYPES: readonly SchemaStoreType[] = [
 
 export const SCHEMA_BASE_TYPES = SCHEMA_STORE_TYPES;
 
-/** Element-Art laut XSD (definition.baseType / schema.baseType) */
-export type ElementKindType = "GROUP" | "COMPONENT" | "CONNECTION" | "TEMPLATE";
+/** Element-Art laut Schema-Vertrag (schema.baseType) */
+export type ElementKindType = "GROUP" | "VIEWGROUP" | "COMPONENT" | "CONNECTION" | "TEMPLATE";
 
 export const ELEMENT_KIND_TYPES: readonly ElementKindType[] = [
 	"GROUP",
+	"VIEWGROUP",
 	"COMPONENT",
 	"CONNECTION",
 	"TEMPLATE",

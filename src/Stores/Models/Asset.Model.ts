@@ -10,6 +10,7 @@ import ElementModel, { ElementDefinitionTagModel } from "./Element.Model";
 import { DockModel } from "./Dock.Model";
 import { ISchemaGroupModel } from "./SchemaGroup.Model";
 import { buildDockEntryFromSchemaItems, buildDockpartEntry } from "../../lib/assetSchemaMutations";
+import { refillEmptyBasedOn } from "../../lib/dockpartBasedOn";
 
 /*
 {
@@ -156,6 +157,10 @@ export const AssetModel = types.compose(
 		}
 		self.beginEdit();
 		self.docks[dockIndex].dockparts.push(entry as any);
+		refillEmptyBasedOn(
+			self.docks[dockIndex].dockparts,
+			(getRoot(self) as IRootStore).configSchemas.dockparts.slice()
+		);
 		self.markTouched();
 	},
 	addDockpart(dockIndex: number, schemaId: string) {
@@ -166,11 +171,16 @@ export const AssetModel = types.compose(
 		}
 		self.beginEdit();
 		self.docks[dockIndex].dockparts.push(snapshot as any);
+		refillEmptyBasedOn(self.docks[dockIndex].dockparts, root.configSchemas.dockparts.slice());
 		self.markTouched();
 	},
 	removeDockpart(dockIndex: number, partIndex: number) {
 		self.beginEdit();
 		self.docks[dockIndex].dockparts.splice(partIndex, 1);
+		refillEmptyBasedOn(
+			self.docks[dockIndex].dockparts,
+			(getRoot(self) as IRootStore).configSchemas.dockparts.slice()
+		);
 		self.markTouched();
 	},
 	/** Legt bei Bedarf ein Dock an und hängt genau ein Dockpart-Element ein */
@@ -185,6 +195,7 @@ export const AssetModel = types.compose(
 		const root = getRoot(self) as IRootStore;
 		const snapshot = buildDockpartEntry(self as IAsset, dockIndex, schemaType, root);
 		self.docks[dockIndex].dockparts.push(snapshot as any);
+		refillEmptyBasedOn(self.docks[dockIndex].dockparts, root.configSchemas.dockparts.slice());
 		self.markTouched();
 	},
 	// Neue Actions für Cross-Referencing

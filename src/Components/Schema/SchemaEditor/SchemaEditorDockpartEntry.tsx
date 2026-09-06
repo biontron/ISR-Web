@@ -4,6 +4,8 @@ import SchemaEditor from "./SchemaEditor.Component";
 import SchemaEditorEmptyState from "./SchemaEditorEmptyState";
 import SchemaEditorGroupEntryControls from "./SchemaEditorGroupEntryControls";
 import SchemaEditorGroupEntryHeader from "./SchemaEditorGroupEntryHeader";
+import SchemaEditorDockpartHeader from "./SchemaEditorDockpartHeader";
+import { findDockForEntryPath } from "./SchemaEditorDockpartBasedOn";
 import { useLangtext } from "../../../lib/common";
 import { resolveDockpartEntrySchemaDefinition } from "../../../lib/dockpartSchemaResolve";
 import { rootStore } from "../../../Stores/Root.Store";
@@ -45,8 +47,9 @@ const SchemaEditorDockpartEntry: React.FC<SchemaEditorDockpartEntryProps> = ({
 			: "";
 	const resolvedSchema = resolveDockpartEntrySchemaDefinition(
 		dockpart,
-		rootStore.configSchemas.dockparts.slice()
+		rootStore.configSchemas.dockparts
 	);
+	const dock = findDockForEntryPath(elementData, entryPath);
 	const entryTitle = langtext("schema_editor.entry_label", { index: arrayIndex + 1 });
 	const typeSuffix = dockpartType ? ` (${dockpartType})` : "";
 	const controls =
@@ -71,7 +74,6 @@ const SchemaEditorDockpartEntry: React.FC<SchemaEditorDockpartEntryProps> = ({
 				controls={controls}
 				canEdit={canEdit}
 				mstPath={entryPath}
-				mstValue={dockpart}
 				schemaPath={entryPath}
 				schemaTypeLabel={
 					dockpartType
@@ -80,6 +82,13 @@ const SchemaEditorDockpartEntry: React.FC<SchemaEditorDockpartEntryProps> = ({
 				}
 			/>
 			<div className="schema-group-entry__body">
+				<SchemaEditorDockpartHeader
+					dockpart={dockpart}
+					dock={dock}
+					elementData={elementData}
+					canEdit={canEdit}
+					schemas={rootStore.configSchemas.dockparts}
+				/>
 				{resolvedSchema ? (
 					<SchemaEditor
 						schemaDefinition={resolvedSchema}
@@ -90,8 +99,8 @@ const SchemaEditorDockpartEntry: React.FC<SchemaEditorDockpartEntryProps> = ({
 					/>
 				) : (
 					<SchemaEditorEmptyState
-						reason="no_schema"
-						detail={dockpartType ? `„${dockpartType}“` : undefined}
+						reason="no_dockpart_schema"
+						detail={dockpartType || undefined}
 					/>
 				)}
 			</div>

@@ -67,6 +67,7 @@
 		"activity_status_tab_write": "Bearbeitung / Speichern",
 		"activity_status_activity_read_error": "Ladefehler",
 		"activity_status_activity_read_interface": "Schnittstelle OK",
+		"activity_status_activity_read_interface_empty": "Keine Elemente",
 		"activity_status_activity_read_interface_error": "Schnittstellen-Fehler",
 		"activity_status_section_interfaces": "REST-Schnittstellen",
 		"activity_status_section_objects": "Objekte",
@@ -197,6 +198,7 @@
 	"schema_editor": {
 		"no_element": "Kein gültiges Datenelement vorhanden",
 		"no_schema": "Schema nicht gefunden",
+		"no_dockpart_schema": "Kein Schema-Template für Dockpart-Typ „@@type@@“.",
 		"no_fields": "Keine Felder in der Schema-Definition",
 		"no_object_settings_view": "Es sind keine objektspezifischen Felder für eine VIEW vorgesehen.",
 		"entry_label": "Eintrag @@index@@",
@@ -209,6 +211,14 @@
 		"mandatory_unfilled": "Pflichtfeld nicht ausgefüllt",
 		"invalid_input": "Ungültige Eingabe",
 		"path_mst": "MST-Pfad",
-		"path_schema": "Schema-Pfad"
+		"path_schema": "Schema-Pfad",
+		"based_on": "Basiert auf (darunterliegende Schicht)",
+		"based_on_placeholder": "Unterliegendes Dockpart wählen",
+		"dockpart_header": "Definition",
+		"dockpart_type": "Typ",
+		"dockpart_version": "Version",
+		"dockpart_label": "Bezeichner",
+		"dockpart_notes": "Anmerkungen",
+		"dockpart_state": "Zustand"
 	}
 }

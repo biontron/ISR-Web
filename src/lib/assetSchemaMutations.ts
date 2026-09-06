@@ -63,6 +63,7 @@ export function buildDockEntryFromSchemaItems(
 		id: String(entry.id ?? ""),
 		type: String(entry.type ?? ""),
 		label: typeof entry.label === "string" ? entry.label : "",
+		hints: Array.isArray(entry.hints) ? entry.hints : [],
 		dockparts: entry.dockparts,
 	};
 }
@@ -92,7 +93,12 @@ export function buildDockpartEntry(
 	return createNewDockpartSnapshot(
 		schemaId,
 		String(partId),
-		root.configSchemas.dockparts.slice()
+		root.configSchemas.dockparts.slice(),
+		dock.dockparts.map((part) => ({
+			id: part.id,
+			type: part.type,
+			protocol: part.protocol,
+		}))
 	);
 }
 

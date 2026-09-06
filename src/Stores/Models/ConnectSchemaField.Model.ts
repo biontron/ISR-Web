@@ -21,6 +21,8 @@ export const ConnectSchemaFieldModel = types.model("ConnectSchemaField", {
 	}),
 	formProperties: types.model({
 		label: MultilingualText,
+		collapsed: types.optional(types.boolean, false),
+		titleTemplate: types.optional(types.string, ""),
 	}),
 	fieldType: types.enumeration("DataType", [
 		"string", "number", "boolean", "null", "object", "array"

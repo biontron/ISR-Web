@@ -46,6 +46,7 @@ describe("buildDockEntryFromSchemaItems", () => {
 			id: entry.id,
 			type: expect.any(String),
 			label: "",
+			hints: [],
 			dockparts: [],
 		});
 		expect(entry).not.toHaveProperty("ownerType");

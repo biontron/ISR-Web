@@ -6,7 +6,7 @@ interface SchemaEditorGroupEntryHeaderProps {
 	controls?: ReactNode;
 	canEdit: boolean;
 	mstPath: string;
-	mstValue: unknown;
+	mstValue?: unknown;
 	schemaPath: string;
 	schemaTypeLabel: string;
 }

@@ -10,6 +10,7 @@ import { rootStore } from "../../../Stores/Root.Store";
 import { useLangtext } from "../../../lib/common";
 import { buildElementStatusClass } from "../../../lib/elementStatusStyle";
 import { hasElementDocksValidationErrors } from "../../../lib/elementValidationChecks";
+import { sortSchemaIdsByStack } from "../../../lib/dockpartBasedOn";
 
 interface AssetDocksSectionProps {
 	asset: IAsset;
@@ -45,7 +46,11 @@ const AssetDocksSection: React.FC<AssetDocksSectionProps> = ({ asset, canEdit })
 		const match = dockpartChooseRequest.path.match(/^docks\[(\d+)\]\.dockparts$/);
 		if (match) {
 			const dockIndex = parseInt(match[1], 10);
-			for (const schemaId of schemaIds) {
+			const ordered = sortSchemaIdsByStack(
+				schemaIds,
+				rootStore.configSchemas.dockparts.slice()
+			);
+			for (const schemaId of ordered) {
 				asset.addDockpart(dockIndex, schemaId);
 			}
 		} else {

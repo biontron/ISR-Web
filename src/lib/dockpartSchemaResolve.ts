@@ -2,6 +2,10 @@ import { ISchemaDefinition } from "../Interfaces/SchemaDefinition";
 import { IConnectSchemaModel } from "../Stores/Models/ConnectSchema.Model";
 import { IConnectSchemaItem } from "../Stores/Types/ConnectSchemaItem";
 import { buildDefaultsFromSchemaItems } from "./schemaEntryDefaults";
+import {
+	DockpartStackRef,
+	resolveBasedOnFromSiblings,
+} from "./dockpartBasedOn";
 
 /** Bekannte Schema/MST-Shape-Konflikte — nicht im Asset-Dockpart-Editor (basedOn: Map vs. Array). */
 const DOCKPART_EDITOR_OMITTED_SCHEMA_KEYS = new Set(["basedOn"]);
@@ -113,7 +117,8 @@ export function createEmptyDockpartInstance(
 export function createNewDockpartSnapshot(
 	schemaId: string,
 	partId: string,
-	allSchemas: IConnectSchemaModel[]
+	allSchemas: IConnectSchemaModel[],
+	siblings: DockpartStackRef[] = []
 ): Record<string, unknown> {
 	const schema = allSchemas.find(
 		(s) =>
@@ -121,14 +126,19 @@ export function createNewDockpartSnapshot(
 			s.type === schemaId ||
 			s.id.toLowerCase() === schemaId.toLowerCase()
 	);
+	const type = String(schema?.type ?? schemaId);
+	const version = String(schema?.definition?.versions?.[0] ?? "");
 
 	return {
 		id: partId,
-		type: String(schema?.type ?? schemaId),
-		label: String(schema?.type ?? schemaId),
-		protocol: "",
-		versions: [],
-		basedOn: [],
+		type,
+		label: "",
+		notes: "",
+		protocol: type,
+		version,
+		versions: version ? [{ version }] : [],
+		basedOn: resolveBasedOnFromSiblings(type, siblings, allSchemas, partId),
+		state: { value: "", timestamp: "", reportedBy: "" },
 		settings: {},
 	};
 }

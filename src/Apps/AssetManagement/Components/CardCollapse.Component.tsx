@@ -9,7 +9,7 @@ import SchemaEditorPathTooltip from "../../../Components/Schema/SchemaEditor/Sch
 interface CardCollapseProps {
 	title: string;
 	extraContent?: ReactNode;
-	children?: ReactNode;
+	children?: ReactNode | (() => ReactNode);
 	actionElement?: ReactNode;
 	hasContentError?: boolean;
 	hasContentWarning?: boolean;
@@ -19,6 +19,13 @@ interface CardCollapseProps {
 	schemaPath?: string;
 	schemaTypeLabel?: string;
 	defaultCollapsed?: boolean;
+}
+
+function renderCollapseBody(children: CardCollapseProps["children"]): ReactNode {
+	if (typeof children === "function") {
+		return children();
+	}
+	return children;
 }
 
 const CardCollapse: React.FC<CardCollapseProps> = ({
@@ -67,13 +74,19 @@ const CardCollapse: React.FC<CardCollapseProps> = ({
 					<Button
 						type="link"
 						className="card-collapse-toggle"
-						onClick={() => setCollapsed(!collapsed)}
+						onClick={(event) => {
+							event.preventDefault();
+							event.stopPropagation();
+							setCollapsed((current) => !current);
+						}}
 						icon={collapsed ? <PlusOutlined /> : <MinusOutlined />}
 					/>
 				</div>
 			</div>
 			{!collapsed && (
-				<div className={`card-collapse__body ${bodyStateClass}`.trim()}>{children}</div>
+				<div className={`card-collapse__body ${bodyStateClass}`.trim()}>
+					{renderCollapseBody(children)}
+				</div>
 			)}
 		</div>
 	);

@@ -1,0 +1,29 @@
+---
+description: UI darf REST-Daten weder beim Lesen noch beim Schreiben bereinigen
+alwaysApply: true
+---
+
+# Kein REST-Cleanup in der UI
+
+In der UI ist **kein Cleanup und keine Datenbereinigung (Sanity)** am REST-Interface erlaubt — **weder beim Lesen noch beim Schreiben**.
+
+Der REST-Körper gilt als Vertrag. Die UI sendet und übernimmt JSON unverändert. Abweichungen sind Fehler, keine stillen Korrekturen.
+
+## Verboten (Lesen und Schreiben)
+
+- Felder ergänzen, streichen, umbenennen oder Default-Werte einsetzen
+- Typen umbiegen (`null` → `""`, Objekt → Array, Zahl → String, leeren Timestamp weglassen)
+- Alternative Formen „normalisieren“ (`basedOn` als Objekt/`entry`/`basedO` → Array)
+- `preProcessSnapshot`, Mapper oder `normalize*`-Hilfen, die REST-JSON heil machen, damit MST nicht fehlschlägt
+- Beim PUT/POST den Store-Snapshot vor dem Senden „aufräumen“
+
+## Erlaubt
+
+- Strikte MST-Modelle, die dem Vertrag entsprechen
+- Sichtbarer Fehler (Ladefehler, Validierung, REST-/Lesen-Übersicht, Anzahl 0)
+
+```text
+❌ basedOn-Objekt zu [{ dockpartId }] machen, damit das Asset lädt
+❌ leeren timestamp vor PUT entfernen
+✅ JSON wie geliefert lesen/schreiben; bei Abweichung Fehler zeigen
+```

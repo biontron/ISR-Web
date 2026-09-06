@@ -16,6 +16,8 @@ export const SchemaGroupModel = types.model("SchemaGroup", {
 	}),
 	formProperties: types.model({
 		label: MultilingualText,
+		collapsed: types.optional(types.boolean, false),
+		titleTemplate: types.optional(types.string, ""),
 	}),
 	itemFlags: types.optional(SchemaGroupFlags, () => ({
 		readonly: false,

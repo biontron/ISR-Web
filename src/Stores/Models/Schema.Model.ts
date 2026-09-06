@@ -24,6 +24,7 @@ export const SchemaModel = types.compose(
 			]),
 			baseType: types.enumeration<ElementKindType>("ElementKindType", [
 				"GROUP",
+				"VIEWGROUP",
 				"COMPONENT",
 				"CONNECTION",
 				"TEMPLATE",
@@ -41,17 +42,6 @@ export const SchemaModel = types.compose(
 				treeIcon: types.string,
 			}),
 			items: types.array(types.late(() => SchemaItem)),
-		})
-		.preProcessSnapshot((snapshot: any) => {
-			// Backward compatibility for mistakenly persisted schema items:
-			// baseType must remain an ElementKindType, never a storeType.
-			if (snapshot && snapshot.baseType === "VIEWGROUP") {
-				return {
-					...snapshot,
-					baseType: "GROUP",
-				};
-			}
-			return snapshot;
 		})
 		.actions((self) => ({}))
 );

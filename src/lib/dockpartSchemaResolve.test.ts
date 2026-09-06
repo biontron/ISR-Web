@@ -64,6 +64,25 @@ describe("dockpartSchemaResolve", () => {
 		expect(resolveDockpartEntrySchemaDefinition({ id: "1" }, schemas as any)).toBeUndefined();
 	});
 
+	it("resolveDockpartEntrySchemaDefinition fällt nicht auf GENERIC zurück", () => {
+		const schemas = [
+			{ id: "GENERIC", type: "GENERIC", parent: { whitelist: [], blacklist: [] }, items: [] },
+			{ id: "TCP", type: "TCP", parent: { whitelist: [], blacklist: [] }, items: [] },
+		];
+		expect(
+			resolveDockpartEntrySchemaDefinition({ id: "3", type: "UNKNOWN" }, schemas as any)
+		).toBeUndefined();
+	});
+
+	it("resolveDockpartEntrySchemaDefinition findet ICMP über eigenes Schema", () => {
+		const schemas = [
+			{ id: "ICMP", type: "ICMP", parent: { whitelist: ["IP", "GENERIC"], blacklist: [] }, items: [] },
+		];
+		expect(
+			resolveDockpartEntrySchemaDefinition({ id: "3", type: "ICMP" }, schemas as any)?.id
+		).toBe("ICMP");
+	});
+
 	it("resolveDockpartEntrySchemaDefinition blendet nur basedOn aus (Map/Array-Konflikt)", () => {
 		const schemas = [
 			{
@@ -232,11 +251,28 @@ describe("dockpartSchemaResolve", () => {
 		expect(snapshot).toEqual({
 			id: "dp-ipv4",
 			type: "IPv4",
-			label: "IPv4",
-			protocol: "",
+			label: "",
+			notes: "",
+			protocol: "IPv4",
+			version: "",
 			versions: [],
 			basedOn: [],
+			state: { value: "", timestamp: "", reportedBy: "" },
 			settings: {},
 		});
+	});
+
+	it("createNewDockpartSnapshot setzt basedOn auf die darunterliegende Schicht", () => {
+		const schemas = [
+			{ id: "IPV4", type: "IP", parent: { whitelist: ["VLAN", "ETHERNET"], blacklist: [] }, items: [] },
+			{ id: "TCP", type: "TCP", parent: { whitelist: ["IP"], blacklist: [] }, items: [] },
+		] as any;
+		const snapshot = createNewDockpartSnapshot(
+			"TCP",
+			"2",
+			schemas,
+			[{ id: "1", type: "IP" }]
+		);
+		expect(snapshot.basedOn).toEqual([{ dockpartId: "1" }]);
 	});
 });

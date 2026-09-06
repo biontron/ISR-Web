@@ -27,28 +27,6 @@ import {
 	normalizeRestArray,
 } from "../lib/restSnapshot";
 
-function normalizeSchemaCollectionItems(
-	storeType: SchemaStoreType,
-	items: unknown[]
-): unknown[] {
-	if (storeType === "DOCKPART") {
-		return items;
-	}
-	return items.map((entry) => {
-		if (!entry || typeof entry !== "object") {
-			return entry;
-		}
-		const item = entry as Record<string, unknown>;
-		const normalized: Record<string, unknown> = { ...item };
-		// Collection path defines schema storeType; keep payload consistent for later PUT URL selection.
-		normalized.storeType = storeType;
-		// Guard against previously persisted wrong value (storeType leaked into baseType).
-		if (normalized.baseType === "VIEWGROUP") {
-			normalized.baseType = "GROUP";
-		}
-		return normalized;
-	});
-}
 
 function restKindForStoreType(storeType: SchemaStoreType): RestObjectKind {
 	switch (storeType) {
@@ -172,7 +150,6 @@ export const ConfigSchemaStore = types
 					storeType === "INTERNAL"
 						? patchConnectionSchemaRestItems(patchInternalSchemaRestItems(restItems))
 						: restItems;
-				const normalizedSchemaItems = normalizeSchemaCollectionItems(storeType, schemaItems);
 
 				const targetArray =
 					storeType === "INTERNAL"
@@ -185,7 +162,7 @@ export const ConfigSchemaStore = types
 				const modelType = storeType === "DOCKPART" ? ConnectSchemaModel : SchemaModel;
 
 				const report = enrichRestLoadReport(
-					loadRestArrayIntoStore(targetArray, modelType, normalizedSchemaItems, restKind, {
+					loadRestArrayIntoStore(targetArray, modelType, schemaItems, restKind, {
 						domain,
 						restUrlIds: { schemaStoreType: storeType },
 					}),
@@ -245,15 +222,15 @@ export const ConfigSchemaStore = types
 			const body = getSnapshot(schema) as object;
 			yield api.postSchemaItem(domain, schema.storeType, schema.id, body);
 
-			const targetArray =
-				schema.storeType === "INTERNAL"
-					? self.internals
-					: schema.storeType === "VIEWGROUP"
-						? self.viewgroups
-						: schema.storeType === "COMPONENT"
-							? self.components
-							: self.dockparts;
-			targetArray.push(schema);
+			if (schema.storeType === "DOCKPART") {
+				self.dockparts.push(getSnapshot(schema));
+			} else if (schema.storeType === "INTERNAL") {
+				self.internals.push(getSnapshot(schema));
+			} else if (schema.storeType === "VIEWGROUP") {
+				self.viewgroups.push(getSnapshot(schema));
+			} else {
+				self.components.push(getSnapshot(schema));
+			}
 		});
 
 		return {

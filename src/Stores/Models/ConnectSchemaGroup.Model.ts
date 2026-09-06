@@ -19,6 +19,8 @@ export const ConnectSchemaGroupModel = types.model("ConnectSchemaGroup", {
 	}),
 	formProperties: types.model({
 		label: MultilingualText,
+		collapsed: types.optional(types.boolean, false),
+		titleTemplate: types.optional(types.string, ""),
 	}),
 	itemFlags: types.optional(ConnectSchemaGroupFlags, () => ({
 		readonly: false,

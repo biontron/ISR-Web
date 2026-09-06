@@ -227,7 +227,18 @@ function findExtraPathsInDockpartScope(
 	);
 
 	if (hasExplicitSettingsGroup) {
-		extras.push(...findExtraPathsInScopePlain(dataRoot, schemaItems, pathPrefix));
+		const settingsGroup = schemaItems.find(
+			(item) => isSchemaGroup(item) && item.dataStructure.itemName === "settings"
+		);
+		if (settingsGroup && isSchemaGroup(settingsGroup)) {
+			extras.push(
+				...findExtraPathsInScopePlain(
+					dataRoot,
+					settingsGroup.items,
+					`${pathPrefix}.settings`
+				)
+			);
+		}
 		return extras;
 	}
 

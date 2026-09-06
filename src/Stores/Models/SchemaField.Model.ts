@@ -32,6 +32,8 @@ export const SchemaFieldModel = types.model("SchemaField", {
 		 * Translations for the field label
 		 */
 		label: MultilingualText,
+		collapsed: types.optional(types.boolean, false),
+		titleTemplate: types.optional(types.string, ""),
 	}),
 
 	fieldType: types.enumeration("DataType", [

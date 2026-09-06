@@ -13,6 +13,39 @@ describe("activityStatusOverview read tiers", () => {
 		restLoadErrorRegistry.errorsBySource = {};
 	});
 
+	it("marks empty reads (count 0) as orange warning", () => {
+		const report = enrichRestLoadReport(
+			{
+				objectKind: "Group",
+				domain: "demo",
+				responseFormat: "array",
+				restCount: 0,
+				loadedCount: 0,
+				restIds: [],
+				loadedIds: [],
+				errors: [],
+				loadedAt: new Date().toISOString(),
+			},
+			"Group",
+			"demo",
+			{ viewId: "prod" }
+		);
+		publishRestLoadReport(report);
+
+		const rows = collectReadInterfaceRows();
+		expect(rows).toHaveLength(1);
+		expect(rows[0].activity).toBe("read-interface-empty");
+		expect(rows[0].errorMessage).toBe("0 Element(e) geladen");
+
+		const badge = buildActivityStatusBadgeCount({
+			views: { views: [] },
+			groups: { groups: [] },
+			assets: { assets: [] },
+			connections: { connections: [] },
+		} as unknown as IRootStore);
+		expect(badge.readErrors).toBe(1);
+	});
+
 	it("shows successful interface row with loaded count", () => {
 		const report = enrichRestLoadReport(
 			{

@@ -405,6 +405,18 @@ body,
 	color: #cf1322;
 }
 
+.activity-status-row-success td {
+	background: #f6ffed;
+}
+
+.activity-status-row-warning td {
+	background: #fff7e6;
+}
+
+.activity-status-row-error td {
+	background: #fff1f0;
+}
+
 .common-layout-main {
   flex: 1;
   min-height: 0;

@@ -12,6 +12,7 @@ export type ActivityKind = RestObjectKind | RestUrlKind;
 
 export type ActivityStatus =
 	| "read-interface"
+	| "read-interface-empty"
 	| "read-interface-error"
 	| "read-error"
 	| "create"
@@ -48,6 +49,7 @@ function rowFromLoadReport(report: RestLoadReport): ActivityStatusRow {
 	const requestFailed = report.responseFormat === "request-failed";
 	const hasObjectErrors = objectErrors.length > 0;
 	const hasErrors = requestFailed || hasObjectErrors;
+	const isEmptyRead = !hasErrors && report.restCount === 0 && report.loadedCount === 0;
 
 	let errorMessage: string;
 	if (requestFailed) {
@@ -56,13 +58,19 @@ function rowFromLoadReport(report: RestLoadReport): ActivityStatusRow {
 			"Schnittstellen-Aufruf fehlgeschlagen";
 	} else if (hasObjectErrors) {
 		errorMessage = `${objectErrors.length} von ${report.restCount} Objekt(en) fehlerhaft · ${report.loadedCount} geladen`;
+	} else if (isEmptyRead) {
+		errorMessage = "0 Element(e) geladen";
 	} else {
 		errorMessage = `${report.loadedCount} Element(e) geladen`;
 	}
 
 	return {
 		rowKey: `read-interface:${report.objectKind}`,
-		activity: hasErrors ? "read-interface-error" : "read-interface",
+		activity: hasErrors
+			? "read-interface-error"
+			: isEmptyRead
+				? "read-interface-empty"
+				: "read-interface",
 		kind: report.objectKind,
 		name: request ? `${request.method} ${request.path}` : report.objectKind,
 		itemId: "-",
@@ -243,8 +251,10 @@ export function buildActivityStatusBadgeCount(root: IRootStore): {
 	total: number;
 } {
 	const readErrors =
-		collectReadInterfaceRows().filter((row) => row.activity === "read-interface-error").length +
-		collectReadObjectErrorRows().length;
+		collectReadInterfaceRows().filter(
+			(row) =>
+				row.activity === "read-interface-error" || row.activity === "read-interface-empty"
+		).length + collectReadObjectErrorRows().length;
 	const touchedCount =
 		collectTouchedObjects(root).length + (root.iac.templateEditDirty ? 1 : 0);
 	const storeErrors = touchedObjectErrorRegistry.all.length + (iacWriteErrorRegistry.failure ? 1 : 0);

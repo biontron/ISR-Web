@@ -67,6 +67,7 @@
 		"activity_status_tab_write": "Edit / Save",
 		"activity_status_activity_read_error": "Read error",
 		"activity_status_activity_read_interface": "Interface OK",
+		"activity_status_activity_read_interface_empty": "No elements",
 		"activity_status_activity_read_interface_error": "Interface error",
 		"activity_status_section_interfaces": "REST interfaces",
 		"activity_status_section_objects": "Objects",
@@ -197,6 +198,7 @@
 	"schema_editor": {
 		"no_element": "No valid data element available",
 		"no_schema": "Schema not found",
+		"no_dockpart_schema": "No schema template for dockpart type \"@@type@@\".",
 		"no_fields": "No fields in the schema definition",
 		"no_object_settings_view": "No object-specific fields are defined for a VIEW.",
 		"entry_label": "Entry @@index@@",
@@ -209,6 +211,14 @@
 		"mandatory_unfilled": "Mandatory field is empty",
 		"invalid_input": "Invalid input",
 		"path_mst": "MST path",
-		"path_schema": "Schema path"
+		"path_schema": "Schema path",
+		"based_on": "Based on (lower layer)",
+		"based_on_placeholder": "Select the underlying dockpart",
+		"dockpart_header": "Definition",
+		"dockpart_type": "Type",
+		"dockpart_version": "Version",
+		"dockpart_label": "Label",
+		"dockpart_notes": "Notes",
+		"dockpart_state": "State"
 	}
 }

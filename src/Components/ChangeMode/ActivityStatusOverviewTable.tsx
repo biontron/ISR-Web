@@ -15,12 +15,13 @@ import ActivityStatusRestPopover from "./ActivityStatusRestPopover";
 
 const ACTIVITY_ORDER: Record<ActivityStatusRow["activity"], number> = {
 	"read-interface": 0,
-	"read-interface-error": 1,
-	"read-error": 2,
-	create: 3,
-	update: 4,
-	delete: 5,
-	"store-error": 6,
+	"read-interface-empty": 1,
+	"read-interface-error": 2,
+	"read-error": 3,
+	create: 4,
+	update: 5,
+	delete: 6,
+	"store-error": 7,
 };
 
 interface ActivityStatusOverviewTableProps {
@@ -120,7 +121,10 @@ const ActivityStatusOverviewTable: React.FC<ActivityStatusOverviewTableProps> = 
 			sortOrder: sortField === "httpStatus" ? sortOrder : undefined,
 			render: (_value: number | undefined, row: ActivityStatusRow) => {
 				const label = formatHttpStatusForDisplay(row.httpStatus, row.isNetworkError);
-				const toneClass = getHttpStatusToneClass(row.httpStatus, row.isNetworkError);
+				const toneClass =
+					row.activity === "read-interface-empty"
+						? "activity-status-http--warning"
+						: getHttpStatusToneClass(row.httpStatus, row.isNetworkError);
 
 				return (
 					<ActivityStatusRestPopover row={row}>
@@ -145,9 +149,11 @@ const ActivityStatusOverviewTable: React.FC<ActivityStatusOverviewTableProps> = 
 					row.activity === "read-error" ||
 					row.activity === "store-error"
 						? "danger"
-						: row.activity === "read-interface"
-							? "success"
-							: undefined;
+						: row.activity === "read-interface-empty"
+							? "warning"
+							: row.activity === "read-interface"
+								? "success"
+								: undefined;
 
 				return (
 					<ActivityStatusRestPopover row={row}>
@@ -214,9 +220,11 @@ const ActivityStatusOverviewTable: React.FC<ActivityStatusOverviewTableProps> = 
 				row.activity === "read-error" ||
 				row.activity === "store-error"
 					? "activity-status-row-error"
-					: row.activity === "read-interface"
-						? "activity-status-row-success"
-						: ""
+					: row.activity === "read-interface-empty"
+						? "activity-status-row-warning"
+						: row.activity === "read-interface"
+							? "activity-status-row-success"
+							: ""
 			}
 			onChange={(_pagination, _filters, sorter) => {
 				if (!Array.isArray(sorter) && sorter.field) {
