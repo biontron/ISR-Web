@@ -72,6 +72,51 @@ describe("interpolateTitleTemplate", () => {
 		).toBe("IP 10.0.0.1");
 	});
 
+	it("hängt das Dockpart-Label an den Settings-Titel", () => {
+		const SettingsMap = types.map(types.frozen());
+		const element = {
+			docks: [
+				{
+					dockparts: [
+						{
+							id: "7",
+							type: "TCP",
+							label: "DLNA-Media",
+							settings: SettingsMap.create({ port: 5000 }),
+						},
+					],
+				},
+			],
+		};
+		const settings = element.docks[0].dockparts[0].settings;
+		const context = {
+			root: element,
+			basePath: "docks[0].dockparts[0].settings",
+		};
+		expect(
+			interpolateTitleTemplate("Port {port} -> {../label}", settings, "Settings", context)
+		).toBe("Port 5000 -> DLNA-Media");
+		expect(
+			interpolateTitleTemplate("Port {port} -> {../title}", settings, "Settings", context)
+		).toBe("Port 5000 -> DLNA-Media");
+		expect(
+			interpolateTitleTemplate("Port {port} -> {../label}", settings, "Settings", {
+				root: {
+					docks: [{ dockparts: [{ label: "", settings }] }],
+				},
+				basePath: "docks[0].dockparts[0].settings",
+			})
+		).toBe("Port 5000");
+		expect(
+			interpolateTitleTemplate("#{id} {type} / {version} - {label}", {
+				id: "7",
+				type: "TCP",
+				version: "",
+				label: "DLNA-Media",
+			}, "Definition")
+		).toBe("#7 TCP - DLNA-Media");
+	});
+
 	it("fällt auf den Gruppentitel zurück", () => {
 		expect(interpolateTitleTemplate("", { port: 1 }, "Settings")).toBe("Settings");
 		expect(interpolateTitleTemplate("{missing}", {}, "Settings")).toBe("Settings");

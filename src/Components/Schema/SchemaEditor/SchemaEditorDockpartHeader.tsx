@@ -1,4 +1,4 @@
-import React from "react";
+import React, { ReactNode } from "react";
 import { observer } from "mobx-react";
 import { Input, Select } from "antd";
 import CardCollapse from "../../../Apps/AssetManagement/Components/CardCollapse.Component";
@@ -14,8 +14,10 @@ interface SchemaEditorDockpartHeaderProps {
 	dockpart: unknown;
 	dock: IDock | undefined;
 	elementData: IElement;
+	entryPath?: string;
 	canEdit: boolean;
 	schemas: IConnectSchemaModel[];
+	actionElement?: ReactNode;
 }
 
 function commit(elementData: IElement, mutate: () => void) {
@@ -29,8 +31,10 @@ const SchemaEditorDockpartHeader: React.FC<SchemaEditorDockpartHeaderProps> = ({
 	dockpart,
 	dock,
 	elementData,
+	entryPath,
 	canEdit,
 	schemas,
+	actionElement,
 }) => {
 	const langtext = useLangtext();
 	if (!isDockpartNode(dockpart)) {
@@ -62,7 +66,16 @@ const SchemaEditorDockpartHeader: React.FC<SchemaEditorDockpartHeaderProps> = ({
 		}));
 
 	return (
-		<CardCollapse title={title} defaultCollapsed depth={1}>
+		<CardCollapse
+			title={title}
+			defaultCollapsed
+			depth={1}
+			mstPath={canEdit ? entryPath : undefined}
+			mstValue={dockpart}
+			schemaPath={canEdit ? entryPath : undefined}
+			schemaTypeLabel={canEdit ? `dockpart · ${dockpart.type || dockpart.protocol}` : undefined}
+			actionElement={actionElement}
+		>
 			{() => (
 				<div className="schema-editor-field-list">
 					<div className={`schema-editor-field Field ${canEdit ? "Edit" : "View"}`}>

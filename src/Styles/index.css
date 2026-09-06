@@ -1156,6 +1156,12 @@ input[readonly] {
   padding: 8px 4px 10px 12px;
 }
 
+.schema-group-dockpart-entry > .schema-group-entry__body {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
 .schema-group-entry-controls {
   display: flex;
   align-items: center;

@@ -24,7 +24,10 @@ function tidyInterpolatedTitle(value: string): string {
 	return value
 		.replace(/\s+/g, " ")
 		.replace(/\/{2,}/g, "/")
+		.replace(/\s+\/\s+-\s+/g, " - ")
 		.replace(/^\/+|\/+$/g, "")
+		.replace(/\s*->\s*$/g, "")
+		.replace(/^\s*->\s*/, "")
 		.replace(/\s*:\s*$/g, "")
 		.replace(/^\s*:\s*/, "")
 		.trim();
@@ -110,6 +113,26 @@ function resolveTemplatePath(
 		return undefined;
 	}
 
+	const variants =
+		segments[segments.length - 1] === "title"
+			? [segments, [...segments.slice(0, -1), "label"]]
+			: [segments];
+
+	for (const candidate of variants) {
+		const resolved = resolveTemplateSegments(candidate, data, context, absolute);
+		if (resolved !== undefined) {
+			return resolved;
+		}
+	}
+	return undefined;
+}
+
+function resolveTemplateSegments(
+	segments: string[],
+	data: unknown,
+	context: TitleTemplateContext | undefined,
+	absolute: boolean
+): unknown {
 	if (absolute) {
 		return valueBySegments(context?.root, "", segments);
 	}
