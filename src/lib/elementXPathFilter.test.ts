@@ -4,6 +4,7 @@ import {
 	collectFilterMatchedElementsExcluding,
 	elementMatchesXPath,
 	elementToFilterXml,
+	tryFastXPathMatch,
 } from "./elementXPathFilter";
 
 function device(id: string, extras: Record<string, unknown> = {}) {
@@ -96,6 +97,17 @@ describe("elementXPathFilter", () => {
 			true
 		);
 		expect(elementMatchesXPath(asset as never, "match(definition/tags/tag, 'Client')")).toBe(true);
+	});
+
+	it("wertet definition-XPath ohne DOMParser aus", () => {
+		const asset = device("A-1");
+		expect(tryFastXPathMatch(asset as never, "definition/type='DEVICE'")).toBe(true);
+		expect(tryFastXPathMatch(asset as never, "starts-with(definition/name,'is-')")).toBe(true);
+		expect(tryFastXPathMatch(asset as never, "match(definition/name, '^is-')")).toBe(true);
+		expect(tryFastXPathMatch(asset as never, "//element[definition/subType='DESKTOP']")).toBe(true);
+		expect(
+			tryFastXPathMatch(asset as never, "matches(docks[1]/dockparts[1]/settings/address/ip, '10')")
+		).toBeNull();
 	});
 
 	it("teilt unzugeordnete Elemente in Treffer und Verfügbare", () => {

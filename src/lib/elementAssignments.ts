@@ -152,12 +152,16 @@ export function collectUnassignedElements(
 	const groups = root.groups.groups.filter(
 		(group) => group.id !== parentId && isStaticallyUnassigned(group)
 	);
-	const assets = root.assets.assets.filter(
-		(asset) =>
-			asset.id !== parentId &&
-			isStaticallyUnassigned(asset) &&
-			!wouldCreateAssignmentCycle(asset, parentId, root)
-	);
+	const parentIsAsset = root.assets.assets.some((asset) => asset.id === parentId);
+	const blockedAssetIds = parentIsAsset
+		? walkAssetOwnerChain(parentId, root.assets.assets)
+		: null;
+	const assets = root.assets.assets.filter((asset) => {
+		if (asset.id === parentId || !isStaticallyUnassigned(asset)) {
+			return false;
+		}
+		return !blockedAssetIds || !blockedAssetIds.has(asset.id);
+	});
 	return [...groups, ...assets];
 }
 

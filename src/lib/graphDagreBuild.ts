@@ -53,14 +53,18 @@ function buildNodeLabel(node: TreeElement, condensed: boolean, omitIcon = false)
 			? `${node.definition.name}<br/>${"label" in node.definition ? node.definition.label : ""}<br/><${typeLabel}>`
 			: node.definition.name;
 	const hoverHtml = buildGraphNodeHoverHtml(rootStore, node);
+	const isClusterLabel = omitIcon;
+	const fontSize = isClusterLabel ? "14.3px" : "13px";
+	const fontWeight = isClusterLabel ? "700" : "400";
+	const labelClass = isClusterLabel ? "Label graph-cluster-label" : `Label ${styleType}`;
 
 	return `
 		<div class="graph-node-shell">
-			<div class="Label ${styleType}" style="display:flex;align-items:flex-start;gap:6px;font-size:13px;line-height:1.3;color:#111;white-space:nowrap;">
+			<div class="${labelClass}" style="display:flex;align-items:flex-start;gap:6px;font-size:${fontSize};font-weight:${fontWeight};line-height:1.3;color:#111;white-space:nowrap;">
 				<span class="graph-icon" style="display:inline-flex;align-items:flex-start;justify-content:center;flex:0 0 auto;">
 					${icon}
 				</span>
-				<span class="graph-link" style="display:inline-block;color:#111;text-decoration:underline;white-space:normal;">
+				<span class="graph-link" style="display:inline-block;color:#111;text-decoration:underline;white-space:normal;font-weight:${fontWeight};">
 					${name}
 				</span>
 			</div>

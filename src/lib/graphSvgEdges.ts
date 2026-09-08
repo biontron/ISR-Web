@@ -57,6 +57,9 @@ export function applyEdgeStylesToSvg(
 	svg.selectAll<SVGPathElement, unknown>("g.edgePath path").each(function () {
 		const path = this;
 		const edgeGroup = path.closest("g.edgePath");
+		if (edgeGroup?.classList.contains("graph-edge--layout-hidden")) {
+			return;
+		}
 		const labelSpan = edgeGroup?.querySelector("[data-connection-id]");
 		const connectionId = labelSpan?.getAttribute("data-connection-id") ?? "";
 		const edge = edgeByConnectionId.get(connectionId);

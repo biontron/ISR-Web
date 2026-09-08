@@ -289,6 +289,272 @@ function xpathRegexTest(value: string, pattern: string, flags: string): boolean 
 	return new RegExp(pattern, jsFlags).test(value);
 }
 
+function readFilterPathValues(element: FilterableElement, path: string): string[] | null {
+	const normalized = path.replace(/^\.\//, "").replace(/^element\//, "").trim();
+	if (!normalized || /(^|\/)docks(\/|$)/.test(normalized)) {
+		return null;
+	}
+
+	const definition = element.definition ?? {};
+	switch (normalized) {
+		case "id":
+			return [element.id];
+		case "ownerIdRef":
+			return [String(element.ownerIdRef ?? "")];
+		case "parentIdRef":
+			return [String(element.parentIdRef ?? "")];
+		case "definition/storeType":
+			return [String(definition.storeType ?? "")];
+		case "definition/baseType":
+			return [String(definition.baseType ?? "")];
+		case "definition/type":
+			return [String(definition.type ?? "")];
+		case "definition/subType":
+			return [String(definition.subType ?? "")];
+		case "definition/name":
+			return [String(definition.name ?? "")];
+		case "definition/label":
+			return [String(definition.label ?? "")];
+		case "definition/description":
+			return [String(definition.description ?? "")];
+		case "definition/tags/tag":
+		case "definition/tags":
+			return (definition.tags ?? [])
+				.map((entry) => (typeof entry === "string" ? entry : entry?.tag ?? ""))
+				.filter((tag) => tag !== "");
+		default:
+			return null;
+	}
+}
+
+function splitTopLevel(expression: string, separator: " and " | " or "): string[] {
+	const parts: string[] = [];
+	let depth = 0;
+	let quote: "'" | '"' | null = null;
+	let start = 0;
+	const sep = separator;
+
+	for (let index = 0; index < expression.length; index++) {
+		const char = expression[index];
+		if (quote) {
+			if (char === quote) {
+				quote = null;
+			}
+			continue;
+		}
+		if (char === "'" || char === '"') {
+			quote = char;
+			continue;
+		}
+		if (char === "(") {
+			depth += 1;
+			continue;
+		}
+		if (char === ")") {
+			depth = Math.max(0, depth - 1);
+			continue;
+		}
+		if (depth === 0 && expression.slice(index, index + sep.length).toLowerCase() === sep) {
+			parts.push(expression.slice(start, index).trim());
+			index += sep.length - 1;
+			start = index + 1;
+		}
+	}
+	parts.push(expression.slice(start).trim());
+	return parts.filter(Boolean);
+}
+
+function unwrapElementPredicate(expression: string): string {
+	const trimmed = expression.trim();
+	const wrapped = trimmed.match(/^\/\/(?:element|\*)\s*\[(.*)\]$/s);
+	return wrapped ? wrapped[1].trim() : trimmed;
+}
+
+function parseStringLiteral(source: string): string | null {
+	return unescapeXPathString(source.trim());
+}
+
+function evaluateFastPredicate(element: FilterableElement, expression: string): boolean | null {
+	const expr = unwrapElementPredicate(expression);
+	if (!expr) {
+		return false;
+	}
+
+	const orParts = splitTopLevel(expr, " or ");
+	if (orParts.length > 1) {
+		let sawNull = false;
+		for (const part of orParts) {
+			const result = evaluateFastPredicate(element, part);
+			if (result === true) {
+				return true;
+			}
+			if (result === null) {
+				sawNull = true;
+			}
+		}
+		return sawNull ? null : false;
+	}
+
+	const andParts = splitTopLevel(expr, " and ");
+	if (andParts.length > 1) {
+		for (const part of andParts) {
+			const result = evaluateFastPredicate(element, part);
+			if (result === null) {
+				return null;
+			}
+			if (!result) {
+				return false;
+			}
+		}
+		return true;
+	}
+
+	const notMatch = expr.match(/^not\s*\((.*)\)\s*$/is);
+	if (notMatch) {
+		const inner = evaluateFastPredicate(element, notMatch[1]);
+		return inner === null ? null : !inner;
+	}
+
+	if (/^true\s*\(\s*\)$/i.test(expr)) {
+		return true;
+	}
+	if (/^false\s*\(\s*\)$/i.test(expr)) {
+		return false;
+	}
+
+	const startsWith = expr.match(/^starts-with\s*\(\s*(.+?)\s*,\s*(.+)\s*\)$/is);
+	if (startsWith) {
+		const values = readFilterPathValues(element, startsWith[1]);
+		const prefix = parseStringLiteral(startsWith[2]);
+		if (!values || prefix == null) {
+			return null;
+		}
+		return values.some((value) => value.startsWith(prefix));
+	}
+
+	const matchCall = findLastMatchCall(expr);
+	if (matchCall && matchCall.start === 0 && matchCall.end === expr.length) {
+		const values = readFilterPathValues(element, matchCall.args[0] ?? "");
+		const pattern = parseStringLiteral(matchCall.args[1] ?? "");
+		const flags = matchCall.args[2] ? parseStringLiteral(matchCall.args[2]) ?? "" : "";
+		if (!values || pattern == null) {
+			return null;
+		}
+		return values.some((value) => xpathRegexTest(value, pattern, flags));
+	}
+
+	const equality = expr.match(/^(.+?)\s*=\s*(.+)$/s);
+	if (equality) {
+		const values = readFilterPathValues(element, equality[1]);
+		const expected = parseStringLiteral(equality[2]);
+		if (!values || expected == null) {
+			return null;
+		}
+		return values.some((value) => value === expected);
+	}
+
+	return null;
+}
+
+/** Ohne DOMParser — für definition/id-Pfade. null = Fallback auf Browser-XPath. */
+export function tryFastXPathMatch(element: FilterableElement, expression: string): boolean | null {
+	const xpath = expression.trim();
+	if (!xpath) {
+		return false;
+	}
+	try {
+		return evaluateFastPredicate(element, xpath);
+	} catch {
+		return null;
+	}
+}
+
+function filterElementFingerprint(element: FilterableElement, includeDocks: boolean): string {
+	const definition = element.definition ?? {};
+	const tags = (definition.tags ?? [])
+		.map((entry) => (typeof entry === "string" ? entry : entry?.tag ?? ""))
+		.join(",");
+	const parts = [
+		element.id,
+		element.class ?? "",
+		String(element.ownerIdRef ?? ""),
+		String(element.parentIdRef ?? ""),
+		definition.storeType ?? "",
+		definition.baseType ?? "",
+		definition.type ?? "",
+		definition.subType ?? "",
+		definition.name ?? "",
+		definition.label ?? "",
+		definition.description ?? "",
+		tags,
+	];
+	if (includeDocks && element.docks != null) {
+		try {
+			parts.push(JSON.stringify(unwrapFilterValue(element.docks)));
+		} catch {
+			parts.push("docks");
+		}
+	}
+	return parts.join("\0");
+}
+
+const xpathMatchCache = new Map<string, { fingerprint: string; matched: boolean }>();
+const XPATH_MATCH_CACHE_MAX = 8000;
+
+function readCachedXPathMatch(cacheKey: string, fingerprint: string): boolean | undefined {
+	const hit = xpathMatchCache.get(cacheKey);
+	if (hit && hit.fingerprint === fingerprint) {
+		return hit.matched;
+	}
+	return undefined;
+}
+
+function writeCachedXPathMatch(cacheKey: string, fingerprint: string, matched: boolean): void {
+	if (xpathMatchCache.size >= XPATH_MATCH_CACHE_MAX) {
+		xpathMatchCache.clear();
+	}
+	xpathMatchCache.set(cacheKey, { fingerprint, matched });
+}
+
+function matchElementAgainstExpressions(
+	element: FilterableElement,
+	expressions: string[]
+): boolean {
+	if (expressions.length === 0) {
+		return false;
+	}
+
+	const includeDocks = expressions.some(xpathNeedsDocks);
+	const fingerprint = filterElementFingerprint(element, includeDocks);
+	const cacheKey = `${element.id}\0${includeDocks ? "1" : "0"}\0${expressions.join("\n")}`;
+	const cached = readCachedXPathMatch(cacheKey, fingerprint);
+	if (cached !== undefined) {
+		return cached;
+	}
+
+	const pending: string[] = [];
+	for (const xpath of expressions) {
+		const fast = tryFastXPathMatch(element, xpath);
+		if (fast === true) {
+			writeCachedXPathMatch(cacheKey, fingerprint, true);
+			return true;
+		}
+		if (fast === null) {
+			pending.push(xpath);
+		}
+	}
+
+	if (pending.length === 0) {
+		writeCachedXPathMatch(cacheKey, fingerprint, false);
+		return false;
+	}
+
+	const doc = parseFilterDocument(element, { includeDocks: pending.some(xpathNeedsDocks) });
+	const matched = !!doc && pending.some((xpath) => elementMatchesXPathOnDocument(doc, xpath));
+	writeCachedXPathMatch(cacheKey, fingerprint, matched);
+	return matched;
+}
+
 /** Browser-XPath 1.0 kennt match()/matches() nicht — vorab in true()/false() auflösen. */
 export function rewriteXPathMatchFunctions(expression: string, doc: Document): string {
 	let current = expression;
@@ -344,12 +610,7 @@ export function elementMatchesXPath(element: FilterableElement, expression: stri
 	if (!xpath) {
 		return false;
 	}
-
-	const doc = parseFilterDocument(element, { includeDocks: xpathNeedsDocks(xpath) });
-	if (!doc) {
-		return false;
-	}
-	return elementMatchesXPathOnDocument(doc, xpath);
+	return matchElementAgainstExpressions(element, [xpath]);
 }
 
 export function elementMatchesAnyXPath(
@@ -357,16 +618,7 @@ export function elementMatchesAnyXPath(
 	rules: unknown[]
 ): boolean {
 	const expressions = rules.map(readXPathExpression).filter(Boolean);
-	if (expressions.length === 0) {
-		return false;
-	}
-	const doc = parseFilterDocument(element, {
-		includeDocks: expressions.some(xpathNeedsDocks),
-	});
-	if (!doc) {
-		return false;
-	}
-	return expressions.some((xpath) => elementMatchesXPathOnDocument(doc, xpath));
+	return matchElementAgainstExpressions(element, expressions);
 }
 
 function partitionUnassignedByXPath(
@@ -378,13 +630,11 @@ function partitionUnassignedByXPath(
 		return { matched: [], available: unassigned };
 	}
 
-	const includeDocks = expressions.some(xpathNeedsDocks);
 	const matched: AssignableTreeElement[] = [];
 	const available: AssignableTreeElement[] = [];
 
 	for (const element of unassigned) {
-		const doc = parseFilterDocument(element, { includeDocks });
-		if (doc && expressions.some((xpath) => elementMatchesXPathOnDocument(doc, xpath))) {
+		if (matchElementAgainstExpressions(element, expressions)) {
 			matched.push(element);
 		} else {
 			available.push(element);

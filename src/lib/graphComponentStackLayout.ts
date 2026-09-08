@@ -167,6 +167,25 @@ function layoutStackColumn(
 	};
 }
 
+export function measureAssetStackColumn(
+	nodesById: Map<string, SVGGElement>,
+	layers: IAsset[][]
+): { width: number; height: number } {
+	const layout = layoutStackColumn(nodesById, layers, 0, 0);
+	return { width: layout.width, height: layout.height };
+}
+
+export function placeAssetStackColumn(
+	nodesById: Map<string, SVGGElement>,
+	layers: IAsset[][],
+	left: number,
+	top: number
+): { width: number; height: number; positions: Map<string, StackNodePosition> } {
+	const layout = layoutStackColumn(nodesById, layers, left, top);
+	applyStackPositions(nodesById, layout.positions);
+	return layout;
+}
+
 function hideLegacyStackClusters(svg: Selection<SVGSVGElement, unknown, null, undefined>): void {
 	svg.selectAll<SVGGElement, string>("g.output g.clusters g.cluster, g.cluster").each(function () {
 		const clusterId = readGraphNodeId(this) ?? this.getAttribute("id") ?? "";

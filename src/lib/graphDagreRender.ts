@@ -75,10 +75,10 @@ export function renderDagreGraph(
 function ensureGraphMargins(g: dagreD3.graphlib.Graph) {
 	const graph = g.graph();
 	if (graph.marginx == null) {
-		graph.marginx = 20;
+		graph.marginx = 0;
 	}
 	if (graph.marginy == null) {
-		graph.marginy = 20;
+		graph.marginy = 0;
 	}
 }
 
@@ -94,7 +94,9 @@ export function prepareGraphCanvas(
 export function finalizeGraphLabels(
 	svg: Selection<SVGSVGElement, unknown, null, undefined>
 ) {
-	svg.selectAll("foreignObject div").style("color", "#111111").style("font-size", "13px");
+	svg.selectAll("g.node foreignObject div").style("color", "#111111").style("font-size", "13px");
+	svg.selectAll("g.cluster foreignObject div").style("color", "#111111");
+	svg.selectAll("g.cluster .graph-cluster-label").style("font-size", "14.3px").style("font-weight", "700");
 	svg.selectAll("g.edgeLabel").style("opacity", 1).style("pointer-events", "all");
 	svg.selectAll("g.edgeLabel .graph-link, g.edgeLabel .graph-edge-label").style(
 		"color",
@@ -141,10 +143,8 @@ export function resolveGraphCanvasSize(
 	viewportWidth: number
 ): { width: number; height: number } {
 	const bbox = svgElement.getBBox();
-	const marginX = 40;
-	const marginY = 40;
 	return {
-		width: Math.max(bbox.width + marginX, viewportWidth, 400),
-		height: Math.max(bbox.height + marginY, 300),
+		width: Math.max(Math.ceil(bbox.x + bbox.width), viewportWidth, 400),
+		height: Math.max(Math.ceil(bbox.y + bbox.height), 300),
 	};
 }

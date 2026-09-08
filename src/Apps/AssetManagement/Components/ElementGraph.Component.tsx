@@ -36,7 +36,8 @@ import {
 	applySwimlaneFullWidthLayout,
 	resolveSwimlaneGraphCanvasSize,
 } from "../../../lib/graphSwimlaneRender";
-import { applyGraphAssetStackLayout } from "../../../lib/graphComponentStackLayout";
+import { applyOverviewClusterLayout } from "../../../lib/graphOverviewRender";
+import { isStackMemberAsset } from "../../../lib/graphComponentStack";
 import { appendGraphArrowDefs, applyEdgeStylesToSvg } from "../../../lib/graphSvgEdges";
 
 function getNodeIdFromDatum(d: unknown): string | undefined {
@@ -50,10 +51,15 @@ const GRAPH_INLINE_STYLE = `
 	.label .Label { display:flex; align-items:flex-start; gap:6px; }
 	.label .graph-icon { display:inline-flex; flex:0 0 auto; }
 	.label .graph-link { display:inline-block; min-width:0; }
+	.graph-cluster-label { font-size: 14.3px; font-weight: 700; }
+	.graph-cluster-label .graph-link { font-weight: 700; }
 	.graph-link { cursor: pointer; color: #111; }
 	.graph-link:hover { text-decoration: underline; color: #0066cc; }
 	.graph-swimlane-title { font-weight: 600; padding: 0 2px 4px; color: #111; text-align: left; white-space: nowrap; }
-	svg .edgePath.graph-edge--swimlane-hidden { display: none; }
+	svg .edgePath.graph-edge--swimlane-hidden,
+	svg .edgePath.graph-edge--layout-hidden,
+	svg .edgeLabel.graph-edge--layout-hidden { display: none; }
+	svg .node.graph-overview-rank-dummy { display: none; }
 	svg foreignObject { overflow: visible; }
 	svg .edgeLabel { pointer-events: all; }
 	.graph-node-shell { position: relative; display: inline-block; }
@@ -89,7 +95,7 @@ const GRAPH_INLINE_STYLE = `
 		font-weight: 600;
 	}
 	.graph-canvas__viewport { overflow: auto; width: 100%; min-height: 320px; min-width: 0; }
-	.graph-canvas__svg { display: block; min-width: 100%; background-color: #f2f2f2; }
+	.graph-canvas__svg { display: block; min-width: 100%; }
 `;
 
 type GraphRenderOptions = {
@@ -108,13 +114,32 @@ function collectGraphEdges(root: TreeElement) {
 	);
 }
 
-function useGraphZoom() {
+export function useGraphZoom() {
 	const [zoomLevel, setZoomLevel] = useState(1);
 	return {
 		zoomLevel,
 		zoomIn: () => setZoomLevel((value) => value * 1.2),
 		zoomOut: () => setZoomLevel((value) => value / 1.2),
 	};
+}
+
+export function GraphZoomButtons({
+	zoomIn,
+	zoomOut,
+}: {
+	zoomIn: () => void;
+	zoomOut: () => void;
+}) {
+	return (
+		<div className="graph-zoom-buttons">
+			<Button type="primary" size="small" onClick={zoomIn}>
+				+
+			</Button>
+			<Button type="primary" size="small" onClick={zoomOut}>
+				-
+			</Button>
+		</div>
+	);
 }
 
 function bindNodeNavigation(
@@ -155,6 +180,7 @@ function bindEdgeOpenConnection(
 type GraphCanvasProps = {
 	element: ActiveElement;
 	layout: GraphRenderOptions;
+	zoomLevel: number;
 	canvasClassName?: string;
 	buildGraph: (
 		g: dagreD3.graphlib.Graph,
@@ -176,9 +202,8 @@ type GraphCanvasProps = {
 };
 
 const GraphCanvas = observer(
-	({ element, layout, canvasClassName, buildGraph, postRender, resolveCanvasSize }: GraphCanvasProps) => {
+	({ element, layout, zoomLevel, canvasClassName, buildGraph, postRender, resolveCanvasSize }: GraphCanvasProps) => {
 		const graphContainer = useRef<SVGSVGElement>(null);
-		const { zoomLevel, zoomIn, zoomOut } = useGraphZoom();
 		const navigate = useNavigate();
 		const [connectionDialogId, setConnectionDialogId] = useState<string | null>(null);
 
@@ -196,8 +221,8 @@ const GraphCanvas = observer(
 			g.graph().rankdir = layout.rankdir ?? "TB";
 			g.graph().ranksep = layout.ranksep ?? 70;
 			g.graph().nodesep = layout.nodesep ?? 5;
-			g.graph().marginx = 20;
-			g.graph().marginy = 20;
+			g.graph().marginx = 0;
+			g.graph().marginy = 0;
 
 			const edges = buildGraph(g, graphRoot, graphConfig);
 			repairGraphClusterNodes(g);
@@ -247,10 +272,6 @@ const GraphCanvas = observer(
 
 		return (
 			<div className={["graph-canvas", canvasClassName].filter(Boolean).join(" ")}>
-				<div style={{ marginBottom: 8 }}>
-					<Button type="primary" onClick={zoomIn} style={{ marginRight: 8 }}>+</Button>
-					<Button type="primary" onClick={zoomOut}>-</Button>
-				</div>
 				<div className="graph-canvas__viewport">
 					<svg ref={graphContainer} className="graph-canvas__svg">
 						<style>{GRAPH_INLINE_STYLE}</style>
@@ -262,9 +283,11 @@ const GraphCanvas = observer(
 	}
 );
 
-export const ElementGraphOverview = observer(({ element }: { element: ActiveElement }) => (
+export const ElementGraphOverview = observer(
+	({ element, zoomLevel }: { element: ActiveElement; zoomLevel: number }) => (
 	<GraphCanvas
 		element={element}
+		zoomLevel={zoomLevel}
 		layout={{ rankdir: "TB", ranksep: 70, nodesep: 5 }}
 		buildGraph={(g, root, config) => {
 			addTreeNodesToGraph(g, {
@@ -279,15 +302,24 @@ export const ElementGraphOverview = observer(({ element }: { element: ActiveElem
 			return edges;
 		}}
 		postRender={(svg, _root, graphConfig, viewportWidth, dagreGraph) => {
-			applyGraphAssetStackLayout(svg, dagreGraph);
+			const assets = rootStore.assets.assets;
+			applyOverviewClusterLayout(svg, dagreGraph, {
+				isViewGroup: (nodeId) => rootStore.groups.groups.some((group) => group.id === nodeId),
+				isDeviceUnit: (nodeId) => {
+					const asset = assets.find((item) => item.id === nodeId);
+					return !!asset && !isStackMemberAsset(asset, assets);
+				},
+			});
 			return undefined;
 		}}
 	/>
 ));
 
-export const ElementGraphSwimlanes = observer(({ element }: { element: ActiveElement }) => (
+export const ElementGraphSwimlanes = observer(
+	({ element, zoomLevel }: { element: ActiveElement; zoomLevel: number }) => (
 	<GraphCanvas
 		element={element}
+		zoomLevel={zoomLevel}
 		canvasClassName="graph-canvas--swimlanes"
 		layout={{ rankdir: "TB", ranksep: 80, nodesep: 40 }}
 		buildGraph={(g, _root, config) => {
@@ -314,12 +346,14 @@ export const ElementGraphSwimlanes = observer(({ element }: { element: ActiveEle
 	/>
 ));
 
-export const ElementGraphMap = observer(({ element }: { element: ActiveElement }) => {
+export const ElementGraphMap = observer(
+	({ element, zoomLevel }: { element: ActiveElement; zoomLevel: number }) => {
 	const flatNodesRef = useRef<TreeElement[]>([]);
 
 	return (
 		<GraphCanvas
 			element={element}
+			zoomLevel={zoomLevel}
 			layout={{ rankdir: "TB", ranksep: 20, nodesep: 20 }}
 			buildGraph={(g, root, config) => {
 				const flatNodes: TreeElement[] = [];

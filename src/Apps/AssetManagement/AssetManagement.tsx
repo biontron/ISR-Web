@@ -11,6 +11,8 @@ import {
 	ElementGraphOverview,
 	ElementGraphSwimlanes,
 	ElementGraphMap,
+	GraphZoomButtons,
+	useGraphZoom,
 } from "./Components/ElementGraph.Component";
 import ElementPropertiesDetails from "./Components/ElementPropertiesDetails";
 import ElementPropertiesAssignments from "./Components/ElementPropertiesAssignments";
@@ -44,6 +46,7 @@ const AssetManagement = observer(() => {
 	const [sizes, setSizes] = useState<{ left: number; center: number; right: number }>(PRESETS.default);
 	const [graphFullscreen, setGraphFullscreen] = useState(false);
 	const [activeGraphTab, setActiveGraphTab] = useState("GraphStack");
+	const { zoomLevel, zoomIn, zoomOut } = useGraphZoom();
 	const groupsLoading = rootStore.groups.loading;
 	const assetsLoading = rootStore.assets.loading;
 
@@ -225,16 +228,26 @@ const AssetManagement = observer(() => {
 						<span>{langtext("general.screenmode_relationship_title")}</span>
 					</div>
 
-					<Tabs defaultActiveKey={activeGraphTab} onChange={setActiveGraphTab}>
+					<Tabs
+						activeKey={activeGraphTab}
+						onChange={setActiveGraphTab}
+						tabBarExtraContent={<GraphZoomButtons zoomIn={zoomIn} zoomOut={zoomOut} />}
+					>
 						<TabPane tab={langtext("general.graph_tab_overview")} key="GraphStack" />
 						<TabPane tab={langtext("general.graph_tab_swimlanes")} key="GraphSwimlanes" />
 						<TabPane tab={langtext("general.graph_tab_map")} key="GraphMap" />
 					</Tabs>
 
 					<div className="graph-panel-content">
-						{activeGraphTab === "GraphStack" && <ElementGraphOverview element={activeElement} />}
-						{activeGraphTab === "GraphSwimlanes" && <ElementGraphSwimlanes element={activeElement} />}
-						{activeGraphTab === "GraphMap" && <ElementGraphMap element={activeElement} />}
+						{activeGraphTab === "GraphStack" && (
+							<ElementGraphOverview element={activeElement} zoomLevel={zoomLevel} />
+						)}
+						{activeGraphTab === "GraphSwimlanes" && (
+							<ElementGraphSwimlanes element={activeElement} zoomLevel={zoomLevel} />
+						)}
+						{activeGraphTab === "GraphMap" && (
+							<ElementGraphMap element={activeElement} zoomLevel={zoomLevel} />
+						)}
 					</div>
 				</Sider>
 			</Layout>
@@ -244,28 +257,37 @@ const AssetManagement = observer(() => {
 				<div className="graph-fullscreen-overlay">
 					<div className="graph-fullscreen-tabs-bar">
 						<Tabs
-							defaultActiveKey={activeGraphTab}
+							activeKey={activeGraphTab}
 							onChange={setActiveGraphTab}
 							style={{ flex: 1 }}
+							tabBarExtraContent={
+								<div className="graph-fullscreen-tabs-actions">
+									<GraphZoomButtons zoomIn={zoomIn} zoomOut={zoomOut} />
+									<Button
+										onClick={() => setGraphFullscreen(false)}
+										icon={<FullscreenExitOutlined />}
+									>
+										Beenden
+									</Button>
+								</div>
+							}
 						>
 							<TabPane tab={langtext("general.graph_tab_overview")} key="GraphStack" />
 							<TabPane tab={langtext("general.graph_tab_swimlanes")} key="GraphSwimlanes" />
 							<TabPane tab={langtext("general.graph_tab_map")} key="GraphMap" />
 						</Tabs>
-
-						<Button
-							onClick={() => setGraphFullscreen(false)}
-							icon={<FullscreenExitOutlined />}
-							style={{ marginLeft: "auto" }}
-						>
-                            Beenden
-						</Button>
 					</div>
 
 					<div className="graph-fullscreen-content">
-						{activeGraphTab === "GraphStack" && <ElementGraphOverview element={activeElement} />}
-						{activeGraphTab === "GraphSwimlanes" && <ElementGraphSwimlanes element={activeElement} />}
-						{activeGraphTab === "GraphMap" && <ElementGraphMap element={activeElement} />}
+						{activeGraphTab === "GraphStack" && (
+							<ElementGraphOverview element={activeElement} zoomLevel={zoomLevel} />
+						)}
+						{activeGraphTab === "GraphSwimlanes" && (
+							<ElementGraphSwimlanes element={activeElement} zoomLevel={zoomLevel} />
+						)}
+						{activeGraphTab === "GraphMap" && (
+							<ElementGraphMap element={activeElement} zoomLevel={zoomLevel} />
+						)}
 					</div>
 				</div>
 			)}
