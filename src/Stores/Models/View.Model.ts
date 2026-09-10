@@ -9,6 +9,7 @@ import ElementModel, { ElementDefinitionTagModel } from "./Element.Model";
 import { assignableElementToTreeNode } from "../../lib/treeNodeDisplay";
 import { collectFilterMatchedElementsExcluding } from "../../lib/elementXPathFilter";
 import { FilterRuleModel } from "./FilterRule.Model";
+import { ValidationRuleModel, ValidationRuleRecord } from "./ValidationRule.Model";
 import { normalizeFilterRules } from "../../lib/filterRuleNormalize";
 
 
@@ -30,6 +31,7 @@ export const ViewModel = types.compose(
 				tags: types.optional(types.array(ElementDefinitionTagModel), []),
 			}),
 			filterRules: types.array(FilterRuleModel),
+			validationRules: types.optional(types.array(ValidationRuleModel), []),
 			attachments: types.array(types.frozen()),
 			properties: types.model({
 				responsibles: types.array(
@@ -123,6 +125,11 @@ export const ViewModel = types.compose(
 	setFilterRules(rules: unknown[]) {
 		self.beginEdit();
 		self.filterRules.replace(normalizeFilterRules(rules));
+		self.markTouched();
+	},
+	setValidationRules(rules: ValidationRuleRecord[]) {
+		self.beginEdit();
+		self.validationRules.replace(rules);
 		self.markTouched();
 	},
 }));

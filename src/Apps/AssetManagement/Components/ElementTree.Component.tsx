@@ -15,6 +15,9 @@ import { ITreeNode } from "../../../Interfaces/Tree";
 import React from "react";
 import SchemaSvgIcon from "../../../Components/Schema/SchemaSvgIcon";
 import ElementStatusDot from "../../../Components/ChangeMode/ElementStatusDot";
+import ElementSignalBars from "../../../Components/ChangeMode/ElementSignalBars";
+import { elementStatusShowsIndicator } from "../../../lib/elementStatusStyle";
+import type { ElementMarkFlags } from "../../../lib/elementXPathValidation";
 import { Tooltip, Descriptions, DescriptionsProps } from "antd";
 import { VerticalAlignBottomOutlined } from "@ant-design/icons";
 import {
@@ -50,7 +53,7 @@ function elementToTreeNode(element: UnlinkedTreeElement): ITreeNode {
 	};
 }
 
-function renderTreeNodeTitle(nodeData: ITreeNode) {
+function renderTreeNodeTitle(nodeData: ITreeNode, marks?: ElementMarkFlags) {
 	const definition = resolveTreeNodeDefinition(rootStore, nodeData);
 	const treeElement = resolveTreeElement(rootStore, nodeData);
 	const iconElement = treeElement ?? nodeData;
@@ -89,10 +92,11 @@ function renderTreeNodeTitle(nodeData: ITreeNode) {
 	];
 
 	const segment = resolveTreeNodeSegment(definition, nodeData.class);
-	const treeNodeClasses = `${treeNodeSegmentClassName(segment)} ${nodeData?.status === "new" || nodeData?.status === "edit" || nodeData?.status === "changed" || nodeData?.status === "invalid" ? "EditMode" : ""} ${rootStore.ui.activeElement?.id === nodeData?.key ? "ActiveElement" : ""}`;
+	const resolvedMarks = marks ?? rootStore.ui.elementMarks.get(nodeData.key);
+	const treeNodeClasses = `${treeNodeSegmentClassName(segment)} ${nodeData?.status === "new" || nodeData?.status === "edit" || nodeData?.status === "changed" || nodeData?.status === "invalid" ? "EditMode" : ""} ${rootStore.ui.activeElement?.id === nodeData?.key ? "ActiveElement" : ""} ${resolvedMarks?.searchMatch ? "SearchMatch" : ""}`;
 
 	return (
-		<span className={treeNodeClasses}>&#160;
+		<span className={`element-tree-node-title ${treeNodeClasses}`}>&#160;
 			<SchemaSvgIcon
 				svgString={rootStore.configSchemas.getIconByDefinition(definition)}
 				element={iconElement}
@@ -108,7 +112,13 @@ function renderTreeNodeTitle(nodeData: ITreeNode) {
 			>
 				<span>&#160;{nodeData.title ?? "???"}</span>
 			</Tooltip>
-			<ElementStatusDot status={nodeData.status} />
+			<ElementSignalBars
+				flags={{
+					changed: elementStatusShowsIndicator(nodeData.status as never) || !!resolvedMarks?.changed,
+					positive: !!resolvedMarks?.positive,
+					negative: !!resolvedMarks?.negative,
+				}}
+			/>
 		</span>
 	);
 }
@@ -124,6 +134,7 @@ const ElementHierarchyTreeView = observer(function ElementHierarchyTreeView({
 	treeData: ITreeNode[] | undefined;
 }) {
 	const navigate = useNavigate();
+	const marks = rootStore.ui.elementMarks;
 	const selectedKeys = rootStore.ui.activeElement?.id ? [rootStore.ui.activeElement.id] : [];
 
 	function onSelect(nextKeys: React.Key[]) {
@@ -146,7 +157,7 @@ const ElementHierarchyTreeView = observer(function ElementHierarchyTreeView({
 			showIcon
 			treeData={treeData}
 			onSelect={onSelect}
-			titleRender={renderTreeNodeTitle}
+			titleRender={(node) => renderTreeNodeTitle(node, marks.get(String(node.key)))}
 			selectedKeys={selectedKeys}
 		/>
 	);
@@ -165,6 +176,7 @@ const ElementUnlinkedListView = observer(function ElementUnlinkedListView({
 	const langtext = useLangtext();
 	const navigate = useNavigate();
 	const selectedId = rootStore.ui.activeElement?.id;
+	const marks = rootStore.ui.elementMarks;
 
 	return (
 		<div className="element-tree-unlinked">
@@ -181,7 +193,7 @@ const ElementUnlinkedListView = observer(function ElementUnlinkedListView({
 							className={`element-tree-unlinked-item ${selectedId === element.id ? "element-tree-unlinked-item--selected" : ""}`}
 							onClick={() => navigateToElement(navigate, element.id)}
 						>
-							{renderTreeNodeTitle(elementToTreeNode(element))}
+							{renderTreeNodeTitle(elementToTreeNode(element), marks.get(element.id))}
 						</List.Item>
 					)}
 				/>

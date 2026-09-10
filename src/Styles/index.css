@@ -85,6 +85,87 @@ body,
 	box-shadow: 0 0 0 1px rgba(0, 0, 0, 0.08);
 }
 
+.element-search-field {
+	width: 260px;
+}
+
+.element-search-hits__query {
+	margin-bottom: 8px;
+	word-break: break-all;
+}
+
+.element-search-hits__item {
+	cursor: pointer;
+	display: flex;
+	align-items: center;
+	justify-content: space-between;
+	gap: 8px;
+}
+
+.element-search-hits__label {
+	min-width: 0;
+}
+
+.element-tree-node-title {
+	display: inline-flex;
+	align-items: center;
+	gap: 4px;
+	width: 100%;
+}
+
+.element-tree-node-title.SearchMatch {
+	background-color: rgba(250, 219, 20, 0.28);
+	border-radius: 3px;
+}
+
+.element-signal-bars {
+	display: inline-flex;
+	flex-shrink: 0;
+	overflow: hidden;
+	border-radius: 1px;
+}
+
+.element-signal-bars--vertical {
+	flex-direction: column;
+	width: 7px;
+	height: 18px;
+	margin-left: auto;
+}
+
+.element-signal-bars--horizontal {
+	flex-direction: row;
+	width: 18px;
+	height: 6px;
+	position: absolute;
+	top: 2px;
+	right: 2px;
+}
+
+.element-signal-bars__seg {
+	flex: 1 1 0;
+	background: transparent;
+}
+
+.element-signal-bars__seg--changed.is-on {
+	background-color: #fa8c16;
+}
+
+.element-signal-bars__seg--positive.is-on {
+	background-color: #52c41a;
+}
+
+.element-signal-bars__seg--negative.is-on {
+	background-color: #ff4d4f;
+}
+
+svg .edgePath.graph-edge--positive path {
+	stroke: #389e0d;
+}
+
+svg .edgePath.graph-edge--negative path {
+	stroke: #cf1322;
+}
+
 .element-tree-view-option {
 	display: inline-flex;
 	align-items: center;
@@ -868,6 +949,18 @@ input[readonly] {
   border: 1px solid #faad14;
   border-radius: 6px;
   padding: 1px;
+}
+
+.schema-editor-field--positive .schema-editor-field__control {
+  box-shadow: inset 3px 0 0 #52c41a;
+}
+
+.schema-editor-field--negative .schema-editor-field__control {
+  box-shadow: inset 3px 0 0 #ff4d4f;
+}
+
+.schema-editor-field--positive.schema-editor-field--negative .schema-editor-field__control {
+  box-shadow: inset 3px 0 0 #52c41a, inset 6px 0 0 #ff4d4f;
 }
 
 .schema-editor-field--error .schema-editor-field__control .ant-input,

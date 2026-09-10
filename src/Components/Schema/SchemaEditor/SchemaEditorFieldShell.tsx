@@ -20,6 +20,8 @@ interface SchemaEditorFieldShellProps {
 	mstValue?: unknown;
 	schemaPath?: string;
 	schemaTypeLabel?: string;
+	validationPositive?: boolean;
+	validationNegative?: boolean;
 }
 
 const SchemaEditorFieldShell: React.FC<SchemaEditorFieldShellProps> = ({
@@ -34,6 +36,8 @@ const SchemaEditorFieldShell: React.FC<SchemaEditorFieldShellProps> = ({
 	mstValue,
 	schemaPath,
 	schemaTypeLabel,
+	validationPositive = false,
+	validationNegative = false,
 }) => {
 	const langtext = useLangtext();
 	const stateClass =
@@ -60,7 +64,9 @@ const SchemaEditorFieldShell: React.FC<SchemaEditorFieldShellProps> = ({
 		);
 
 	return (
-		<div className={`schema-editor-field Field ${modeClass} ${stateClass}`.trim()}>
+		<div
+			className={`schema-editor-field Field ${modeClass} ${stateClass} ${validationPositive ? "schema-editor-field--positive" : ""} ${validationNegative ? "schema-editor-field--negative" : ""}`.trim()}
+		>
 			<label className="schema-editor-field__label">{labelContent}</label>
 			<div className="schema-editor-field__control">{children}</div>
 			{field.example ? (

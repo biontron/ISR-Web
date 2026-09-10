@@ -10,9 +10,15 @@ import { AssetModel, IAsset } from "./Models/Asset.Model";
 import { ConnectionModel } from "./Models/Connection.Model";
 import { ViewLazyRef } from "./Models/View.Model";
 import { resolveIdentifier } from "mobx-state-tree";
-import { rootStore } from "./Root.Store";
+import { IRootStore, rootStore } from "./Root.Store";
 import { ActiveElement } from "../Interfaces/Element";
 import { IElement } from "./Models/Element.Model";
+import {
+	collectViewElementMarks,
+	collectViewSearchHits,
+	type ElementMarkFlags,
+	type ViewSearchHit,
+} from "../lib/elementXPathValidation";
 
 function runValidationSyncForElement(element: ActiveElement | undefined): void {
 	if (!element) {
@@ -42,6 +48,8 @@ export const UIStore = types
 			"COMPONENT"
 		),
 		selectedConfigSchemaId: types.optional(types.string, ""),
+		elementSearchText: types.optional(types.string, ""),
+		elementSearchDialogOpen: types.optional(types.boolean, false),
 	})
 	.actions((self) => ({
 		syncActiveElementValidation() {
@@ -198,8 +206,22 @@ export const UIStore = types
 		clearSelectedConfigSchemaId() {
 			self.selectedConfigSchemaId = "";
 		},
+		setElementSearchText(value: string) {
+			self.elementSearchText = value;
+		},
+		setElementSearchDialogOpen(open: boolean) {
+			self.elementSearchDialogOpen = open;
+		},
 	}))
 	.views((self) => ({
+		get elementMarks(): Map<string, ElementMarkFlags> {
+			const root = getRoot(self) as IRootStore;
+			return collectViewElementMarks(root, self.activeView, self.elementSearchText);
+		},
+		get elementSearchHits(): ViewSearchHit[] {
+			const root = getRoot(self) as IRootStore;
+			return collectViewSearchHits(root, self.activeView, self.elementSearchText);
+		},
 		canEditActiveElement(): boolean {
 			const status = self.activeElement?.status;
 			return (

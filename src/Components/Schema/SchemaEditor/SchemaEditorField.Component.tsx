@@ -28,6 +28,7 @@ import SchemaEditorFieldEdit from "./SchemaEditorFieldEdit";
 import SchemaEditorFieldView from "./SchemaEditorFieldView";
 import { IElement } from "../../../Stores/Models/Element.Model";
 import { useSchemaEditorContext } from "./SchemaEditorContext";
+import { fieldPathHasMark } from "../../../lib/elementXPathValidation";
 
 interface FieldComponentProps {
 	pathPrefix: string;
@@ -99,6 +100,11 @@ const SchemaEditorField: React.FC<FieldComponentProps> = ({
 	const hasRuleViolation = isOmittedField
 		? false
 		: isFieldRuleViolated(schemaDefinitionField, value);
+	const elementMarks = rootStore.ui.elementMarks.get(elementData.id);
+	const validationPositive =
+		!isOmittedField && fieldPathHasMark(mstPath, elementMarks?.fieldPaths ?? []) && !!elementMarks?.positive;
+	const validationNegative =
+		!isOmittedField && fieldPathHasMark(mstPath, elementMarks?.fieldPaths ?? []) && !!elementMarks?.negative;
 
 	useEffect(() => {
 		defaultsAppliedRef.current = false;
@@ -215,6 +221,9 @@ const SchemaEditorField: React.FC<FieldComponentProps> = ({
 				isMandatoryUnfilled={isMandatoryUnfilled}
 				isStructurallyMissing={isStructurallyMissing}
 				hasRuleViolation={hasRuleViolation}
+				mstPath={mstPath}
+				validationPositive={validationPositive}
+				validationNegative={validationNegative}
 			/>
 		);
 	}
@@ -231,6 +240,8 @@ const SchemaEditorField: React.FC<FieldComponentProps> = ({
 			mstValue={externalValue}
 			schemaPath={schemaPath}
 			schemaTypeLabel={formatSchemaFieldTypeLabel(schemaDefinitionField)}
+			validationPositive={validationPositive}
+			validationNegative={validationNegative}
 		/>
 	);
 };

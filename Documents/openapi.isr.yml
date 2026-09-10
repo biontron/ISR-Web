@@ -1783,6 +1783,23 @@ components:
     FilterruleType:
       type: string
 
+    ValidationRuleType:
+      type: object
+      required:
+        - xpath
+        - description
+        - polarity
+      properties:
+        xpath:
+          type: string
+        description:
+          type: string
+        polarity:
+          type: string
+          enum:
+            - positive
+            - negative
+
     GroupItem:
       required:
         - id
@@ -1898,6 +1915,10 @@ components:
           type: array
           items:
             $ref: "#/components/schemas/FilterruleType"
+        validationRules:
+          type: array
+          items:
+            $ref: "#/components/schemas/ValidationRuleType"
         attachments:
           type: array
           items:

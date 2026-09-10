@@ -12,6 +12,8 @@ import authStore from "../../Stores/Auth.Store";
 import { useLangtext } from "../../lib/common";
 import ChangeModeToolbar from "../ChangeMode/ChangeModeToolbar";
 import ActivityStatusOverviewModal from "../ChangeMode/ActivityStatusOverviewModal";
+import ElementSearchField from "../Search/ElementSearchField";
+import ElementSearchHitsDialog from "../Search/ElementSearchHitsDialog";
 
 interface CommonLayoutProps {
 	children: ReactNode;
@@ -108,6 +110,7 @@ const CommonLayout: React.FC<CommonLayoutProps> = observer(({ children }) => {
 				</div>
 
 				<div style={{ display: "flex", alignItems: "center", gap: "20px" }}>
+					<ElementSearchField />
 					<Dropdown overlay={userMenu}>
 						<a
 							className="ant-dropdown-link"
@@ -121,6 +124,7 @@ const CommonLayout: React.FC<CommonLayoutProps> = observer(({ children }) => {
 			</nav>
 			<main className="common-layout-main">{children}</main>
 			<ActivityStatusOverviewModal />
+			<ElementSearchHitsDialog />
 		</div>
 	);
 });

@@ -83,6 +83,12 @@ describe("elementXPathFilter", () => {
 		const asset = device("A-1");
 		expect(elementMatchesXPath(asset as never, "match(definition/name, 'is-.*')")).toBe(true);
 		expect(elementMatchesXPath(asset as never, "matches(definition/name, '^is-')")).toBe(true);
+		expect(
+			elementMatchesXPath(
+				{ ...device("V-1"), definition: { ...device("V-1").definition, baseType: "VIEW" } } as never,
+				'matches(definition/baseType,"VIEW")'
+			)
+		).toBe(true);
 		expect(elementMatchesXPath(asset as never, "fn:matches(definition/name, '^IS-', 'i')")).toBe(
 			true
 		);

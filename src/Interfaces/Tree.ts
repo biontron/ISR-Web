@@ -19,4 +19,7 @@ export type ITreeNode = {
 	label?: string;
 	description: string | undefined;
 	status: string | undefined;
+	validationPositive?: boolean;
+	validationNegative?: boolean;
+	searchMatch?: boolean;
 };

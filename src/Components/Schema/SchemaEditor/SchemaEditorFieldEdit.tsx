@@ -18,6 +18,8 @@ interface FieldComponentProps {
 	mstValue?: unknown;
 	schemaPath?: string;
 	schemaTypeLabel?: string;
+	validationPositive?: boolean;
+	validationNegative?: boolean;
 }
 
 const SchemaEditorFieldEdit: React.FC<FieldComponentProps> = ({
@@ -31,6 +33,8 @@ const SchemaEditorFieldEdit: React.FC<FieldComponentProps> = ({
 	mstValue,
 	schemaPath,
 	schemaTypeLabel,
+	validationPositive = false,
+	validationNegative = false,
 }) => {
 	const [draft, setDraft] = useState(value);
 	const inputRef = useRef<React.ComponentRef<typeof Input>>(null);
@@ -69,6 +73,8 @@ const SchemaEditorFieldEdit: React.FC<FieldComponentProps> = ({
 			mstValue={mstValue}
 			schemaPath={schemaPath}
 			schemaTypeLabel={schemaTypeLabel}
+			validationPositive={validationPositive}
+			validationNegative={validationNegative}
 		>
 			<Input
 				ref={inputRef}

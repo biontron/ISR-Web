@@ -11,6 +11,9 @@ interface FieldComponentProps {
 	isMandatoryUnfilled?: boolean;
 	isStructurallyMissing?: boolean;
 	hasRuleViolation?: boolean;
+	validationPositive?: boolean;
+	validationNegative?: boolean;
+	mstPath?: string;
 }
 
 const SchemaEditorFieldView: React.FC<FieldComponentProps> = ({
@@ -19,6 +22,9 @@ const SchemaEditorFieldView: React.FC<FieldComponentProps> = ({
 	isMandatoryUnfilled = false,
 	isStructurallyMissing = false,
 	hasRuleViolation = false,
+	validationPositive = false,
+	validationNegative = false,
+	mstPath,
 }) => {
 	const hasContentError = isMandatoryUnfilled || hasRuleViolation || isStructurallyMissing;
 	const state: SchemaEditorFieldState = hasContentError ? "error" : "normal";
@@ -30,6 +36,9 @@ const SchemaEditorFieldView: React.FC<FieldComponentProps> = ({
 			mode="view"
 			state={state}
 			isStructurallyMissing={isStructurallyMissing}
+			mstPath={mstPath}
+			validationPositive={validationPositive}
+			validationNegative={validationNegative}
 		>
 			<div className="schema-editor-field-value Input">{displayValue}</div>
 		</SchemaEditorFieldShell>

@@ -24,6 +24,8 @@ import {
 	resolveGraphStyle,
 } from "./graphElementStyle";
 import { buildGraphNodeHoverHtml } from "./treeNodeDisplay";
+import { buildElementSignalBarsHtml } from "./elementSignalBars";
+import { elementStatusShowsIndicator } from "./elementStatusStyle";
 
 type DagreNodeConfig = {
 	labelType: string;
@@ -53,6 +55,15 @@ function buildNodeLabel(node: TreeElement, condensed: boolean, omitIcon = false)
 			? `${node.definition.name}<br/>${"label" in node.definition ? node.definition.label : ""}<br/><${typeLabel}>`
 			: node.definition.name;
 	const hoverHtml = buildGraphNodeHoverHtml(rootStore, node);
+	const marks = rootStore.ui.elementMarks.get(node.id);
+	const signalBars = buildElementSignalBarsHtml(
+		{
+			changed: elementStatusShowsIndicator(node.status) || !!marks?.changed,
+			positive: !!marks?.positive,
+			negative: !!marks?.negative,
+		},
+		"horizontal"
+	);
 	const isClusterLabel = omitIcon;
 	const fontSize = isClusterLabel ? "14.3px" : "13px";
 	const fontWeight = isClusterLabel ? "700" : "400";
@@ -60,6 +71,7 @@ function buildNodeLabel(node: TreeElement, condensed: boolean, omitIcon = false)
 
 	return `
 		<div class="graph-node-shell">
+			${signalBars}
 			<div class="${labelClass}" style="display:flex;align-items:flex-start;gap:6px;font-size:${fontSize};font-weight:${fontWeight};line-height:1.3;color:#111;white-space:nowrap;">
 				<span class="graph-icon" style="display:inline-flex;align-items:flex-start;justify-content:center;flex:0 0 auto;">
 					${icon}

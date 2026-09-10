@@ -16,7 +16,7 @@ type FilterDefinition = {
 	tags?: Array<{ tag?: string } | string>;
 };
 
-type FilterableElement = {
+export type FilterableElement = {
 	id: string;
 	class?: string;
 	definition?: FilterDefinition;
@@ -24,10 +24,13 @@ type FilterableElement = {
 	parentIdRef?: string | null;
 	docks?: unknown;
 	settings?: unknown;
+	links?: unknown;
 };
 
 type FilterXmlOptions = {
 	includeDocks?: boolean;
+	includeSettings?: boolean;
+	includeLinks?: boolean;
 };
 
 const XML_NAME = /^[A-Za-z_][\w.-]*$/;
@@ -71,6 +74,14 @@ export function xpathNeedsDocks(expression: string): boolean {
 	return /(^|[^A-Za-z_])docks([\s/\[\]]|$)/.test(expression);
 }
 
+export function xpathNeedsSettings(expression: string): boolean {
+	return /(^|[^A-Za-z_])settings([\s/\[\]]|$)/.test(expression);
+}
+
+export function xpathNeedsLinks(expression: string): boolean {
+	return /(^|[^A-Za-z_])links([\s/\[\]]|$)/.test(expression);
+}
+
 function escapeXml(value: unknown): string {
 	return String(value ?? "")
 		.replace(/&/g, "&amp;")
@@ -111,6 +122,7 @@ export function elementToFilterXml(
 	const parts = [
 		"<element>",
 		xmlLeaf("id", element.id),
+		xmlLeaf("class", element.class),
 		"<definition>",
 		xmlLeaf("storeType", definition.storeType),
 		xmlLeaf("baseType", definition.baseType),
@@ -125,6 +137,12 @@ export function elementToFilterXml(
 	];
 	if (options.includeDocks && element.docks != null) {
 		parts.push(valueToXml("docks", element.docks));
+	}
+	if (options.includeSettings && element.settings != null) {
+		parts.push(valueToXml("settings", element.settings));
+	}
+	if (options.includeLinks && element.links != null) {
+		parts.push(valueToXml("links", element.links));
 	}
 	parts.push("</element>");
 	return parts.join("");
@@ -299,6 +317,8 @@ function readFilterPathValues(element: FilterableElement, path: string): string[
 	switch (normalized) {
 		case "id":
 			return [element.id];
+		case "class":
+			return [String(element.class ?? "")];
 		case "ownerIdRef":
 			return [String(element.ownerIdRef ?? "")];
 		case "parentIdRef":
@@ -469,7 +489,26 @@ export function tryFastXPathMatch(element: FilterableElement, expression: string
 	}
 }
 
-function filterElementFingerprint(element: FilterableElement, includeDocks: boolean): string {
+function filterXmlOptionsForExpressions(expressions: string[]): FilterXmlOptions {
+	return {
+		includeDocks: expressions.some(xpathNeedsDocks),
+		includeSettings: expressions.some(xpathNeedsSettings),
+		includeLinks: expressions.some(xpathNeedsLinks),
+	};
+}
+
+function appendFingerprintValue(parts: string[], value: unknown, fallback: string): void {
+	if (value == null) {
+		return;
+	}
+	try {
+		parts.push(JSON.stringify(unwrapFilterValue(value)));
+	} catch {
+		parts.push(fallback);
+	}
+}
+
+function filterElementFingerprint(element: FilterableElement, options: FilterXmlOptions): string {
 	const definition = element.definition ?? {};
 	const tags = (definition.tags ?? [])
 		.map((entry) => (typeof entry === "string" ? entry : entry?.tag ?? ""))
@@ -488,12 +527,14 @@ function filterElementFingerprint(element: FilterableElement, includeDocks: bool
 		definition.description ?? "",
 		tags,
 	];
-	if (includeDocks && element.docks != null) {
-		try {
-			parts.push(JSON.stringify(unwrapFilterValue(element.docks)));
-		} catch {
-			parts.push("docks");
-		}
+	if (options.includeDocks) {
+		appendFingerprintValue(parts, element.docks, "docks");
+	}
+	if (options.includeSettings) {
+		appendFingerprintValue(parts, element.settings, "settings");
+	}
+	if (options.includeLinks) {
+		appendFingerprintValue(parts, element.links, "links");
 	}
 	return parts.join("\0");
 }
@@ -524,9 +565,9 @@ function matchElementAgainstExpressions(
 		return false;
 	}
 
-	const includeDocks = expressions.some(xpathNeedsDocks);
-	const fingerprint = filterElementFingerprint(element, includeDocks);
-	const cacheKey = `${element.id}\0${includeDocks ? "1" : "0"}\0${expressions.join("\n")}`;
+	const options = filterXmlOptionsForExpressions(expressions);
+	const fingerprint = filterElementFingerprint(element, options);
+	const cacheKey = `${element.id}\0${options.includeDocks ? "1" : "0"}${options.includeSettings ? "s" : ""}${options.includeLinks ? "l" : ""}\0${expressions.join("\n")}`;
 	const cached = readCachedXPathMatch(cacheKey, fingerprint);
 	if (cached !== undefined) {
 		return cached;
@@ -549,7 +590,7 @@ function matchElementAgainstExpressions(
 		return false;
 	}
 
-	const doc = parseFilterDocument(element, { includeDocks: pending.some(xpathNeedsDocks) });
+	const doc = parseFilterDocument(element, filterXmlOptionsForExpressions(pending));
 	const matched = !!doc && pending.some((xpath) => elementMatchesXPathOnDocument(doc, xpath));
 	writeCachedXPathMatch(cacheKey, fingerprint, matched);
 	return matched;
@@ -611,6 +652,128 @@ export function elementMatchesXPath(element: FilterableElement, expression: stri
 		return false;
 	}
 	return matchElementAgainstExpressions(element, [xpath]);
+}
+
+export function xpathPathToMstPath(path: string): string {
+	return path
+		.replace(/^\.?\//, "")
+		.replace(/^element\//, "")
+		.replace(/\[(\d+)\]/g, (_, index) => `[${Math.max(0, Number(index) - 1)}]`)
+		.replace(/\//g, ".");
+}
+
+const ARRAY_XML_NAMES = new Set(["docks", "dockparts", "links", "linkparts", "tags", "tag"]);
+
+function xmlNodeToMstPath(node: Node, root: Element): string {
+	const current =
+		node.nodeType === Node.ATTRIBUTE_NODE ? (node as Attr).ownerElement : node;
+	const parts: string[] = [];
+	let cursor: Node | null = current;
+	while (cursor && cursor !== root && cursor.nodeType === Node.ELEMENT_NODE) {
+		const element = cursor as Element;
+		const name = element.localName;
+		let index = 0;
+		let sibling = element.previousElementSibling;
+		while (sibling) {
+			if (sibling.localName === name) {
+				index += 1;
+			}
+			sibling = sibling.previousElementSibling;
+		}
+		if (index > 0 || ARRAY_XML_NAMES.has(name)) {
+			parts.unshift(`${name}[${index}]`);
+		} else {
+			parts.unshift(name);
+		}
+		cursor = element.parentElement;
+	}
+	return parts.filter((part) => part !== "element" && !part.startsWith("element[")).join(".");
+}
+
+function collectPredicateFieldPaths(expression: string): string[] {
+	const expr = unwrapElementPredicate(expression);
+	const paths = new Set<string>();
+	const callMatcher = /(?:fn:)?(?:match(?:es)?|starts-with|contains)\s*\(\s*([^,]+)/gi;
+	let found: RegExpExecArray | null;
+	while ((found = callMatcher.exec(expr)) != null) {
+		const path = found[1].trim();
+		if (path && path[0] !== "'" && path[0] !== '"') {
+			paths.add(xpathPathToMstPath(path));
+		}
+	}
+	const compareMatcher = /([A-Za-z_][\w./[\]]*)\s*(?:=|!=)/g;
+	while ((found = compareMatcher.exec(expr)) != null) {
+		const path = found[1].trim();
+		if (path && !/^(true|false|not)$/i.test(path)) {
+			paths.add(xpathPathToMstPath(path));
+		}
+	}
+	return Array.from(paths).filter(Boolean);
+}
+
+function collectMatchedNodePaths(doc: Document, expression: string): string[] {
+	try {
+		const rewritten = rewriteXPathMatchFunctions(expression, doc);
+		const result = doc.evaluate(
+			rewritten,
+			doc.documentElement,
+			null,
+			XPathResult.ORDERED_NODE_SNAPSHOT_TYPE,
+			null
+		);
+		const paths: string[] = [];
+		for (let index = 0; index < result.snapshotLength; index++) {
+			const node = result.snapshotItem(index);
+			if (!node) {
+				continue;
+			}
+			const path = xmlNodeToMstPath(node, doc.documentElement);
+			if (path) {
+				paths.push(path);
+			}
+		}
+		return paths;
+	} catch {
+		return [];
+	}
+}
+
+export function isUsableXPathExpression(expression: string): boolean {
+	const xpath = expression.trim();
+	if (!xpath) {
+		return false;
+	}
+	try {
+		const doc = new DOMParser().parseFromString("<element/>", "application/xml");
+		const rewritten = rewriteXPathMatchFunctions(xpath, doc);
+		doc.evaluate(rewritten, doc.documentElement, null, XPathResult.ANY_TYPE, null);
+		return true;
+	} catch {
+		return false;
+	}
+}
+
+export function collectXPathMatchFieldPaths(
+	element: FilterableElement,
+	expression: string
+): string[] {
+	const xpath = expression.trim();
+	if (!xpath || !elementMatchesXPath(element, xpath)) {
+		return [];
+	}
+	const fromPredicate = collectPredicateFieldPaths(xpath);
+	const doc = parseFilterDocument(element, filterXmlOptionsForExpressions([xpath]));
+	const fromNodes = doc ? collectMatchedNodePaths(doc, xpath) : [];
+	const merged: string[] = [];
+	const seen = new Set<string>();
+	for (const path of fromPredicate.concat(fromNodes)) {
+		if (!path || seen.has(path)) {
+			continue;
+		}
+		seen.add(path);
+		merged.push(path);
+	}
+	return merged;
 }
 
 export function elementMatchesAnyXPath(

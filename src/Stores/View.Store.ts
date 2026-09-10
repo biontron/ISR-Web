@@ -73,6 +73,7 @@ export const ViewStore = types.compose("ViewStore", BaseStore, types.model({
 				description: ""
 			},
 			filterRules: [],
+			validationRules: [],
 			attachments: [],
 			properties: {
 				responsibles: [],

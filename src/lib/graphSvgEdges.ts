@@ -5,6 +5,7 @@ import {
 } from "./connectionDirection";
 import { ConnectionGraphEdge } from "./graphConnectionEdges";
 import { GraphVisualStyle } from "./graphConfig";
+import { rootStore } from "../Stores/Root.Store";
 import {
 	graphStyleToSvgEdgeStyle,
 } from "./graphElementStyle";
@@ -88,5 +89,13 @@ export function applyEdgeStylesToSvg(
 		}
 		path.style.cursor = "pointer";
 		path.classList.add("graph-connection-edge");
+		const marks = rootStore.ui.elementMarks.get(connectionId);
+		edgeGroup?.classList.toggle("graph-edge--positive", !!marks?.positive);
+		edgeGroup?.classList.toggle("graph-edge--negative", !!marks?.negative);
+		if (marks?.negative) {
+			path.style.setProperty("stroke", "#cf1322");
+		} else if (marks?.positive) {
+			path.style.setProperty("stroke", "#389e0d");
+		}
 	});
 }

@@ -62,7 +62,7 @@ const GRAPH_INLINE_STYLE = `
 	svg .node.graph-overview-rank-dummy { display: none; }
 	svg foreignObject { overflow: visible; }
 	svg .edgeLabel { pointer-events: all; }
-	.graph-node-shell { position: relative; display: inline-block; }
+	.graph-node-shell { position: relative; display: inline-block; padding-right: 22px; }
 	.graph-node-tooltip {
 		display: none;
 		position: absolute;
@@ -206,6 +206,7 @@ const GraphCanvas = observer(
 		const graphContainer = useRef<SVGSVGElement>(null);
 		const navigate = useNavigate();
 		const [connectionDialogId, setConnectionDialogId] = useState<string | null>(null);
+		const elementMarks = rootStore.ui.elementMarks;
 
 		const renderGraph = useCallback(() => {
 			const view = rootStore.ui.activeView;
@@ -259,7 +260,7 @@ const GraphCanvas = observer(
 			if (inner) {
 				inner.setAttribute("transform", `translate(0,0) scale(${zoomLevel})`);
 			}
-		}, [element, layout.rankdir, layout.ranksep, layout.nodesep, buildGraph, navigate, zoomLevel, postRender, resolveCanvasSize]);
+		}, [element, layout.rankdir, layout.ranksep, layout.nodesep, buildGraph, navigate, zoomLevel, postRender, resolveCanvasSize, elementMarks]);
 
 		useEffect(() => {
 			renderGraph();

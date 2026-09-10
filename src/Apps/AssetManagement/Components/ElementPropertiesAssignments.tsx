@@ -7,6 +7,8 @@ import { useLangtext } from "../../../lib/common";
 import { rootStore } from "../../../Stores/Root.Store";
 import { observer } from "mobx-react";
 import AssetReferenceMapping from "../../../Components/Schema/SchemaEditor/Mappings/AssetReferenceMapping.Component";
+import ViewValidationRules from "../../../Components/Schema/SchemaEditor/Mappings/ViewValidationRules.Component";
+import { IView } from "../../../Stores/Models/View.Model";
 
 const ElementPropertiesAssignments: React.FC = () => {
 	const langtext = useLangtext();
@@ -29,6 +31,11 @@ const ElementPropertiesAssignments: React.FC = () => {
 				<CardCollapse title={langtext("general.assetreference_assignment")}>
 					<AssetReferenceMapping element={activeElement} />
 				</CardCollapse>
+				{activeElement.class === "View" ? (
+					<CardCollapse title={langtext("general.view_validation_rules")}>
+						<ViewValidationRules view={activeElement as IView} />
+					</CardCollapse>
+				) : null}
 			</div>
 		</Fragment>
 	);
