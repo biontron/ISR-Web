@@ -145,6 +145,7 @@ export const GroupModel = types.compose(
 					if (!element) {
 						return {
 							key: "",
+							elementId: "",
 							class: "GROUP",
 							title: "Asset-Referenz ungültig",
 							baseType: "NONE",

@@ -61,7 +61,11 @@ const SchemaEditorInner: React.FC<SchemaEditorProps> = ({
 	const formItems = resolveFormItems(schemaDefinition);
 
 	if (formItems.length === 0) {
-		if (elementData.class === "View") {
+		if (
+			elementData.class === "View" &&
+			schemaName !== "ANY-DEFINITION" &&
+			schemaName !== "ANY-PROPERTIES"
+		) {
 			return <SchemaEditorEmptyState reason="no_view_settings" />;
 		}
 		return (

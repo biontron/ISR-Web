@@ -246,10 +246,11 @@ function parseCallArgs(
 	return null;
 }
 
-function findLastMatchCall(
-	expression: string
+function findLastNamedCall(
+	expression: string,
+	namePattern: RegExp
 ): { start: number; end: number; args: string[] } | null {
-	const matcher = /(?:fn:)?match(?:es)?\s*\(/gi;
+	const matcher = new RegExp(namePattern.source, namePattern.flags.includes("g") ? namePattern.flags : `${namePattern.flags}g`);
 	let last: { start: number; end: number; args: string[] } | null = null;
 	let found: RegExpExecArray | null;
 
@@ -266,6 +267,18 @@ function findLastMatchCall(
 		matcher.lastIndex = openParen + 1;
 	}
 	return last;
+}
+
+function findLastMatchCall(
+	expression: string
+): { start: number; end: number; args: string[] } | null {
+	return findLastNamedCall(expression, /(?:fn:)?match(?:es)?\s*\(/gi);
+}
+
+function findLastEqualsCall(
+	expression: string
+): { start: number; end: number; args: string[] } | null {
+	return findLastNamedCall(expression, /(?:fn:)?equals\s*\(/gi);
 }
 
 function xpathPathValues(doc: Document, path: string): string[] {
@@ -452,6 +465,16 @@ function evaluateFastPredicate(element: FilterableElement, expression: string): 
 		return values.some((value) => value.startsWith(prefix));
 	}
 
+	const equalsCall = findLastEqualsCall(expr);
+	if (equalsCall && equalsCall.start === 0 && equalsCall.end === expr.length) {
+		const values = readFilterPathValues(element, equalsCall.args[0] ?? "");
+		const expected = parseStringLiteral(equalsCall.args[1] ?? "");
+		if (!values || expected == null) {
+			return null;
+		}
+		return values.some((value) => value === expected);
+	}
+
 	const matchCall = findLastMatchCall(expr);
 	if (matchCall && matchCall.start === 0 && matchCall.end === expr.length) {
 		const values = readFilterPathValues(element, matchCall.args[0] ?? "");
@@ -596,6 +619,20 @@ function matchElementAgainstExpressions(
 	return matched;
 }
 
+export function rewriteXPathEqualsFunctions(expression: string): string {
+	let current = expression;
+	for (let guard = 0; guard < 32; guard++) {
+		const call = findLastEqualsCall(current);
+		if (!call) {
+			return current;
+		}
+		const path = (call.args[0] ?? "").trim();
+		const literal = (call.args[1] ?? "").trim();
+		current = `${current.slice(0, call.start)}${path}=${literal}${current.slice(call.end)}`;
+	}
+	return current;
+}
+
 /** Browser-XPath 1.0 kennt match()/matches() nicht — vorab in true()/false() auflösen. */
 export function rewriteXPathMatchFunctions(expression: string, doc: Document): string {
 	let current = expression;
@@ -625,6 +662,10 @@ export function rewriteXPathMatchFunctions(expression: string, doc: Document): s
 	return current;
 }
 
+function rewriteXPathExtensions(expression: string, doc: Document): string {
+	return rewriteXPathMatchFunctions(rewriteXPathEqualsFunctions(expression), doc);
+}
+
 export function elementMatchesXPathOnDocument(doc: Document, expression: string): boolean {
 	const xpath = expression.trim();
 	if (!xpath) {
@@ -632,7 +673,7 @@ export function elementMatchesXPathOnDocument(doc: Document, expression: string)
 	}
 
 	try {
-		const rewritten = rewriteXPathMatchFunctions(xpath, doc);
+		const rewritten = rewriteXPathExtensions(xpath, doc);
 		const result = doc.evaluate(
 			rewritten,
 			doc.documentElement,
@@ -693,7 +734,7 @@ function xmlNodeToMstPath(node: Node, root: Element): string {
 function collectPredicateFieldPaths(expression: string): string[] {
 	const expr = unwrapElementPredicate(expression);
 	const paths = new Set<string>();
-	const callMatcher = /(?:fn:)?(?:match(?:es)?|starts-with|contains)\s*\(\s*([^,]+)/gi;
+	const callMatcher = /(?:fn:)?(?:match(?:es)?|starts-with|contains|equals)\s*\(\s*([^,]+)/gi;
 	let found: RegExpExecArray | null;
 	while ((found = callMatcher.exec(expr)) != null) {
 		const path = found[1].trim();
@@ -713,7 +754,7 @@ function collectPredicateFieldPaths(expression: string): string[] {
 
 function collectMatchedNodePaths(doc: Document, expression: string): string[] {
 	try {
-		const rewritten = rewriteXPathMatchFunctions(expression, doc);
+		const rewritten = rewriteXPathExtensions(expression, doc);
 		const result = doc.evaluate(
 			rewritten,
 			doc.documentElement,
@@ -745,7 +786,7 @@ export function isUsableXPathExpression(expression: string): boolean {
 	}
 	try {
 		const doc = new DOMParser().parseFromString("<element/>", "application/xml");
-		const rewritten = rewriteXPathMatchFunctions(xpath, doc);
+		const rewritten = rewriteXPathExtensions(xpath, doc);
 		doc.evaluate(rewritten, doc.documentElement, null, XPathResult.ANY_TYPE, null);
 		return true;
 	} catch {
@@ -818,6 +859,21 @@ export function collectFilterElementPartition(
 		return { matched: [], available: unassigned };
 	}
 	return partitionUnassignedByXPath(unassigned, rules);
+}
+
+export function collectFilterMatchedFromPool(
+	unassigned: AssignableTreeElement[],
+	rules: unknown[],
+	excludeIds?: Iterable<string>
+): AssignableTreeElement[] {
+	const expressions = rules.map(readXPathExpression).filter(Boolean);
+	if (expressions.length === 0) {
+		return [];
+	}
+	const skip = excludeIds ? new Set(excludeIds) : null;
+	return unassigned.filter(
+		(element) => (!skip || !skip.has(element.id)) && matchElementAgainstExpressions(element, expressions)
+	);
 }
 
 export function collectFilterMatchedElements(

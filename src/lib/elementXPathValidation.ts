@@ -1,9 +1,17 @@
 import type { IAsset } from "../Stores/Models/Asset.Model";
 import type { IConnection } from "../Stores/Models/Connection.Model";
 import type {
-	ValidationRulePolarity,
 	ValidationRuleRecord,
+	ValidationRuleType,
 } from "../Stores/Models/ValidationRule.Model";
+import {
+	addXPathRule,
+	readXPathRuleType,
+	removeXPathRule,
+	snapshotXPathRules,
+	toXPathRuleRecord,
+	updateXPathRule,
+} from "./xpathRule";
 import type { IView } from "../Stores/Models/View.Model";
 import type { IRootStore } from "../Stores/Root.Store";
 import { findAssetByEndpointRef } from "./connectionEndpointRef";
@@ -15,7 +23,7 @@ import {
 } from "./elementXPathFilter";
 import { elementStatusShowsIndicator } from "./elementStatusStyle";
 
-export type { ValidationRuleRecord, ValidationRulePolarity };
+export type { ValidationRuleRecord, ValidationRuleType };
 
 export type SearchableElement = FilterableElement & {
 	status?: string;
@@ -41,7 +49,7 @@ export type ViewSearchHit = {
 };
 
 const XPATH_HINT =
-	/\/\/|\/|\[|\]|(?:fn:)?match(?:es)?\s*\(|starts-with\s*\(|contains\s*\(|(?:=|!=)/;
+	/\/\/|\/|\[|\]|(?:fn:)?match(?:es)?\s*\(|starts-with\s*\(|contains\s*\(|equals\s*\(|(?:=|!=)/;
 
 const SEARCH_HIT_LIMIT = 200;
 
@@ -82,26 +90,14 @@ function addFieldPaths(marks: ElementMarkFlags, paths: string[]): void {
 	marks.fieldPaths = Array.from(next);
 }
 
-export function readValidationRulePolarity(value: string): ValidationRulePolarity | undefined {
+export function readValidationRuleType(value: string): ValidationRuleType | undefined {
 	return value === "positive" || value === "negative" ? value : undefined;
 }
 
 export function snapshotValidationRules(
-	rules: ReadonlyArray<{ xpath: string; description: string; polarity: string }>
+	rules: ReadonlyArray<{ xpath: string; comment: string; type: string }>
 ): ValidationRuleRecord[] {
-	const records: ValidationRuleRecord[] = [];
-	for (const rule of rules) {
-		const polarity = readValidationRulePolarity(rule.polarity);
-		if (!polarity) {
-			continue;
-		}
-		records.push({
-			xpath: rule.xpath,
-			description: rule.description,
-			polarity,
-		});
-	}
-	return records;
+	return snapshotXPathRules(rules, ["positive", "negative"]) as ValidationRuleRecord[];
 }
 
 export function looksLikeXPath(query: string): boolean {
@@ -270,15 +266,15 @@ function applyXPathRule(
 	marks: Map<string, ElementMarkFlags>,
 	element: SearchableElement,
 	xpath: string,
-	polarity?: ValidationRulePolarity
+	type?: ValidationRuleType
 ): boolean {
 	if (!elementMatchesXPath(element, xpath)) {
 		return false;
 	}
 	const entry = ensureMarks(marks, element.id, elementStatusShowsIndicator(element.status as never));
-	if (polarity === "positive") {
+	if (type === "positive") {
 		entry.positive = true;
-	} else if (polarity === "negative") {
+	} else if (type === "negative") {
 		entry.negative = true;
 	} else {
 		entry.searchMatch = true;
@@ -312,12 +308,12 @@ export function collectViewElementMarks(
 		if (!xpath) {
 			continue;
 		}
-		const polarity = readValidationRulePolarity(rule.polarity);
-		if (!polarity) {
+		const type = readXPathRuleType(rule);
+		if (type !== "positive" && type !== "negative") {
 			continue;
 		}
 		for (const element of candidates) {
-			applyXPathRule(marks, element, xpath, polarity);
+			applyXPathRule(marks, element, xpath, type);
 		}
 	}
 
@@ -420,30 +416,19 @@ export function freetextToValidationXPath(query: string): string {
 
 export function toValidationRuleRecord(
 	xpath: string,
-	description: string,
-	polarity: ValidationRulePolarity
+	comment: string,
+	type: ValidationRuleType
 ): ValidationRuleRecord {
-	return {
-		xpath: xpath.trim(),
-		description,
-		polarity,
-	};
+	return toXPathRuleRecord(xpath, comment, type) as ValidationRuleRecord;
 }
 
 export function addValidationRule(
 	rules: ValidationRuleRecord[],
 	xpath: string,
-	description: string,
-	polarity: ValidationRulePolarity
+	comment: string,
+	type: ValidationRuleType
 ): ValidationRuleRecord[] {
-	const record = toValidationRuleRecord(xpath, description, polarity);
-	if (!record.xpath) {
-		return rules;
-	}
-	if (rules.some((rule) => rule.xpath === record.xpath && rule.polarity === record.polarity)) {
-		return rules;
-	}
-	return [...rules, record];
+	return addXPathRule(rules, xpath, comment, type) as ValidationRuleRecord[];
 }
 
 export function updateValidationRule(
@@ -451,29 +436,14 @@ export function updateValidationRule(
 	index: number,
 	patch: Partial<ValidationRuleRecord>
 ): ValidationRuleRecord[] {
-	if (index < 0 || index >= rules.length) {
-		return rules;
-	}
-	return rules.map((rule, ruleIndex) => {
-		if (ruleIndex !== index) {
-			return rule;
-		}
-		return {
-			xpath: patch.xpath !== undefined ? patch.xpath.trim() : rule.xpath,
-			description: patch.description !== undefined ? patch.description : rule.description,
-			polarity: patch.polarity !== undefined ? patch.polarity : rule.polarity,
-		};
-	});
+	return updateXPathRule(rules, index, patch) as ValidationRuleRecord[];
 }
 
 export function removeValidationRule(
 	rules: ValidationRuleRecord[],
 	index: number
 ): ValidationRuleRecord[] {
-	if (index < 0 || index >= rules.length) {
-		return rules;
-	}
-	return rules.filter((_, ruleIndex) => ruleIndex !== index);
+	return removeXPathRule(rules, index) as ValidationRuleRecord[];
 }
 
 export function searchQueryToValidationXPath(query: string): string {

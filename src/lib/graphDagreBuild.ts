@@ -268,7 +268,6 @@ export function addTreeNodesToGraph(
 		const isActive = options.activeElementId === node.id;
 		const style = resolveGraphStyle(node, { config, isActive });
 		const svgStyle = graphStyleToSvgNodeStyle(style);
-		const condensed = false;
 		const willBeCluster =
 			node.class === "View" ||
 			node.class === "Group" ||
@@ -276,7 +275,7 @@ export function addTreeNodesToGraph(
 
 		ensureGraphNode(g, node.id, {
 			labelType: "html",
-			label: buildNodeLabel(node, condensed, willBeCluster),
+			label: buildNodeLabel(node, false, willBeCluster),
 			clusterLabelPos: "top",
 			style: svgStyle,
 			id: node.id,

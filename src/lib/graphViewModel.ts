@@ -30,11 +30,13 @@ export function collectGraphViewNodes(
 ): GraphViewNode[] {
 	const config = options.config ?? loadGraphConfig();
 	const nodes: GraphViewNode[] = [];
+	const seen = new Set<string>();
 
 	function walk(node: TreeElement, currentDepth: number, parentIsCondensed: boolean) {
-		if (!node?.definition) {
+		if (!node?.definition || seen.has(node.id)) {
 			return;
 		}
+		seen.add(node.id);
 		const condensed =
 			parentIsCondensed ||
 			(options.collapseBelowDepth != null && currentDepth >= options.collapseBelowDepth);

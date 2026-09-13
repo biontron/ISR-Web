@@ -24,7 +24,7 @@ export function buildTreeNodeInfoRows(
 	root: IRootStore,
 	nodeData: Pick<
 	ITreeNode,
-	"key" | "class" | "title" | "label" | "description" | "status" | "baseType" | "subType" | "elementType" | "storeType"
+	"key" | "elementId" | "class" | "title" | "label" | "description" | "status" | "baseType" | "subType" | "elementType" | "storeType"
 	>,
 	definition?: ElementDefinitionTypeFields
 ): TreeNodeInfoRow[] {
@@ -49,7 +49,7 @@ export function buildTreeNodeInfoRows(
 		{ label: "Name", value: String(nodeData.title ?? "—") },
 		{ label: "Label", value: String(nodeData.label ?? "—") },
 		{ label: "Descripton", value: String(nodeData.description ?? "—") },
-		{ label: "ID", value: String(nodeData.key ?? "—") },
+		{ label: "ID", value: String(nodeData.elementId ?? nodeData.key ?? "—") },
 		{ label: "Status", value: String(nodeData.status ?? "—") },
 	];
 }
@@ -118,7 +118,7 @@ export function resolveTreeElement(
 	root: IRootStore,
 	nodeData: ITreeNode
 ): TreeElement | undefined {
-	const key = nodeData.key?.trim();
+	const key = (nodeData.elementId ?? nodeData.key)?.trim();
 	if (!key) {
 		return undefined;
 	}
@@ -179,6 +179,7 @@ export function assignableElementToTreeNode(
 	const definition = element.definition;
 	return {
 		key: element.id,
+		elementId: element.id,
 		class: element.class,
 		title: definition?.name ?? "",
 		storeType: definition?.storeType,

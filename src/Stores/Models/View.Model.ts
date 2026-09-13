@@ -2,14 +2,15 @@
 # Infrastructure Repository (ISR) / Infrastruktur Repository (ISR)
 # SPDX-License-Identifier: GPL-2.0 
 */
-import { Instance, getRoot, types } from "mobx-state-tree";
+import { Instance, cast, getRoot, types } from "mobx-state-tree";
 import { IGroup } from "./Group.Model";
 import { IAsset } from "./Asset.Model";
 import ElementModel, { ElementDefinitionTagModel } from "./Element.Model";
-import { assignableElementToTreeNode } from "../../lib/treeNodeDisplay";
+import { buildElementTreeNodes } from "../../lib/elementTreeNodes";
 import { collectFilterMatchedElementsExcluding } from "../../lib/elementXPathFilter";
 import { FilterRuleModel } from "./FilterRule.Model";
 import { ValidationRuleModel, ValidationRuleRecord } from "./ValidationRule.Model";
+import { xpathRuleSnapshots } from "../../lib/xpathRule";
 import { normalizeFilterRules } from "../../lib/filterRuleNormalize";
 
 
@@ -80,25 +81,7 @@ export const ViewModel = types.compose(
 						children: [],
 					}];
 				}
-				const staticGroups = root.groups.groups.filter(
-					(element: IGroup) => element.parentIdRef === self.id
-				);
-				const staticAssets = (root.assets?.assets ?? []).filter(
-					(asset: IAsset) => asset.ownerIdRef === self.id
-				);
-				const existingIds = [
-					...staticGroups.map((element: IGroup) => element.id),
-					...staticAssets.map((asset: IAsset) => asset.id),
-				];
-				const filterMatched = collectFilterMatchedElementsExcluding(
-					root,
-					self.id,
-					self.filterRules,
-					existingIds
-				);
-				return [...staticGroups, ...staticAssets, ...filterMatched].map((element: IGroup | IAsset) =>
-					assignableElementToTreeNode(root, element)
-				);
+				return buildElementTreeNodes(root, self);
 			},
 
 			/**
@@ -129,7 +112,7 @@ export const ViewModel = types.compose(
 	},
 	setValidationRules(rules: ValidationRuleRecord[]) {
 		self.beginEdit();
-		self.validationRules.replace(rules);
+		self.validationRules = cast(xpathRuleSnapshots(rules));
 		self.markTouched();
 	},
 }));

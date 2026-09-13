@@ -50,6 +50,10 @@ export const UIStore = types
 		selectedConfigSchemaId: types.optional(types.string, ""),
 		elementSearchText: types.optional(types.string, ""),
 		elementSearchDialogOpen: types.optional(types.boolean, false),
+		elementPropertiesTab: types.optional(types.string, "1"),
+		pendingValidationRuleViewId: types.optional(types.string, ""),
+		pendingValidationRuleXpath: types.optional(types.string, ""),
+		pendingValidationRuleComment: types.optional(types.string, ""),
 	})
 	.actions((self) => ({
 		syncActiveElementValidation() {
@@ -211,6 +215,20 @@ export const UIStore = types
 		},
 		setElementSearchDialogOpen(open: boolean) {
 			self.elementSearchDialogOpen = open;
+		},
+		setElementPropertiesTab(key: string) {
+			self.elementPropertiesTab = key;
+		},
+		setPendingValidationRule(viewId: string, xpath: string, comment: string) {
+			self.pendingValidationRuleViewId = viewId;
+			self.pendingValidationRuleXpath = xpath;
+			self.pendingValidationRuleComment = comment;
+			self.elementPropertiesTab = "assignments";
+		},
+		clearPendingValidationRule() {
+			self.pendingValidationRuleViewId = "";
+			self.pendingValidationRuleXpath = "";
+			self.pendingValidationRuleComment = "";
 		},
 	}))
 	.views((self) => ({

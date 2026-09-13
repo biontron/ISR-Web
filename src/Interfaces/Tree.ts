@@ -6,12 +6,15 @@ import React from "react";
 
 export type ITreeNode = {
 	key: string;
+	/** REST-Element-ID — kann mehrfach im Baum vorkommen; `key` ist die eindeutige Knoten-ID. */
+	elementId?: string;
 	title: string | React.ReactNode;
 	baseType: string | undefined;
 	subType: string | undefined;
 	storeType?: string;
 	elementType?: string;
 	children?: ITreeNode[];
+	isLeaf?: boolean;
 	disabled?: boolean;
 	selectable?: boolean;
 	/* transfer data */

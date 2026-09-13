@@ -29,6 +29,7 @@ XPath-Indizes sind 1-basiert (`docks[1]/dockparts[2]/…`). MST-/JSON-Pfade im S
 
 Beispiele:
 
+- `equals(definition/baseType,"COMPONENT")`
 - `definition/type='DEVICE'`
 - `definition/tags/tag='Client'`
 - `starts-with(definition/name,'is-')`

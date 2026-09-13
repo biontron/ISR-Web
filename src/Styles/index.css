@@ -89,6 +89,24 @@ body,
 	width: 260px;
 }
 
+.element-tree-loading {
+	padding: 8px 12px;
+	opacity: 0.65;
+}
+
+.common-layout-lang {
+	height: 32px;
+	padding: 0 8px;
+	border: 1px solid #d9d9d9;
+	border-radius: 6px;
+	background: #fff;
+}
+
+.element-tree-loading {
+	padding: 8px 12px;
+	opacity: 0.65;
+}
+
 .element-search-hits__query {
 	margin-bottom: 8px;
 	word-break: break-all;
@@ -104,6 +122,36 @@ body,
 
 .element-search-hits__label {
 	min-width: 0;
+}
+
+.element-search-hits__examples {
+	margin-top: 16px;
+	padding-top: 12px;
+	border-top: 1px solid #f0f0f0;
+}
+
+.element-search-hits__examples-title {
+	margin-bottom: 6px;
+	font-weight: 600;
+}
+
+.element-search-hits__examples-list {
+	margin: 0;
+	padding-left: 18px;
+}
+
+.element-search-hits__example {
+	display: inline;
+	padding: 0;
+	border: 0;
+	background: none;
+	cursor: pointer;
+	text-align: left;
+	color: #1677ff;
+}
+
+.element-search-hits__example:hover code {
+	text-decoration: underline;
 }
 
 .element-tree-node-title {
@@ -169,6 +217,88 @@ svg .edgePath.graph-edge--negative path {
 .element-tree-view-option {
 	display: inline-flex;
 	align-items: center;
+	gap: 6px;
+}
+
+.element-tree-view-select-row {
+	display: flex;
+	flex-direction: row;
+	flex-wrap: nowrap;
+	align-items: center;
+	gap: 8px;
+	width: 100%;
+}
+
+.element-tree-view-select-group {
+	display: flex;
+	flex: 1 1 auto;
+	min-width: 0;
+}
+
+.element-tree-view-select-group .element-tree-view-select,
+.element-tree-view-select-group .ant-select {
+	flex: 1 1 auto;
+	min-width: 0;
+}
+
+.element-tree-view-select-group .ant-btn {
+	flex: 0 0 auto;
+	margin-inline-start: 0;
+}
+
+.view-picker-empty {
+	flex: 1 1 auto;
+	min-height: 0;
+	display: flex;
+	flex-direction: column;
+	align-items: center;
+	justify-content: center;
+	padding: 32px 24px;
+	overflow: auto;
+}
+
+.view-picker-empty__title {
+	margin: 0 0 24px;
+	font-size: 28px;
+	font-weight: 600;
+	text-align: center;
+}
+
+.view-picker-empty__list {
+	list-style: none;
+	margin: 0;
+	padding: 0;
+	width: min(520px, 100%);
+	display: flex;
+	flex-direction: column;
+	gap: 8px;
+}
+
+.view-picker-empty__item {
+	display: flex;
+	flex-direction: row;
+	align-items: center;
+	gap: 10px;
+	width: 100%;
+	padding: 12px 16px;
+	border: 1px solid #d9d9d9;
+	border-radius: 8px;
+	background: #fff;
+	cursor: pointer;
+	text-align: left;
+	font: inherit;
+}
+
+.view-picker-empty__item:hover {
+	border-color: #1677ff;
+	background: #e6f4ff;
+}
+
+.view-picker-empty__name {
+	min-width: 0;
+	overflow: hidden;
+	text-overflow: ellipsis;
+	white-space: nowrap;
 }
 
 .json-inspect-panel {

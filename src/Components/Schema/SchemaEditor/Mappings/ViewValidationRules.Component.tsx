@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
 import { Button, Col, Input, List, Radio, Row } from "antd";
 import { DeleteOutlined, PlusOutlined } from "@ant-design/icons";
 import { observer } from "mobx-react";
@@ -10,17 +10,29 @@ import {
 	removeValidationRule,
 	snapshotValidationRules,
 	updateValidationRule,
-	type ValidationRulePolarity,
 	type ValidationRuleRecord,
+	type ValidationRuleType,
 } from "../../../../lib/elementXPathValidation";
 
 const ViewValidationRules: React.FC<{ view: IView }> = observer(({ view }) => {
 	const langtext = useLangtext();
 	const canEdit = !rootStore.ui.isReadOnly;
 	const [xpathDraft, setXpathDraft] = useState("");
-	const [descriptionDraft, setDescriptionDraft] = useState("");
-	const [polarityDraft, setPolarityDraft] = useState<ValidationRulePolarity>("negative");
+	const [commentDraft, setCommentDraft] = useState("");
+	const [typeDraft, setTypeDraft] = useState<ValidationRuleType>("negative");
 	const rules = snapshotValidationRules(view.validationRules);
+	const pendingXpath = rootStore.ui.pendingValidationRuleXpath;
+	const pendingComment = rootStore.ui.pendingValidationRuleComment;
+	const pendingViewId = rootStore.ui.pendingValidationRuleViewId;
+
+	useEffect(() => {
+		if (!pendingXpath || pendingViewId !== view.id) {
+			return;
+		}
+		setXpathDraft(pendingXpath);
+		setCommentDraft(pendingComment);
+		rootStore.ui.clearPendingValidationRule();
+	}, [pendingXpath, pendingComment, pendingViewId, view.id]);
 
 	const persist = (next: ValidationRuleRecord[]) => {
 		view.setValidationRules(next);
@@ -51,25 +63,25 @@ const ViewValidationRules: React.FC<{ view: IView }> = observer(({ view }) => {
 					>
 						<div style={{ width: "100%" }}>
 							<Input
-								value={rule.description}
+								value={rule.comment}
 								disabled={!canEdit}
 								placeholder={langtext("general.assetreference_filter_description_placeholder")}
 								onChange={(event) =>
 									persist(
 										updateValidationRule(rules, index, {
-											description: event.target.value,
+											comment: event.target.value,
 										})
 									)
 								}
 								style={{ marginBottom: 6 }}
 							/>
 							<Radio.Group
-								value={rule.polarity}
+								value={rule.type}
 								disabled={!canEdit}
 								onChange={(event) =>
 									persist(
 										updateValidationRule(rules, index, {
-											polarity: event.target.value,
+											type: event.target.value as ValidationRuleType,
 										})
 									)
 								}
@@ -90,19 +102,19 @@ const ViewValidationRules: React.FC<{ view: IView }> = observer(({ view }) => {
 			<Row gutter={8} style={{ marginTop: 8, marginBottom: 8 }}>
 				<Col span={24}>
 					<Input
-						value={descriptionDraft}
+						value={commentDraft}
 						disabled={!canEdit}
 						placeholder={langtext("general.assetreference_filter_description_placeholder")}
-						onChange={(event) => setDescriptionDraft(event.target.value)}
+						onChange={(event) => setCommentDraft(event.target.value)}
 					/>
 				</Col>
 			</Row>
 			<Row gutter={8} style={{ marginBottom: 8 }}>
 				<Col span={24}>
 					<Radio.Group
-						value={polarityDraft}
+						value={typeDraft}
 						disabled={!canEdit}
-						onChange={(event) => setPolarityDraft(event.target.value)}
+						onChange={(event) => setTypeDraft(event.target.value as ValidationRuleType)}
 					>
 						<Radio.Button value="positive">
 							{langtext("general.view_validation_positive")}
@@ -124,9 +136,9 @@ const ViewValidationRules: React.FC<{ view: IView }> = observer(({ view }) => {
 							if (!canEdit || !xpathDraft.trim()) {
 								return;
 							}
-							persist(addValidationRule(rules, xpathDraft, descriptionDraft, polarityDraft));
+							persist(addValidationRule(rules, xpathDraft, commentDraft, typeDraft));
 							setXpathDraft("");
-							setDescriptionDraft("");
+							setCommentDraft("");
 						}}
 					/>
 				</Col>
@@ -136,9 +148,9 @@ const ViewValidationRules: React.FC<{ view: IView }> = observer(({ view }) => {
 						icon={<PlusOutlined />}
 						disabled={!canEdit || xpathDraft.trim() === ""}
 						onClick={() => {
-							persist(addValidationRule(rules, xpathDraft, descriptionDraft, polarityDraft));
+							persist(addValidationRule(rules, xpathDraft, commentDraft, typeDraft));
 							setXpathDraft("");
-							setDescriptionDraft("");
+							setCommentDraft("");
 						}}
 					>
 						{langtext("general.add")}

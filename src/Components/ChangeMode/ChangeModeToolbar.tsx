@@ -218,16 +218,6 @@ const ChangeModeToolbar: React.FC = () => {
 					</Fragment>
 				)}
 
-				<Button.Group style={iconGroupGap}>
-					<Tooltip title={langtext("general.json_inspect")}>
-						<Button
-							icon={<CodeOutlined />}
-							onClick={() => setJsonInspectOpen(true)}
-							disabled={!canJsonInspect}
-						/>
-					</Tooltip>
-				</Button.Group>
-
 				<Tooltip title={langtext("general.activity_status_overview_title")}>
 					<Badge
 						className="change-mode-overview-badge"
@@ -249,6 +239,16 @@ const ChangeModeToolbar: React.FC = () => {
 						/>
 					</Badge>
 				</Tooltip>
+
+				<Button.Group style={iconGroupGap}>
+					<Tooltip title={langtext("general.json_inspect")}>
+						<Button
+							icon={<CodeOutlined />}
+							onClick={() => setJsonInspectOpen(true)}
+							disabled={!canJsonInspect}
+						/>
+					</Tooltip>
+				</Button.Group>
 			</Space>
 		</Fragment>
 	);

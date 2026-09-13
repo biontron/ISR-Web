@@ -99,18 +99,18 @@ const CommonLayout: React.FC<CommonLayoutProps> = observer(({ children }) => {
 					</Dropdown>
 
 					<ChangeModeToolbar />
+				</div>
 
+				<div style={{ display: "flex", alignItems: "center", gap: "20px" }}>
+					<ElementSearchField />
 					<select
+						className="common-layout-lang"
 						value={rootStore.i18n.lang}
 						onChange={handleLanguageChange}
 					>
 						<option value="de">de</option>
 						<option value="en">en</option>
 					</select>
-				</div>
-
-				<div style={{ display: "flex", alignItems: "center", gap: "20px" }}>
-					<ElementSearchField />
 					<Dropdown overlay={userMenu}>
 						<a
 							className="ant-dropdown-link"

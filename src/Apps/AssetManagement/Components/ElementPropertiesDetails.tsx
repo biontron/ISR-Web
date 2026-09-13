@@ -87,29 +87,18 @@ const ElementPropertiesDetails: React.FC<ElementPropertiesDetailsProps> = () => 
 				</>
 			)}
 
-			{isAssetLike && (
-				<>
+			{isAssetLike && activeElement && (
+				<section className="element-properties-section">
 					<Tooltip title={langtext("general.element_properties")}>
 						<Divider>{langtext("general.element_properties")}</Divider>
 					</Tooltip>
-
-					{activeElement && (
-						<>
-							<SchemaEditor
-								schemaName="ANY-DEFINITION"
-								pathPrefix=""
-								elementData={activeElement}
-								canEdit={canEdit}
-							/>
-							<SchemaEditor
-								schemaName="ANY-PROPERTIES"
-								pathPrefix="properties"
-								elementData={activeElement}
-								canEdit={canEdit}
-							/>
-						</>
-					)}
-				</>
+					<SchemaEditor
+						schemaName="ANY-PROPERTIES"
+						pathPrefix="properties"
+						elementData={activeElement}
+						canEdit={canEdit}
+					/>
+				</section>
 			)}
 
 			{isAssetLike && isTreeElement(activeElement) && (
@@ -131,6 +120,20 @@ const ElementPropertiesDetails: React.FC<ElementPropertiesDetailsProps> = () => 
 							canEdit={canEdit}
 						/>
 					</div>
+				</section>
+			)}
+
+			{activeElement && (
+				<section className="element-properties-section element-properties-section--definition">
+					<Tooltip title={langtext("general.element_definition")}>
+						<Divider>{langtext("general.element_definition")}</Divider>
+					</Tooltip>
+					<SchemaEditor
+						schemaName="ANY-DEFINITION"
+						pathPrefix=""
+						elementData={activeElement}
+						canEdit={canEdit}
+					/>
 				</section>
 			)}
 

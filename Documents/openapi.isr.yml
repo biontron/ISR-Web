@@ -1780,25 +1780,31 @@ components:
       allOf:
         - $ref: "#/components/schemas/SchemaDocumentList"
 
-    FilterruleType:
-      type: string
-
-    ValidationRuleType:
+    XPathRule:
       type: object
       required:
         - xpath
-        - description
-        - polarity
+        - comment
+        - type
       properties:
         xpath:
           type: string
-        description:
+        comment:
           type: string
-        polarity:
+        type:
           type: string
           enum:
+            - childselect
             - positive
             - negative
+
+    FilterruleType:
+      allOf:
+        - $ref: "#/components/schemas/XPathRule"
+
+    ValidationRuleType:
+      allOf:
+        - $ref: "#/components/schemas/XPathRule"
 
     GroupItem:
       required:

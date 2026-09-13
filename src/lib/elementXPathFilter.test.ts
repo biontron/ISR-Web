@@ -37,6 +37,9 @@ describe("elementXPathFilter", () => {
 	it("wertet relative XPath-Prädikate gegen <element> aus", () => {
 		const asset = device("A-1");
 		expect(elementMatchesXPath(asset as never, "definition/type='DEVICE'")).toBe(true);
+		expect(elementMatchesXPath(asset as never, 'equals(definition/baseType,"COMPONENT")')).toBe(
+			true
+		);
 		expect(elementMatchesXPath(asset as never, "definition/subType='PRINTER'")).toBe(false);
 		expect(elementMatchesXPath(asset as never, "definition/tags/tag='Client'")).toBe(true);
 		expect(elementMatchesXPath(asset as never, "starts-with(definition/name,'is-')")).toBe(true);

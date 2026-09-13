@@ -515,6 +515,25 @@ const SchemaEditorGroup: React.FC<SchemaEditorGroupProps> = ({
 		return renderChildItems(childPathPrefix, childPathPrefix);
 	};
 
+	if (schemaName === "ANY-DEFINITION" && schemaItemsGroupName === "definition") {
+		const groupBody = renderAnyDefinitionGroupChildren();
+		const extraDataEntries = findExtraPathsInScope(
+			elementData,
+			schemaDefinitionGroup.items,
+			childPathPrefix
+		);
+		const structuralMissingEntries = isGroupMissing
+			? [{ path, kind: "group" as const }]
+			: findStructuralMissingInScope(elementData, schemaDefinitionGroup.items, childPathPrefix);
+		return (
+			<>
+				{groupBody ? <div className={groupClassName}>{groupBody}</div> : null}
+				<SchemaEditorStructuralMissing entries={structuralMissingEntries} />
+				<SchemaEditorExtraData entries={extraDataEntries} />
+			</>
+		);
+	}
+
 	const groupTitle = (() => {
 		if (!titleTemplate) {
 			return groupLabel;

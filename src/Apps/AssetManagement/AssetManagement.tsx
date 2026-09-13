@@ -20,6 +20,7 @@ import { ElementPropertiesConnections } from "./Components/ElementPropertiesConn
 import { ElementPropertiesControls } from "./Components/ElementPropertiesControls";
 import { BreadCrumbs } from "./Components/BreadCrumbs";
 import { ElementTree } from "./Components/ElementTree.Component";
+import ViewPickerEmpty from "./Components/ViewPickerEmpty";
 import "../../Styles/AssetManagement.css";
 import { useLangtext } from "../../lib/common";
 import { buildElementStatusClass } from "../../lib/elementStatusStyle";
@@ -106,6 +107,22 @@ const AssetManagement = observer(() => {
 		"element-properties-frame",
 		!isReadOnly && activeElement ? activeElement.status : undefined
 	);
+
+	const requestedPropertiesTab = rootStore.ui.elementPropertiesTab;
+	const hasAssignmentsTab =
+		activeElement?.class === "View" ||
+		activeElement?.class === "Group" ||
+		activeElement?.class === "Asset";
+	const hasAssetTabs = activeElement?.class === "Asset";
+	let propertiesTab = requestedPropertiesTab || "1";
+	if (requestedPropertiesTab === "assignments" && !hasAssignmentsTab) {
+		propertiesTab = "1";
+	} else if (
+		(requestedPropertiesTab === "2" || requestedPropertiesTab === "3") &&
+		!hasAssetTabs
+	) {
+		propertiesTab = "1";
+	}
 
 	return (
 		<Layout style={{ height: "100%" }}>
@@ -198,28 +215,35 @@ const AssetManagement = observer(() => {
 					<div className="area-header" onClick={() => applyPreset("properties")}>
 						<span>{langtext("general.screenmode_properties_title")}</span>
 					</div>
-					<Tabs defaultActiveKey="1">
+					{activeElement ? (
+					<Tabs
+						activeKey={propertiesTab}
+						onChange={(key) => rootStore.ui.setElementPropertiesTab(key)}
+					>
 						<TabPane tab={langtext("general.details_tab_details")} key="1">
-							{activeElement && <ElementPropertiesDetails />}
+							<ElementPropertiesDetails />
 						</TabPane>
-						{(activeElement?.class === "View" ||
-							activeElement?.class === "Group" ||
-							activeElement?.class === "Asset") && (
+						{(activeElement.class === "View" ||
+							activeElement.class === "Group" ||
+							activeElement.class === "Asset") && (
 							<TabPane tab={langtext("general.details_tab_assignments")} key="assignments">
-								{activeElement && <ElementPropertiesAssignments />}
+								<ElementPropertiesAssignments />
 							</TabPane>
 						)}
-						{activeElement?.class === "Asset" && (
+						{activeElement.class === "Asset" && (
 							<TabPane tab={langtext("general.details_tab_connections")} key="2">
-								{activeElement && <ElementPropertiesConnections />}
+								<ElementPropertiesConnections />
 							</TabPane>
 						)}
-						{activeElement?.class === "Asset" && (
+						{activeElement.class === "Asset" && (
 							<TabPane tab={langtext("general.details_tab_actionboard")} key="3">
-								{activeElement && <ElementPropertiesControls />}
+								<ElementPropertiesControls />
 							</TabPane>
 						)}
 					</Tabs>
+					) : (
+						<ViewPickerEmpty />
+					)}
 				</Layout>
 
 				{/* RIGHT - GRAPH */}

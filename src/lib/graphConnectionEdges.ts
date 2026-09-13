@@ -144,10 +144,12 @@ export function collectConnectionGraphEdgesFromTree(
 		}
 	}
 
+	const seenNodes = new Set<string>();
 	const walk = (node: TreeElement, remainingDepth: number) => {
-		if (!node?.definition) {
+		if (!node?.definition || seenNodes.has(node.id)) {
 			return;
 		}
+		seenNodes.add(node.id);
 		if (
 			node.class === "Group" ||
 			node.class === "Asset" ||
@@ -230,21 +232,29 @@ export function collectVisibleAssetIdsFromTree(
 	depth: number
 ): Set<string> {
 	const ids = new Set<string>();
-	if (!node) {
-		return ids;
-	}
-	if (node.class === "Asset" || node.class === "AssetDetails") {
-		ids.add(node.id);
-	}
-	if (depth > 0 && typeof node.children === "function") {
-		for (const child of node.children()) {
-			if (child) {
-				collectVisibleAssetIdsFromTree(child as typeof node, depth - 1).forEach((id) => {
-					ids.add(id);
-				});
+	const seen = new Set<string>();
+
+	function walk(
+		current: { id: string; class?: string; children?: () => Array<{ id: string; class?: string; children?: () => unknown[] } | null> },
+		remaining: number
+	) {
+		if (!current || seen.has(current.id)) {
+			return;
+		}
+		seen.add(current.id);
+		if (current.class === "Asset" || current.class === "AssetDetails") {
+			ids.add(current.id);
+		}
+		if (remaining > 0 && typeof current.children === "function") {
+			for (const child of current.children()) {
+				if (child) {
+					walk(child as typeof current, remaining - 1);
+				}
 			}
 		}
 	}
+
+	walk(node, depth);
 	return ids;
 }
 

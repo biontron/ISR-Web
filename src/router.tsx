@@ -34,12 +34,12 @@ const router = createBrowserRouter([
 	},
 	{
 		path: "/:domain/",
-		loader: async ({ params }) => {
+		loader: ({ params }) => {
 			const domain = params.domain;
 			if (domain) {
 				authStore.setDomain(domain);
+				void rootStore.configSchemas.loadAll(domain);
 			}
-			await rootStore.configSchemas.loadAll(domain);
 			return null;
 		},
 		element: (
@@ -73,13 +73,14 @@ const router = createBrowserRouter([
 			{
 				path: "/:domain/am/",
 				element: <AssetManagement />,
-				loader: async ({ params }) => {
+				loader: ({ params }) => {
 					const domain = params.domain;
-					await rootStore.configSchemas.loadByBaseType("DOCKPART", domain);
-					await rootStore.views.load();
-					await rootStore.assets.loadAssets();
-					await rootStore.connections.load();
-
+					if (domain) {
+						void rootStore.configSchemas.loadByBaseType("DOCKPART", domain);
+					}
+					void rootStore.views.load();
+					void rootStore.assets.loadAssets();
+					void rootStore.connections.load();
 					return null;
 				},
 				children: [
@@ -87,9 +88,11 @@ const router = createBrowserRouter([
 						path: "/:domain/am/:view",
 						shouldRevalidate: ({ currentParams, nextParams }) =>
 							currentParams.view !== nextParams.view,
-						loader: async ({ params }) => {
+						loader: ({ params }) => {
 							rootStore.ui.setActiveView(params.view as any);
-							await rootStore.groups.load(params.view!);
+							if (params.view) {
+								void rootStore.groups.load(params.view);
+							}
 							rootStore.ui.setActiveElementById(params.view!);
 							return null;
 						},

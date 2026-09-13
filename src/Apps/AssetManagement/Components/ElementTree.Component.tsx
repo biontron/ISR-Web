@@ -2,7 +2,7 @@
 # Infrastructure Repository (ISR) / Infrastruktur Repository (ISR)
 # SPDX-License-Identifier: GPL-2.0 
 */
-import { Select, Button, Col, Row, Tree, List } from "antd";
+import { Select, Button, Col, Row, Space, Tree, List } from "antd";
 import { observer } from "mobx-react";
 import { resolveIdentifier } from "mobx-state-tree";
 import { useNavigate } from "react-router-dom";
@@ -32,6 +32,28 @@ import {
 	treeNodeSegmentClassName,
 } from "../../../lib/treeNodeDisplay";
 import { collectUnlinkedElementsForView, UnlinkedTreeElement } from "../../../lib/treeUnlinkedAssets";
+import {
+	ancestorIdsFromTreeKey,
+	buildElementTreeNodes,
+	collectTreeKeysForElementId,
+	resolveTreeParentSpec,
+	setTreeNodeChildren,
+	treeNodeElementId,
+} from "../../../lib/elementTreeNodes";
+import { filterRuleExpression } from "../../../lib/filterRuleNormalize";
+
+function viewIdFromSelectValue(val: unknown): string | undefined {
+	if (typeof val === "string" && val.trim() !== "") {
+		return val;
+	}
+	if (val && typeof val === "object" && "value" in val) {
+		const value = (val as { value?: unknown }).value;
+		if (typeof value === "string" && value.trim() !== "") {
+			return value;
+		}
+	}
+	return undefined;
+}
 
 function navigateToElement(navigate: ReturnType<typeof useNavigate>, elementId: string) {
 	navigate(`/${authStore.getDomain()}/am/${rootStore.ui.activeView?.id}/element/${elementId}`);
@@ -41,6 +63,7 @@ function elementToTreeNode(element: UnlinkedTreeElement): ITreeNode {
 	const definition = element.definition;
 	return {
 		key: element.id,
+		elementId: element.id,
 		class: element.class,
 		title: definition?.name,
 		storeType: definition?.storeType,
@@ -86,14 +109,15 @@ function renderTreeNodeTitle(nodeData: ITreeNode, marks?: ElementMarkFlags) {
 		{
 			key: "6",
 			label: "ID",
-			children: <span className="element-info-id-value">{nodeData.key}</span>,
+			children: <span className="element-info-id-value">{treeNodeElementId(nodeData)}</span>,
 		},
 		{ key: "7", label: "Status", children: nodeData.status },
 	];
 
 	const segment = resolveTreeNodeSegment(definition, nodeData.class);
-	const resolvedMarks = marks ?? rootStore.ui.elementMarks.get(nodeData.key);
-	const treeNodeClasses = `${treeNodeSegmentClassName(segment)} ${nodeData?.status === "new" || nodeData?.status === "edit" || nodeData?.status === "changed" || nodeData?.status === "invalid" ? "EditMode" : ""} ${rootStore.ui.activeElement?.id === nodeData?.key ? "ActiveElement" : ""} ${resolvedMarks?.searchMatch ? "SearchMatch" : ""}`;
+	const elementId = treeNodeElementId(nodeData);
+	const resolvedMarks = marks ?? rootStore.ui.elementMarks.get(elementId);
+	const treeNodeClasses = `${treeNodeSegmentClassName(segment)} ${nodeData?.status === "new" || nodeData?.status === "edit" || nodeData?.status === "changed" || nodeData?.status === "invalid" ? "EditMode" : ""} ${rootStore.ui.activeElement?.id === elementId ? "ActiveElement" : ""} ${resolvedMarks?.searchMatch ? "SearchMatch" : ""}`;
 
 	return (
 		<span className={`element-tree-node-title ${treeNodeClasses}`}>&#160;
@@ -124,47 +148,136 @@ function renderTreeNodeTitle(nodeData: ITreeNode, marks?: ElementMarkFlags) {
 }
 
 const ElementHierarchyTree = observer(function ElementHierarchyTree() {
-	const treeData = rootStore.ui.activeView?.childrenAsTreeNodes();
-	return <ElementHierarchyTreeView treeData={treeData} />;
+	const view = rootStore.ui.activeView;
+	const viewId = view?.id;
+	const filterSig = view
+		? Array.from(view.filterRules ?? [])
+				.map((rule) => filterRuleExpression(rule))
+				.join("|")
+		: "";
+	const dataEpoch = `${viewId ?? ""}:${rootStore.groups.groups.length}:${rootStore.assets.assets.length}:${filterSig}`;
+	const [treeData, setTreeData] = React.useState<ITreeNode[]>([]);
+	const [building, setBuilding] = React.useState(false);
+
+	React.useEffect(() => {
+		if (!view) {
+			setTreeData([]);
+			setBuilding(false);
+			return;
+		}
+		setBuilding(true);
+		setTreeData([]);
+		const timer = window.setTimeout(() => {
+			setTreeData(buildElementTreeNodes(rootStore, view));
+			setBuilding(false);
+		}, 0);
+		return () => window.clearTimeout(timer);
+	}, [dataEpoch, view]);
+
+	return (
+		<ElementHierarchyTreeView
+			treeData={treeData}
+			building={building}
+			viewId={viewId}
+			activeElementId={rootStore.ui.activeElement?.id}
+			onTreeDataChange={setTreeData}
+		/>
+	);
 });
 
 const ElementHierarchyTreeView = observer(function ElementHierarchyTreeView({
 	treeData,
+	building,
+	viewId,
+	activeElementId,
+	onTreeDataChange,
 }: {
-	treeData: ITreeNode[] | undefined;
+	treeData: ITreeNode[];
+	building: boolean;
+	viewId?: string;
+	activeElementId?: string;
+	onTreeDataChange: React.Dispatch<React.SetStateAction<ITreeNode[]>>;
 }) {
 	const navigate = useNavigate();
-	const marks = rootStore.ui.elementMarks;
-	const selectedKeys = rootStore.ui.activeElement?.id ? [rootStore.ui.activeElement.id] : [];
+	const marks = treeData.length > 0 ? rootStore.ui.elementMarks : undefined;
+	const selectedKeys = activeElementId ? collectTreeKeysForElementId(treeData, activeElementId) : [];
+	const [expandedKeys, setExpandedKeys] = React.useState<React.Key[]>([]);
 
-	function onSelect(nextKeys: React.Key[]) {
+	React.useEffect(() => {
+		setExpandedKeys([]);
+	}, [viewId]);
+
+	function onSelect(nextKeys: React.Key[], info: { node: ITreeNode }) {
 		if (!nextKeys?.length) {
 			return;
 		}
-		const elementId = String(nextKeys[0]);
+		const elementId = treeNodeElementId(info.node);
 		if (resolveIdentifier(GroupModel, rootStore, elementId) || resolveIdentifier(AssetModel, rootStore, elementId)) {
 			navigateToElement(navigate, elementId);
 		}
 	}
 
+	function loadChildren(node: ITreeNode) {
+		return new Promise<void>((resolve) => {
+			if (node.children?.length || node.isLeaf) {
+				resolve();
+				return;
+			}
+			const elementId = treeNodeElementId(node);
+			const parent = resolveTreeParentSpec(rootStore, elementId);
+			if (!parent) {
+				resolve();
+				return;
+			}
+			const ancestorIds = ancestorIdsFromTreeKey(String(node.key), viewId);
+			ancestorIds.add(elementId);
+			const children = buildElementTreeNodes(rootStore, parent, {
+				parentKey: String(node.key),
+				ancestorIds,
+			});
+			onTreeDataChange((current) => setTreeNodeChildren(current, String(node.key), children));
+			resolve();
+		});
+	}
+
+	if (building) {
+		return <div className="element-tree-loading">…</div>;
+	}
+
 	return (
 		<Tree
-			autoExpandParent
 			checkable={false}
 			selectable
-			defaultExpandAll
 			showLine
 			showIcon
 			treeData={treeData}
+			expandedKeys={expandedKeys}
+			onExpand={(keys) => setExpandedKeys(keys)}
+			loadData={loadChildren}
 			onSelect={onSelect}
-			titleRender={(node) => renderTreeNodeTitle(node, marks.get(String(node.key)))}
+			titleRender={(node) =>
+				renderTreeNodeTitle(node, marks?.get(treeNodeElementId(node)))
+			}
 			selectedKeys={selectedKeys}
 		/>
 	);
 });
 
 const ElementUnlinkedList = observer(function ElementUnlinkedList() {
-	const unlinkedElements = collectUnlinkedElementsForView(rootStore, rootStore.ui.activeView?.id);
+	const viewId = rootStore.ui.activeView?.id;
+	const [unlinkedElements, setUnlinkedElements] = React.useState<UnlinkedTreeElement[]>([]);
+
+	React.useEffect(() => {
+		if (!viewId) {
+			setUnlinkedElements([]);
+			return;
+		}
+		const timer = window.setTimeout(() => {
+			setUnlinkedElements(collectUnlinkedElementsForView(rootStore, viewId));
+		}, 0);
+		return () => window.clearTimeout(timer);
+	}, [viewId, rootStore.groups.groups.length, rootStore.assets.assets.length]);
+
 	return <ElementUnlinkedListView unlinkedElements={unlinkedElements} />;
 });
 
@@ -207,6 +320,7 @@ type Props = {};
 export const ElementTree = observer((props: Props) => {
 	const { activeElement } = rootStore.ui;
 	const navigate = useNavigate();
+	const langtext = useLangtext();
 	const viewClasses = `${activeElement?.status === "new" || activeElement?.status === "edit" || activeElement?.status === "changed" || activeElement?.status === "invalid" ? "EditMode" : ""} ${rootStore.ui.activeView?.id === activeElement?.id ? "ActiveElement" : ""}`;
 
 	return (
@@ -214,34 +328,44 @@ export const ElementTree = observer((props: Props) => {
 			<div className="element-tree__scroll">
 			<Row gutter={[16, 16]}>
 				<Col span={24}>
-					<ElementStatusDot status={rootStore.ui.activeView?.status} />
-					<Select
-						labelInValue
-						defaultValue={{ value: rootStore.ui.activeView?.id }}
-						value={{ value: rootStore.ui.activeView?.id }}
-						style={{ width: 300 }}
-						className={viewClasses}
-						onChange={(val) => {
-							navigate(`/${authStore.getDomain()}/am/${val.value}`);
-						}}
-						options={rootStore.views.views.map((view: IView) => {
-							return {
-								value: view.id,
-								label: (
-									<span className="element-tree-view-option">
-										<ElementStatusDot status={view.status} />
-										{view.definition.name}
-									</span>
-								),
-							};
-						})}
-					/>
-					<Button
-						onClick={() => {
-							navigate(`/${authStore.getDomain()}/am/${rootStore.ui.activeView?.id}`);
-						}}
-						icon={<VerticalAlignBottomOutlined />}
-						shape="circle"/>
+					<div className="element-tree-view-select-row">
+						<ElementStatusDot status={rootStore.ui.activeView?.status} />
+						<Space.Compact className="element-tree-view-select-group">
+							<Select
+								placeholder={langtext("general.view_picker_title")}
+								value={rootStore.ui.activeView?.id}
+								className={`element-tree-view-select ${viewClasses}`}
+								onChange={(viewId) => {
+									const id = viewIdFromSelectValue(viewId);
+									if (!id) {
+										return;
+									}
+									navigate(`/${authStore.getDomain()}/am/${id}`);
+								}}
+								options={rootStore.views.views.map((view: IView) => {
+									return {
+										value: view.id,
+										label: (
+											<span className="element-tree-view-option">
+												<ElementStatusDot status={view.status} />
+												{view.definition.name}
+											</span>
+										),
+									};
+								})}
+							/>
+							<Button
+								onClick={() => {
+									if (!rootStore.ui.activeView?.id) {
+										return;
+									}
+									navigate(`/${authStore.getDomain()}/am/${rootStore.ui.activeView.id}`);
+								}}
+								disabled={!rootStore.ui.activeView?.id}
+								icon={<VerticalAlignBottomOutlined />}
+							/>
+						</Space.Compact>
+					</div>
 				</Col>
 				<Col span={24}>
 					<ElementHierarchyTree />

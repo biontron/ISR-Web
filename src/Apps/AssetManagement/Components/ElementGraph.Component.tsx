@@ -206,13 +206,15 @@ const GraphCanvas = observer(
 		const graphContainer = useRef<SVGSVGElement>(null);
 		const navigate = useNavigate();
 		const [connectionDialogId, setConnectionDialogId] = useState<string | null>(null);
-		const elementMarks = rootStore.ui.elementMarks;
-
+		const assetCount = rootStore.assets.assets.length;
+		const groupCount = rootStore.groups.groups.length;
+		const connectionCount = rootStore.connections.connections.length;
 		const renderGraph = useCallback(() => {
 			const view = rootStore.ui.activeView;
 			if (!view || !element || !isTreeElement(element) || !graphContainer.current) {
 				return;
 			}
+			void rootStore.ui.elementMarks;
 
 			const graphRoot = element as TreeElement;
 			const graphConfig = resolveGraphConfigForView(view.settings);
@@ -260,11 +262,27 @@ const GraphCanvas = observer(
 			if (inner) {
 				inner.setAttribute("transform", `translate(0,0) scale(${zoomLevel})`);
 			}
-		}, [element, layout.rankdir, layout.ranksep, layout.nodesep, buildGraph, navigate, zoomLevel, postRender, resolveCanvasSize, elementMarks]);
+		}, [
+			element,
+			layout.rankdir,
+			layout.ranksep,
+			layout.nodesep,
+			buildGraph,
+			navigate,
+			zoomLevel,
+			postRender,
+			resolveCanvasSize,
+			assetCount,
+			groupCount,
+			connectionCount,
+		]);
 
 		useEffect(() => {
-			renderGraph();
+			const timer = window.setTimeout(() => {
+				renderGraph();
+			}, 0);
 			return () => {
+				window.clearTimeout(timer);
 				if (graphContainer.current) {
 					select(graphContainer.current).selectAll("g.node, g.cluster, g.edgePath").on("click", null);
 				}
@@ -358,10 +376,12 @@ export const ElementGraphMap = observer(
 			layout={{ rankdir: "TB", ranksep: 20, nodesep: 20 }}
 			buildGraph={(g, root, config) => {
 				const flatNodes: TreeElement[] = [];
+				const seen = new Set<string>();
 				const walk = (node: TreeElement, depth: number) => {
-					if (!node?.definition) {
+					if (!node?.definition || seen.has(node.id)) {
 						return;
 					}
+					seen.add(node.id);
 					flatNodes.push(node);
 					if (depth <= 0 || typeof node.children !== "function") {
 						return;

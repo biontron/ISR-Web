@@ -105,6 +105,7 @@ export const AssetModel = types.compose(
 
 				return childrenAssets.map((element: IAsset) => ({
 					key: element.id,
+					elementId: element.id,
 					class: element.class,
 					title: element.definition?.name,
 					storeType: element.definition?.storeType,

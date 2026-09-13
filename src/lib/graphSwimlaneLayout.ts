@@ -22,10 +22,13 @@ export function collectSwimlaneComponentsFromTree(
 ): TreeElement[] {
 	const components: TreeElement[] = [];
 
+	const seen = new Set<string>();
+
 	function walk(node: TreeElement, depth: number) {
-		if (!node?.definition) {
+		if (!node?.definition || seen.has(node.id)) {
 			return;
 		}
+		seen.add(node.id);
 		if (isSwimlaneComponent(node)) {
 			components.push(node);
 		}
@@ -50,10 +53,13 @@ export function collectSwimlaneComponents(
 ): TreeElement[] {
 	const components: TreeElement[] = [];
 
+	const seen = new Set<string>();
+
 	function walk(node: TreeElement, depth: number) {
-		if (!node?.definition || !g.hasNode(node.id)) {
+		if (!node?.definition || !g.hasNode(node.id) || seen.has(node.id)) {
 			return;
 		}
+		seen.add(node.id);
 		if (isSwimlaneComponent(node)) {
 			components.push(node);
 		}
