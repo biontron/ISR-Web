@@ -307,11 +307,30 @@ export function addTreeNodesToGraph(
 	}
 }
 
+function ensureBridgeStubNode(g: dagreD3.graphlib.Graph, nodeId: string, label: string) {
+	if (g.hasNode(nodeId)) {
+		return;
+	}
+	g.setNode(nodeId, {
+		labelType: "html",
+		label: `<div class="graph-bridge-stub">${label}</div>`,
+		class: "graph-bridge-stub-node",
+		rx: 8,
+		ry: 8,
+	});
+}
+
 export function addConnectionEdgesToGraph(
 	g: dagreD3.graphlib.Graph,
 	edges: ConnectionGraphEdge[]
 ) {
 	for (const edge of edges) {
+		if (edge.fromNodeId.startsWith("bridge-stub:")) {
+			ensureBridgeStubNode(g, edge.fromNodeId, edge.label || "Brücke");
+		}
+		if (edge.toNodeId.startsWith("bridge-stub:")) {
+			ensureBridgeStubNode(g, edge.toNodeId, edge.label || "Brücke");
+		}
 		const fromNode = g.node(edge.fromNodeId);
 		const toNode = g.node(edge.toNodeId);
 		if (!g.hasNode(edge.fromNodeId) || !g.hasNode(edge.toNodeId) || !fromNode || !toNode) {

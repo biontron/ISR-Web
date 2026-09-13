@@ -159,4 +159,47 @@ describe("elementXPathFilter", () => {
 			null
 		);
 	});
+
+	it("matcht Regeln ohne Environment-Ref auch bei gestempelter environmentId", () => {
+		const root = {
+			groups: { groups: [] },
+			assets: {
+				assets: [
+					{
+						...device("a-agl", { name: "AGLVM01.AGL.DE" }),
+						environmentId: "01e93fa0-1c74-44b1-bafd-6d8a988fea01",
+						ownerIdRef: null,
+					},
+				],
+			},
+		} as any;
+		const rules = [
+			{ xpath: "matches(definition/name, 'AGLVM[A-Z0-9]{2,4}.AGL.DE')", description: "" },
+		];
+		expect(collectFilterMatchedElements(root, "view1", rules).map((item) => item.id)).toEqual([
+			"a-agl",
+		]);
+	});
+
+	it("begrenzt Filterregeln auf die genannten Environments", () => {
+		const root = {
+			groups: { groups: [] },
+			assets: {
+				assets: [
+					{ ...device("a-home"), environmentId: "home", ownerIdRef: null },
+					{ ...device("a-office"), environmentId: "office", ownerIdRef: null },
+				],
+			},
+		} as any;
+		const rules = [
+			{
+				xpath: "definition/subType='DESKTOP'",
+				description: "Desktops",
+				environments: [{ ref: "home" }],
+			},
+		];
+		expect(collectFilterMatchedElements(root, "view1", rules).map((item) => item.id)).toEqual([
+			"a-home",
+		]);
+	});
 });

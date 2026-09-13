@@ -17,6 +17,7 @@ type TreeAsset = {
 	id: string;
 	class?: string;
 	status?: string;
+	environmentId?: string | null;
 	ownerIdRef?: string | null;
 	definition?: TreeDefinition;
 };
@@ -151,6 +152,17 @@ function resolveAssetFromRef(
 	const assetId = resolveAssetIdFromRef(ref) || fallbackId;
 	if (!assetId) {
 		return undefined;
+	}
+	const environmentRef =
+		ref && typeof ref === "object" && "environmentRef" in ref
+			? String((ref as { environmentRef?: string }).environmentRef ?? "").trim()
+			: "";
+	if (environmentRef) {
+		return (
+			root.assets.assets.find(
+				(asset) => asset.id === assetId && String(asset.environmentId ?? "") === environmentRef
+			) ?? root.assets.assets.find((asset) => asset.id === assetId)
+		);
 	}
 	return root.assets.assets.find((asset) => asset.id === assetId);
 }

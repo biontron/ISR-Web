@@ -1,7 +1,37 @@
+export type FilterRuleEnvironmentRef = {
+	ref: string;
+};
+
 export type FilterRuleRecord = {
 	xpath: string;
 	description: string;
+	environments: FilterRuleEnvironmentRef[];
 };
+
+function readFilterRuleEnvironments(rule: unknown): FilterRuleEnvironmentRef[] {
+	if (!rule || typeof rule !== "object") {
+		return [];
+	}
+	const raw = (rule as { environments?: unknown }).environments;
+	if (!Array.isArray(raw)) {
+		return [];
+	}
+	const seen = new Set<string>();
+	const refs: FilterRuleEnvironmentRef[] = [];
+	for (const entry of raw) {
+		const ref = typeof entry === "string"
+			? entry.trim()
+			: typeof (entry as { ref?: unknown })?.ref === "string"
+				? String((entry as { ref: string }).ref).trim()
+				: "";
+		if (!ref || seen.has(ref)) {
+			continue;
+		}
+		seen.add(ref);
+		refs.push({ ref });
+	}
+	return refs;
+}
 
 export function filterRuleExpression(rule: unknown): string {
 	if (typeof rule === "string") {
@@ -32,6 +62,7 @@ export function toFilterRuleRecord(rule: unknown, description?: string): FilterR
 	return {
 		xpath: typeof rule === "string" ? rule.trim() : filterRuleExpression(rule),
 		description: description !== undefined ? description : filterRuleDescription(rule),
+		environments: readFilterRuleEnvironments(rule),
 	};
 }
 

@@ -5,11 +5,11 @@
 import { Instance, applySnapshot, flow, types, getRoot } from "mobx-state-tree";
 import { BaseStore } from "./Base.Store";
 import { IRootStore } from "./Root.Store";
-import { ConnectionStore } from "./Connection.Store";
 import { ActiveElement } from "../Interfaces/Element";
 import { AssetModel, IAsset } from "./Models/Asset.Model";
-import { IConfig } from "./Models/Config.Model";
 import authStore from "./Auth.Store";
+import { stampEnvironmentId } from "../lib/environmentIdentity";
+import { resolvePrimaryEnvironmentRef, resolveViewEnvironmentRefs } from "../lib/viewEnvironments";
 import { AssetDetailsModel } from "./Models/AssetDetails.Model";
 import { generateResourceID } from "../lib/common";
 import api from "../lib/api";
@@ -43,7 +43,6 @@ export const AssetStore = types.compose("Asset", BaseStore, types.model({
 	// Add a save action
 	const store = flow(function* saveData(viewID: string, assetID: string) {
 		const root = getRoot(self) as any;
-		const config = root.config as IConfig;
 
 		if (viewID === undefined) {
 			// nothing to do
@@ -51,8 +50,9 @@ export const AssetStore = types.compose("Asset", BaseStore, types.model({
 			try {
 				// Replace with your save logic (e.g., sending data to a server)
 				const data = self.assets.find(asset => asset.id === assetID);
+				const env = data?.environmentId || resolvePrimaryEnvironmentRef(root.ui.activeView);
 				const isCreate = isNewElementStatus(data?.status, data?.statusBeforeInvalid);
-				const url = `/${authStore.getDomain()}/environments/${config.environment}/assets${
+				const url = `/${authStore.getDomain()}/environments/${env}/assets${
 					isCreate ? "" : "/" + assetID
 				}`;
 
@@ -80,6 +80,50 @@ export const AssetStore = types.compose("Asset", BaseStore, types.model({
 	/**
 	 * Loader for a single container content, types as any because of cyclic reference
 	 */
+	const loadAssetsForEnvironments = flow(function* loadAssetsForEnvironments(
+		environmentIds: string[]
+	) {
+		const domain = authStore.getDomain();
+		if (!domain) {
+			return;
+		}
+		if (environmentIds.length === 0) {
+			self.assets.clear();
+			return;
+		}
+
+		const merged: unknown[] = [];
+		const seen = new Set<string>();
+		for (const environmentId of environmentIds) {
+			const jsonData = yield api.getAssets(domain, environmentId);
+			const { items } = normalizeRestArray(jsonData);
+			for (const item of items) {
+				if (!item || typeof item !== "object") {
+					continue;
+				}
+				const stamped = stampEnvironmentId(item as Record<string, unknown>, environmentId);
+				const id = String(stamped.id ?? "");
+				if (!id || seen.has(id)) {
+					continue;
+				}
+				seen.add(id);
+				merged.push(stamped);
+			}
+		}
+
+		const restUrlIds = { env: environmentIds[0] };
+		const report = enrichRestLoadReport(
+			loadRestArrayIntoStore(self.assets, AssetModel, merged, "Asset", {
+				domain,
+				restUrlIds,
+			}),
+			"Asset",
+			domain,
+			restUrlIds
+		);
+		publishRestLoadReport(report);
+	});
+
 	const loadAssets = flow(function* loadContent() {
 		if (self.loading) {
 			return;
@@ -87,27 +131,15 @@ export const AssetStore = types.compose("Asset", BaseStore, types.model({
 
 		self.loading = true;
 		const root = getRoot(self) as any;
-		const config = root.config as IConfig;
 		const domain = authStore.getDomain();
+		const environmentIds = resolveViewEnvironmentRefs(root.ui.activeView);
 
-		const restUrlIds = { env: config.environment };
 		try {
 			if (!domain) {
 				return;
 			}
 
-			const jsonData = yield api.getAssets(domain, config.environment);
-			const { items } = normalizeRestArray(jsonData);
-			const report = enrichRestLoadReport(
-				loadRestArrayIntoStore(self.assets, AssetModel, items, "Asset", {
-					domain,
-					restUrlIds,
-				}),
-				"Asset",
-				domain,
-				restUrlIds
-			);
-			publishRestLoadReport(report);
+			yield loadAssetsForEnvironments(environmentIds);
 
 			const viewId = root.ui.activeView?.id;
 			if (viewId) {
@@ -118,7 +150,10 @@ export const AssetStore = types.compose("Asset", BaseStore, types.model({
 		} catch (error) {
 			if (domain) {
 				publishRestLoadReport(
-					createRestLoadFailureReport("Asset", error, { domain, restUrlIds })
+					createRestLoadFailureReport("Asset", error, {
+						domain,
+						restUrlIds: { env: environmentIds[0] },
+					})
 				);
 			}
 		} finally {
@@ -131,8 +166,6 @@ export const AssetStore = types.compose("Asset", BaseStore, types.model({
 	 */
 	const loadAssetDetails = flow(function* loadAssetDetails() {
 		// self.loading = true;
-		const root = getRoot(self) as IRootStore;
-		const config = root.config as IConfig;
 		/*
 		const url = `${authStore.getApiRoot()}/${authStore.getDomain()}/environments/${config.environment}-list`;
 		const idList = JSON.stringify(rootStore.ui.activeGroup?.assetIds);
@@ -162,7 +195,7 @@ export const AssetStore = types.compose("Asset", BaseStore, types.model({
 		// self.loading = false;
 	});
 
-	function create(schemaId: string, parent: ActiveElement) {
+	function create(schemaId: string, parent: ActiveElement, environmentId?: string) {
 		const id = generateResourceID("Asset");
 		const root = getRoot(self) as IRootStore;
 		const schema =
@@ -175,6 +208,7 @@ export const AssetStore = types.compose("Asset", BaseStore, types.model({
 
 		const newAsset = AssetModel.create({
 			id: id,
+			environmentId: environmentId || resolvePrimaryEnvironmentRef(root.ui.activeView),
 			definition: {
 				storeType: definitionTypes.storeType,
 				baseType: definitionTypes.baseType,
@@ -214,11 +248,11 @@ export const AssetStore = types.compose("Asset", BaseStore, types.model({
 
 	const remove = flow(function* removeAsset(assetId: string) {
 		const root = getRoot(self) as any;
-		const config = root.config as IConfig;
 
 		try {
 			const asset = root.assets.assets.find((asset: IAsset) => asset.id === assetId);
-			const url = `/${authStore.getDomain()}/environments/${config.environment}/assets/${assetId}`;
+			const env = asset?.environmentId || resolvePrimaryEnvironmentRef(root.ui.activeView);
+			const url = `/${authStore.getDomain()}/environments/${env}/assets/${assetId}`;
 
 			const response = yield api.delete(url);
 
@@ -247,6 +281,7 @@ export const AssetStore = types.compose("Asset", BaseStore, types.model({
 	return {
 		loadAssetDetails,
 		loadAssets,
+		loadAssetsForEnvironments,
 		findAssetByDockpartId,
 		create,
 		store,

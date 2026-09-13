@@ -6,6 +6,8 @@ import {
 	resolveElementKindDisplay,
 	resolveElementTypeDisplay,
 } from "./elementDefinitionTypes";
+import { environmentDisplayName } from "../Stores/Models/Environment.Model";
+import { readEnvironmentId } from "./environmentIdentity";
 
 export type TreeNodeInfoRow = {
 	label: string;
@@ -38,14 +40,18 @@ export function buildTreeNodeInfoRows(
 			storeType: nodeData.storeType,
 		} as ElementDefinitionTypeFields);
 
+	const environmentId = readEnvironmentId(
+		root.assets.assets.find((asset) => asset.id === (nodeData.elementId ?? nodeData.key))
+	);
+	const environment = environmentId ? root.environments.findById(environmentId) : undefined;
+
 	return [
-		{ label: "storeType", value: resolvedDefinition?.storeType ?? "—" },
+		{ label: "Umgebung", value: environment ? environmentDisplayName(environment) : environmentId || "—" },
 		{
-			label: "baseType",
-			value: String(resolveElementKindDisplay(resolvedDefinition, nodeData.class) || "—"),
+			label: "Type",
+			value: String(resolveElementKindDisplay(resolvedDefinition, nodeData.class) || resolvedDefinition?.baseType || "—"),
 		},
-		{ label: "Typ", value: resolveElementTypeDisplay(resolvedDefinition, schemas) || "—" },
-		{ label: "Subtyp", value: resolvedDefinition?.subType ?? "—" },
+		{ label: "Subtype", value: resolvedDefinition?.type ?? "—" },
 		{ label: "Name", value: String(nodeData.title ?? "—") },
 		{ label: "Label", value: String(nodeData.label ?? "—") },
 		{ label: "Descripton", value: String(nodeData.description ?? "—") },

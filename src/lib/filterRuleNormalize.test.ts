@@ -16,6 +16,7 @@ describe("filterRuleNormalize", () => {
 		).toEqual({
 			xpath: "match(definition/name, 'AGLVM')",
 			description: "Virtuelle Maschinen",
+			environments: [],
 		});
 		expect(
 			normalizeFilterRules([
@@ -23,8 +24,8 @@ describe("filterRuleNormalize", () => {
 				{ filterRule: "definition/subType='DESKTOP'" },
 			])
 		).toEqual([
-			{ xpath: "definition/type='DEVICE'", description: "Geräte" },
-			{ xpath: "definition/subType='DESKTOP'", description: "" },
+			{ xpath: "definition/type='DEVICE'", description: "Geräte", environments: [] },
+			{ xpath: "definition/subType='DESKTOP'", description: "", environments: [] },
 		]);
 	});
 
@@ -42,6 +43,7 @@ describe("filterRuleNormalize", () => {
 			{
 				xpath: "match(definition/name, 'AGLVM[A-Z0-9]{2,4}')",
 				description: "Virtuelle Maschinen",
+				environments: [],
 			},
 		]);
 		expect(JSON.stringify(snapshot)).toContain('"xpath"');
@@ -56,7 +58,7 @@ describe("filterRuleNormalize", () => {
 			filterRules: [{ filterRule: "definition/type='DEVICE'", description: "Geräte" } as never],
 		});
 		expect(getSnapshot(host)).toEqual({
-			filterRules: [{ xpath: "definition/type='DEVICE'", description: "Geräte" }],
+			filterRules: [{ xpath: "definition/type='DEVICE'", description: "Geräte", environments: [] }],
 		});
 	});
 });

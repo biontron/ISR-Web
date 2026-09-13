@@ -12,6 +12,7 @@ import { generateResourceID } from "../lib/common";
 import { IRootStore } from "./Root.Store";
 import { resolveViewDefinitionTypesForCreate } from "../lib/elementDefinitionTypes";
 import { isNewElementStatus } from "../lib/elementStaging";
+import { defaultBindingsForNewView, slugViewCollectionId } from "../lib/viewEnvironments";
 import api from "../lib/api";
 import {
 	createRestLoadFailureReport,
@@ -72,6 +73,10 @@ export const ViewStore = types.compose("ViewStore", BaseStore, types.model({
 				name: "A new View",
 				description: ""
 			},
+			environments: defaultBindingsForNewView(
+				root.ui.activeView,
+				root.environments.environments.map((environment) => environment.id)
+			),
 			filterRules: [],
 			validationRules: [],
 			attachments: [],
@@ -92,6 +97,73 @@ export const ViewStore = types.compose("ViewStore", BaseStore, types.model({
 		newView.setStatus("new");
 		return newView;
 	}
+
+	function findById(viewId: string): IView | undefined {
+		return self.views.find((view) => view.id === viewId);
+	}
+
+	const createNamed = flow(function* createNamedView(name: string) {
+		const domain = authStore.getDomain();
+		const trimmed = name.trim();
+		if (!domain || !trimmed) {
+			return undefined;
+		}
+		const root = getRoot(self) as IRootStore;
+		const id = slugViewCollectionId(trimmed);
+		if (!id) {
+			alert("Ungültiger View-Name. Erlaubt: A-Z, a-z, 0-9, _, -");
+			return undefined;
+		}
+		if (findById(id)) {
+			alert("Eine View mit dieser ID existiert bereits.");
+			return undefined;
+		}
+		const bindings = defaultBindingsForNewView(
+			root.ui.activeView,
+			root.environments.environments.map((environment) => environment.id)
+		);
+		const payload = {
+			id,
+			definition: {
+				storeType: "VIEWGROUP",
+				baseType: "GROUP",
+				type: "VIEW",
+				subType: "",
+				name: trimmed,
+				description: "",
+			},
+			environments: bindings,
+			filterRules: [],
+			attachments: [],
+			properties: {
+				responsibles: [],
+				notations: [],
+				style: {
+					bgColor: "",
+					graph: {
+						layout: null,
+					},
+				},
+			},
+		};
+		try {
+			const created = yield api.post(`/${domain}/views`, payload);
+			const createdId = String(created?.id ?? id);
+			yield load();
+			const view = findById(createdId);
+			if (view && bindings.length > 0) {
+				view.setEnvironments(bindings);
+				if (bindings.length > 1) {
+					yield store(view.id);
+				}
+			}
+			return view;
+		} catch (error) {
+			alert("Fehler beim Anlegen der View");
+			console.error("Error creating view:", error);
+			return undefined;
+		}
+	});
 
 	// Add a save action
 	const store = flow(function* saveData(viewID: string) {
@@ -144,10 +216,12 @@ export const ViewStore = types.compose("ViewStore", BaseStore, types.model({
 			);
 			const url = `/${authStore.getDomain()}/views/${viewId}`;
 
-			const response = yield api.delete(url);
+			const response = yield api.request(url, { method: "DELETE" });
 
 			if (response.ok) {
-				removeLocal(view);
+				if (view) {
+					removeLocal(view);
+				}
 				console.log("View removed successfully.");
 			} else {
 				const responseBody = yield response.text();
@@ -170,6 +244,8 @@ export const ViewStore = types.compose("ViewStore", BaseStore, types.model({
 	return {
 		load,
 		create,
+		createNamed,
+		findById,
 		store,
 		remove,
 		removeLocal

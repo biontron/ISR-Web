@@ -2,7 +2,7 @@
 # Infrastructure Repository (ISR) / Infrastruktur Repository (ISR)
 # SPDX-License-Identifier: GPL-2.0 
 */
-import { getRoot, Instance, types } from "mobx-state-tree";
+import { cast, getRoot, Instance, types } from "mobx-state-tree";
 import { ITreeNode } from "../../Interfaces/Tree";
 import { IRootStore } from "../Root.Store";
 import { IAssetDetails } from "./AssetDetails.Model";
@@ -42,6 +42,7 @@ export const AssetModel = types.compose(
 				description: types.string,
 				tags: types.optional(types.array(ElementDefinitionTagModel), []),
 			}),
+			environmentId: types.optional(types.string, ""),
 			ownerIdRef: types.maybeNull(types.string),
 			docks: types.optional(types.array(DockModel), []),
 			attachments: types.array(types.frozen()),
@@ -66,6 +67,7 @@ export const AssetModel = types.compose(
 			elementIdRefs: types.array(
 				types.model({
 					id: types.string,
+					environmentRef: types.optional(types.string, ""),
 				})
 			),
 			filterRules: types.array(types.frozen()),
@@ -217,9 +219,11 @@ export const AssetModel = types.compose(
 		self.markTouched();
 	},
 
-	setElementIdRefs(refs: Array<{ id: string }>) {
+	setElementIdRefs(refs: Array<{ id: string; environmentRef?: string }>) {
 		self.beginEdit();
-		self.elementIdRefs.replace(refs);     // ← .replace() statt direkte Zuweisung
+		self.elementIdRefs = cast(
+			refs.map((ref) => ({ id: ref.id, environmentRef: ref.environmentRef ?? "" }))
+		);
 		self.markTouched();
 	},
 

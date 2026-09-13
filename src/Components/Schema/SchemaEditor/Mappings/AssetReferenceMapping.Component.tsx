@@ -29,6 +29,7 @@ import { filterRuleDescription } from "../../../../lib/filterRuleNormalize";
 import {
 	collectFilterElementPartition,
 } from "../../../../lib/elementXPathFilter";
+import { resolvePrimaryEnvironmentRef } from "../../../../lib/viewEnvironments";
 
 type MappingParent = IView | IGroup | IAsset;
 
@@ -102,7 +103,15 @@ const AssetReferenceMapping: React.FC<{ element: ActiveElement }> = observer(({ 
 		if (!hasFilterRules(element) || !canEdit) {
 			return;
 		}
-		persistFilterRules(addXPathFilterRule([...element.filterRules], xpathDraft, descriptionDraft));
+		const primary = resolvePrimaryEnvironmentRef(rootStore.ui.activeView);
+		persistFilterRules(
+			addXPathFilterRule(
+				[...element.filterRules],
+				xpathDraft,
+				descriptionDraft,
+				primary ? [{ ref: primary }] : []
+			)
+		);
 		setXpathDraft("");
 		setDescriptionDraft("");
 	};

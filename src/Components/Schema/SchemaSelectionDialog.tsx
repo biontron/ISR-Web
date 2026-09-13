@@ -1,7 +1,7 @@
 /*
 # SPDX-License-Identifier: GPL-2.0*/
 
-import { Modal, Table, Tabs, Tag, Tooltip, message } from "antd";
+import { Modal, Select, Table, Tabs, Tag, Tooltip, message } from "antd";
 import React, { useEffect, useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { rootStore } from "../../Stores/Root.Store";
@@ -19,6 +19,13 @@ import {
 	isParentTypeInSchemaBlacklist,
 	isParentTypeInSchemaWhitelist,
 } from "../../lib/schemaParentRestrictions";
+import { environmentDisplayName } from "../../Stores/Models/Environment.Model";
+import {
+	readViewEnvironmentBindings,
+	resolveCreateEnvironmentTarget,
+	resolvePrimaryEnvironmentRef,
+	viewRequiresEnvironmentPicker,
+} from "../../lib/viewEnvironments";
 
 interface SchemaSelectionDialogProps {
 	visible: boolean;
@@ -48,7 +55,8 @@ function resolveSchemaForSelection(selectedSchemaId: string): ISchemaModel | und
 
 function createNewElement(
 	parentElement: ActiveElement,
-	selectedSchemaId: string
+	selectedSchemaId: string,
+	environmentId?: string
 ): ActiveElement | undefined {
 	const schema = resolveSchemaForSelection(selectedSchemaId);
 	if (!schema) {
@@ -71,7 +79,11 @@ function createNewElement(
 	}
 
 	if (target === "asset") {
-		const asset = rootStore.assets.create(selectedSchemaId, parentElement!);
+		const asset = rootStore.assets.create(
+			selectedSchemaId,
+			parentElement!,
+			resolveCreateEnvironmentTarget(rootStore.ui.activeView, environmentId)
+		);
 		rootStore.ui.setActiveElement(asset);
 		return asset;
 	}
@@ -124,7 +136,10 @@ const SchemaSelectionDialog: React.FC<SchemaSelectionDialogProps> = ({
 	const [activeTab, setActiveTab] = useState<CreateTabKey>("structure");
 	const [selectedRowKey, setSelectedRowKey] = useState<string | null>(null);
 	const [dataSource, setDataSource] = useState<SchemaData[]>([]);
+	const [targetEnvironmentId, setTargetEnvironmentId] = useState("");
 	const navigate = useNavigate();
+	const showEnvironmentPicker = viewRequiresEnvironmentPicker(rootStore.ui.activeView);
+	const environmentChoices = readViewEnvironmentBindings(rootStore.ui.activeView);
 
 	const parentType = isTreeElement(element)
 		? resolveElementSchemaParentType(element.definition)
@@ -154,6 +169,12 @@ const SchemaSelectionDialog: React.FC<SchemaSelectionDialogProps> = ({
 		setDataSource(activeTab === "structure" ? structureSchemas : componentSchemas);
 		setSelectedRowKey(null);
 	}, [visible, element, activeTab, structureSchemas, componentSchemas]);
+
+	useEffect(() => {
+		if (visible) {
+			setTargetEnvironmentId(resolvePrimaryEnvironmentRef(rootStore.ui.activeView));
+		}
+	}, [visible]);
 
 	const columns = [
 		{
@@ -235,7 +256,15 @@ const SchemaSelectionDialog: React.FC<SchemaSelectionDialogProps> = ({
 				if (selectedRowKey === null) {
 					return;
 				}
-				const created = createNewElement(element, selectedRowKey);
+				if (
+					showEnvironmentPicker &&
+					activeTab === "component" &&
+					!targetEnvironmentId
+				) {
+					message.error(langtext("general.create_environment_target_required"));
+					return;
+				}
+				const created = createNewElement(element, selectedRowKey, targetEnvironmentId);
 				onOk(selectedRowKey);
 				if (created) {
 					const viewId = rootStore.ui.activeView?.id;
@@ -247,6 +276,26 @@ const SchemaSelectionDialog: React.FC<SchemaSelectionDialogProps> = ({
 				}
 			}}
 		>
+			{showEnvironmentPicker && activeTab === "component" ? (
+				<div style={{ marginBottom: 16 }}>
+					<label style={{ display: "block", marginBottom: 8 }}>
+						{langtext("general.create_environment_target")}
+					</label>
+					<Select
+						style={{ width: "100%" }}
+						value={targetEnvironmentId || undefined}
+						placeholder={langtext("general.create_environment_target")}
+						onChange={(value) => setTargetEnvironmentId(value)}
+						options={environmentChoices.map((entry) => {
+							const environment = rootStore.environments.findById(entry.ref);
+							return {
+								value: entry.ref,
+								label: environment ? environmentDisplayName(environment) : entry.ref,
+							};
+						})}
+					/>
+				</div>
+			) : null}
 			<Tabs
 				activeKey={activeTab}
 				onChange={(key) => setActiveTab(key as CreateTabKey)}

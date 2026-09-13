@@ -8,6 +8,7 @@ export type AssignableTreeElement = IGroup | IAsset;
 export type XPathFilterRule = {
 	xpath: string;
 	description: string;
+	environments?: Array<{ ref: string }>;
 };
 
 function isNonEmptyId(value: unknown): value is string {
@@ -75,11 +76,20 @@ export function unassignElementFromParent(
 		return;
 	}
 
-	const current = Array.prototype.slice.call(refs) as Array<{ id: unknown }>;
+	const current = Array.prototype.slice.call(refs) as Array<{
+		id: unknown;
+		environmentRef?: string;
+	}>;
 	const next = current
-		.map(resolveElementRefId)
-		.filter((id): id is string => !!id && id !== child.id)
-		.map((id) => ({ id }));
+		.map((ref) => {
+			const id = resolveElementRefId(ref);
+			if (!id || id === child.id) {
+				return undefined;
+			}
+			const environmentRef = String(ref.environmentRef ?? "").trim();
+			return environmentRef ? { id, environmentRef } : { id };
+		})
+		.filter((entry): entry is { id: string; environmentRef?: string } => !!entry);
 
 	if (next.length === current.length) {
 		return;
@@ -176,7 +186,8 @@ export function toXPathFilterRule(expression: string, description = ""): XPathFi
 export function addXPathFilterRule(
 	rules: unknown[],
 	expression: string,
-	description = ""
+	description = "",
+	environments?: Array<{ ref: string }>
 ): unknown[] {
 	const xpath = expression.trim();
 	if (!xpath) {
@@ -185,7 +196,11 @@ export function addXPathFilterRule(
 	if (rules.some((rule) => readXPathExpression(rule) === xpath)) {
 		return rules;
 	}
-	return [...rules, toXPathFilterRule(xpath, description.trim())];
+	const rule = toXPathFilterRule(xpath, description.trim());
+	return [
+		...rules,
+		environments && environments.length > 0 ? { ...rule, environments } : rule,
+	];
 }
 
 export function updateXPathFilterRule(
@@ -204,6 +219,7 @@ export function updateXPathFilterRule(
 		return {
 			xpath: patch.xpath !== undefined ? patch.xpath.trim() : current.xpath,
 			description: patch.description !== undefined ? patch.description : current.description,
+			environments: current.environments,
 		};
 	});
 }

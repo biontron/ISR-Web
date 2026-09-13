@@ -72,9 +72,11 @@ export const UIStore = types
 
 				self.activeView = view as any;
 
-				// regarding view-specific elements (groups)
+				// regarding view-specific elements (groups + Inventar der gebundenen Environments)
 				const root = getRoot(self) as any;
 				root.groups.load(view);
+				void root.assets.loadAssets();
+				void root.connections.load();
 			}
 		},
 

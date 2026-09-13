@@ -3,6 +3,8 @@ import {
 	collectUnassignedElements,
 	readXPathExpression,
 } from "./elementAssignments";
+import { toFilterRuleRecord } from "./filterRuleNormalize";
+import { readEnvironmentId } from "./environmentIdentity";
 import type { IRootStore } from "../Stores/Root.Store";
 
 type FilterDefinition = {
@@ -19,6 +21,7 @@ type FilterDefinition = {
 export type FilterableElement = {
 	id: string;
 	class?: string;
+	environmentId?: string | null;
 	definition?: FilterDefinition;
 	ownerIdRef?: string | null;
 	parentIdRef?: string | null;
@@ -817,20 +820,33 @@ export function collectXPathMatchFieldPaths(
 	return merged;
 }
 
+function filterRuleAppliesToElement(element: FilterableElement, rule: unknown): boolean {
+	const xpath = readXPathExpression(rule);
+	if (!xpath) {
+		return false;
+	}
+	const envRefs = toFilterRuleRecord(rule).environments.map((entry) => entry.ref);
+	if (envRefs.length > 0) {
+		const environmentId = readEnvironmentId(element);
+		if (!environmentId || !envRefs.includes(environmentId)) {
+			return false;
+		}
+	}
+	return elementMatchesXPath(element, xpath);
+}
+
 export function elementMatchesAnyXPath(
 	element: FilterableElement,
 	rules: unknown[]
 ): boolean {
-	const expressions = rules.map(readXPathExpression).filter(Boolean);
-	return matchElementAgainstExpressions(element, expressions);
+	return rules.some((rule) => filterRuleAppliesToElement(element, rule));
 }
 
 function partitionUnassignedByXPath(
 	unassigned: AssignableTreeElement[],
 	rules: unknown[]
 ): { matched: AssignableTreeElement[]; available: AssignableTreeElement[] } {
-	const expressions = rules.map(readXPathExpression).filter(Boolean);
-	if (expressions.length === 0) {
+	if (rules.map(readXPathExpression).every((xpath) => xpath === "")) {
 		return { matched: [], available: unassigned };
 	}
 
@@ -838,7 +854,7 @@ function partitionUnassignedByXPath(
 	const available: AssignableTreeElement[] = [];
 
 	for (const element of unassigned) {
-		if (matchElementAgainstExpressions(element, expressions)) {
+		if (elementMatchesAnyXPath(element, rules)) {
 			matched.push(element);
 		} else {
 			available.push(element);
@@ -866,13 +882,12 @@ export function collectFilterMatchedFromPool(
 	rules: unknown[],
 	excludeIds?: Iterable<string>
 ): AssignableTreeElement[] {
-	const expressions = rules.map(readXPathExpression).filter(Boolean);
-	if (expressions.length === 0) {
+	if (rules.map(readXPathExpression).every((xpath) => xpath === "")) {
 		return [];
 	}
 	const skip = excludeIds ? new Set(excludeIds) : null;
 	return unassigned.filter(
-		(element) => (!skip || !skip.has(element.id)) && matchElementAgainstExpressions(element, expressions)
+		(element) => (!skip || !skip.has(element.id)) && elementMatchesAnyXPath(element, rules)
 	);
 }
 

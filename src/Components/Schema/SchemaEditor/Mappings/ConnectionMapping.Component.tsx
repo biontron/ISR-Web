@@ -35,6 +35,7 @@ const ConnectionMapping: React.FC<ConnectionMappingProps> = observer(({ element 
 	const [logicalVisible, setLogicalVisible] = useState(false);
 	const [overviewVisible, setOverviewVisible] = useState(false);
 	const [editingConnectionId, setEditingConnectionId] = useState<string | null>(null);
+	const [pendingKind, setPendingKind] = useState<"logical" | "bridge" | "context">("logical");
 
 	const allAssets = rootStore.assets.assets.slice();
 	const allConnections = rootStore.connections.connections.slice();
@@ -72,10 +73,31 @@ const ConnectionMapping: React.FC<ConnectionMappingProps> = observer(({ element 
 					</Button>
 					<Button
 						icon={<LinkOutlined />}
-						onClick={() => setLogicalVisible(true)}
+						onClick={() => {
+							setPendingKind("logical");
+							setLogicalVisible(true);
+						}}
 						disabled={allAssets.length < 2}
 					>
 						{langtext("general.connection_logical_add")}
+					</Button>
+					<Button
+						onClick={() => {
+							setPendingKind("bridge");
+							setLogicalVisible(true);
+						}}
+						disabled={allAssets.length < 1}
+					>
+						{langtext("general.connection_bridge_add")}
+					</Button>
+					<Button
+						onClick={() => {
+							setPendingKind("context");
+							setLogicalVisible(true);
+						}}
+						disabled={allAssets.length < 2}
+					>
+						{langtext("general.connection_context_add")}
 					</Button>
 					<Button
 						type="primary"
@@ -155,7 +177,13 @@ const ConnectionMapping: React.FC<ConnectionMappingProps> = observer(({ element 
 				visible={logicalVisible}
 				fromAsset={element}
 				onCancel={() => setLogicalVisible(false)}
-				onCreated={(connectionId) => setEditingConnectionId(connectionId)}
+				onCreated={(connectionId) => {
+					const created = rootStore.connections.connections.find((item) => item.id === connectionId);
+					if (created && pendingKind !== "logical") {
+						created.setKind(pendingKind);
+					}
+					setEditingConnectionId(connectionId);
+				}}
 			/>
 			<ConnectionEditDialog
 				connectionId={editingConnectionId}

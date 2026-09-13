@@ -3,6 +3,7 @@ import { IRootStore } from "../Stores/Root.Store";
 import { buildRestUrl, RestUrlKind } from "./restUrlCatalog";
 import { TouchedObjectRef } from "./touchedObjects";
 import { restWritePayloadForRef } from "./restWritePayload";
+import { resolvePrimaryEnvironmentRef } from "./viewEnvironments";
 
 export interface TouchedObjectRestRequest {
 	method: string;
@@ -20,9 +21,17 @@ export function buildRestRequestForTouchedObject(
 	ref: TouchedObjectRef
 ): TouchedObjectRestRequest {
 	const domain = authStore.getDomain() ?? "";
-	const env = root.config.environment;
 	const viewId = root.ui.activeView?.id ?? "";
 	const itemId = ref.id;
+	let env = "";
+	if (ref.kind === "Asset") {
+		env = root.assets.assets.find((asset) => asset.id === itemId)?.environmentId ?? "";
+	} else if (ref.kind === "Connection") {
+		env = root.connections.connections.find((connection) => connection.id === itemId)?.environmentId ?? "";
+	}
+	if (!env) {
+		env = resolvePrimaryEnvironmentRef(root.ui.activeView);
+	}
 
 	let operation: "create" | "update" | "delete";
 	switch (ref.touch) {

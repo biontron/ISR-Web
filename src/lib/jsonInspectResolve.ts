@@ -40,19 +40,7 @@ function resolveFromAssetManagement(root: IRootStore): JsonInspectTarget | null 
 		return null;
 	}
 
-	const current = inspectSnapshot(element, getSnapshot(element));
-	const baseline = elementBaseline(element as IElement);
-	const name =
-		"definition" in element && element.definition && "name" in element.definition
-			? String(element.definition.name)
-			: element.id;
-
-	return {
-		title: `${element.class}: ${name}`,
-		kind: element.class,
-		current,
-		baseline,
-	};
+	return buildElementJsonInspectTarget(element as IElement);
 }
 
 function schemaInspectKind(baseType: SchemaBaseType): string {
@@ -115,6 +103,26 @@ export function buildConnectionJsonInspectTarget(connection: IConnection): JsonI
 		current: getSnapshot(connection),
 		baseline: elementBaseline(connection),
 	};
+}
+
+export function buildElementJsonInspectTarget(element: IElement): JsonInspectTarget {
+	const definition = (element as { definition?: { name?: unknown } }).definition;
+	const name = typeof definition?.name === "string" ? definition.name : element.id;
+	return {
+		title: `${element.class}: ${name}`,
+		kind: element.class,
+		current: inspectSnapshot(element, getSnapshot(element)),
+		baseline: elementBaseline(element),
+	};
+}
+
+export function buildSnapshotJsonInspectTarget(
+	kind: string,
+	title: string,
+	current: unknown,
+	baseline?: unknown
+): JsonInspectTarget {
+	return { kind, title, current, baseline };
 }
 
 /** Ermittelt das aktuell inspizierbare Objekt je nach Anwendung/Selektion. */

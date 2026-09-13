@@ -2,7 +2,7 @@
 # Infrastructure Repository (ISR) / Infrastruktur Repository (ISR)
 # SPDX-License-Identifier: GPL-2.0 
 */
-import { Instance, getIdentifier, getRoot, getSnapshot, types } from "mobx-state-tree";
+import { Instance, cast, getIdentifier, getRoot, getSnapshot, types } from "mobx-state-tree";
 import { ITreeNode } from "../../Interfaces/Tree";
 import { IRootStore } from "../Root.Store";
 import { AssetModel, IAsset } from "./Asset.Model";
@@ -11,6 +11,7 @@ import { assignableElementToTreeNode } from "../../lib/treeNodeDisplay";
 import { collectFilterMatchedElementsExcluding } from "../../lib/elementXPathFilter";
 import { FilterRuleModel } from "./FilterRule.Model";
 import { normalizeFilterRules } from "../../lib/filterRuleNormalize";
+import { resolvePrimaryEnvironmentRef } from "../../lib/viewEnvironments";
 
 function resolveAssetIdFromRef(ref: { id: unknown }): string | undefined {
 	if (typeof ref.id === "string" && ref.id !== "") {
@@ -23,7 +24,7 @@ function resolveAssetIdFromRef(ref: { id: unknown }): string | undefined {
 }
 
 function resolveAssetFromRef(
-	ref: { id: unknown },
+	ref: { id: unknown; environmentRef?: string },
 	root: IRootStore,
 	fallbackId?: string
 ): IAsset | undefined {
@@ -31,6 +32,16 @@ function resolveAssetFromRef(
 
 	if (!assetId) {
 		return undefined;
+	}
+
+	const environmentRef = String(ref.environmentRef ?? "").trim();
+	if (environmentRef) {
+		return (
+			root.assets.assets.find(
+				(asset: IAsset) =>
+					asset.id === assetId && String(asset.environmentId ?? "") === environmentRef
+			) ?? root.assets.assets.find((asset: IAsset) => asset.id === assetId)
+		);
 	}
 
 	return root.assets.assets.find((asset: IAsset) => asset.id === assetId);
@@ -79,6 +90,7 @@ export const GroupModel = types.compose(
 			elementIdRefs: types.array(
 				types.model({
 					id: types.string,
+					environmentRef: types.optional(types.string, ""),
 				})
 			),
 			filterRules: types.array(FilterRuleModel),
@@ -201,14 +213,24 @@ export const GroupModel = types.compose(
 		self.parentIdRef = parentId;
 		self.markTouched();
 	},
-	setElementIdRefs(refs: Array<{ id: string }>) {
+	setElementIdRefs(refs: Array<{ id: string; environmentRef?: string }>) {
 		self.beginEdit();
-		self.elementIdRefs.replace(refs);
+		self.elementIdRefs = cast(
+			refs.map((ref) => ({ id: ref.id, environmentRef: ref.environmentRef ?? "" }))
+		);
 		self.markTouched();
 	},
 	setFilterRules(rules: unknown[]) {
 		self.beginEdit();
-		self.filterRules.replace(normalizeFilterRules(rules));
+		const root = getRoot(self) as IRootStore;
+		const primary = resolvePrimaryEnvironmentRef(root.ui?.activeView);
+		self.filterRules = cast(
+			normalizeFilterRules(rules).map((rule) =>
+				rule.environments.length > 0 || !primary
+					? rule
+					: { ...rule, environments: [{ ref: primary }] }
+			)
+		);
 		self.markTouched();
 	},
 }));

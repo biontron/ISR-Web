@@ -12,6 +12,7 @@ import { FilterRuleModel } from "./FilterRule.Model";
 import { ValidationRuleModel, ValidationRuleRecord } from "./ValidationRule.Model";
 import { xpathRuleSnapshots } from "../../lib/xpathRule";
 import { normalizeFilterRules } from "../../lib/filterRuleNormalize";
+import { resolvePrimaryEnvironmentRef } from "../../lib/viewEnvironments";
 
 
 /**
@@ -31,6 +32,15 @@ export const ViewModel = types.compose(
 				description: types.string,
 				tags: types.optional(types.array(ElementDefinitionTagModel), []),
 			}),
+			environments: types.optional(
+				types.array(
+					types.model({
+						ref: types.string,
+						primary: types.optional(types.boolean, false),
+					})
+				),
+				[]
+			),
 			filterRules: types.array(FilterRuleModel),
 			validationRules: types.optional(types.array(ValidationRuleModel), []),
 			attachments: types.array(types.frozen()),
@@ -105,9 +115,31 @@ export const ViewModel = types.compose(
 			},
 		}))
 ).actions((self) => ({
+	setDefinitionName(name: string) {
+		self.beginEdit();
+		self.definition.name = name;
+		self.markTouched();
+	},
+	setEnvironments(bindings: Array<{ ref: string; primary?: boolean }>) {
+		self.beginEdit();
+		self.environments.replace(
+			bindings
+				.filter((entry) => entry.ref?.trim())
+				.map((entry) => ({ ref: entry.ref.trim(), primary: Boolean(entry.primary) }))
+		);
+		self.markTouched();
+	},
 	setFilterRules(rules: unknown[]) {
 		self.beginEdit();
-		self.filterRules.replace(normalizeFilterRules(rules));
+		const root = getRoot(self) as { ui?: { activeView?: unknown } };
+		const primary = resolvePrimaryEnvironmentRef(root.ui?.activeView ?? self);
+		self.filterRules = cast(
+			normalizeFilterRules(rules).map((rule) =>
+				rule.environments.length > 0 || !primary
+					? rule
+					: { ...rule, environments: [{ ref: primary }] }
+			)
+		);
 		self.markTouched();
 	},
 	setValidationRules(rules: ValidationRuleRecord[]) {

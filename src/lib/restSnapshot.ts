@@ -16,7 +16,8 @@ export type RestObjectKind =
 	| "View"
 	| "Group"
 	| "Asset"
-	| "Connection";
+	| "Connection"
+	| "Environment";
 
 export type RestLoadErrorEntry = {
 	objectKind: RestObjectKind;
@@ -75,6 +76,7 @@ const OBJECT_KIND_TO_URL_KIND: Partial<Record<RestObjectKind, RestUrlKind>> = {
 	Group: "Group",
 	Asset: "Asset",
 	Connection: "Connection",
+	Environment: "Environment",
 };
 
 export function buildRestLoadRequestMeta(

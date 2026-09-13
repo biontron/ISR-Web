@@ -21,6 +21,7 @@ const ElementSearchField: React.FC = observer(() => {
 
 	return (
 		<Input.Search
+			id="isr-element-search"
 			className="element-search-field"
 			allowClear
 			value={draft}

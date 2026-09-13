@@ -20,12 +20,10 @@ import { elementStatusShowsIndicator } from "../../../lib/elementStatusStyle";
 import type { ElementMarkFlags } from "../../../lib/elementXPathValidation";
 import { Tooltip, Descriptions, DescriptionsProps } from "antd";
 import { VerticalAlignBottomOutlined } from "@ant-design/icons";
-import {
-	resolveElementKindDisplay,
-	resolveElementTypeDisplay,
-} from "../../../lib/elementDefinitionTypes";
+import { resolveElementKindDisplay } from "../../../lib/elementDefinitionTypes";
 import { useLangtext } from "../../../lib/common";
 import {
+	buildTreeNodeInfoRows,
 	resolveTreeElement,
 	resolveTreeNodeDefinition,
 	resolveTreeNodeSegment,
@@ -59,6 +57,31 @@ function navigateToElement(navigate: ReturnType<typeof useNavigate>, elementId: 
 	navigate(`/${authStore.getDomain()}/am/${rootStore.ui.activeView?.id}/element/${elementId}`);
 }
 
+function flattenVisibleTreeNodes(nodes: ITreeNode[], expandedKeys: React.Key[]): ITreeNode[] {
+	const expanded = new Set(expandedKeys.map(String));
+	const visible: ITreeNode[] = [];
+	const walk = (list: ITreeNode[]) => {
+		for (const node of list) {
+			visible.push(node);
+			if (node.children?.length && expanded.has(String(node.key))) {
+				walk(node.children);
+			}
+		}
+	};
+	walk(nodes);
+	return visible;
+}
+
+function isKeyboardTypingTarget(target: EventTarget | null): boolean {
+	if (!(target instanceof HTMLElement)) {
+		return false;
+	}
+	if (target.isContentEditable) {
+		return true;
+	}
+	return Boolean(target.closest("input, textarea, select, [contenteditable='true'], .ant-modal, .ant-dropdown"));
+}
+
 function elementToTreeNode(element: UnlinkedTreeElement): ITreeNode {
 	const definition = element.definition;
 	return {
@@ -80,8 +103,6 @@ function renderTreeNodeTitle(nodeData: ITreeNode, marks?: ElementMarkFlags) {
 	const definition = resolveTreeNodeDefinition(rootStore, nodeData);
 	const treeElement = resolveTreeElement(rootStore, nodeData);
 	const iconElement = treeElement ?? nodeData;
-	const schemas = rootStore.configSchemas.schemaCompat;
-
 	const infoTitle = (
 		<>
 			{nodeData.class ?? "???"} — {nodeData.title ?? "???"}
@@ -91,18 +112,17 @@ function renderTreeNodeTitle(nodeData: ITreeNode, marks?: ElementMarkFlags) {
 	);
 
 	const items: DescriptionsProps["items"] = [
-		{ key: "0", label: "storeType", children: definition?.storeType ?? "—" },
+		{ key: "0", label: "Umgebung", children: buildTreeNodeInfoRows(rootStore, nodeData, definition)[0]?.value ?? "—" },
 		{
 			key: "1d",
-			label: "baseType",
-			children: resolveElementKindDisplay(definition, nodeData.class) || "—",
+			label: "Type",
+			children: resolveElementKindDisplay(definition, nodeData.class) || definition?.baseType || "—",
 		},
 		{
 			key: "1",
-			label: "Typ",
-			children: resolveElementTypeDisplay(definition, schemas) || "—",
+			label: "Subtype",
+			children: definition?.type ?? "—",
 		},
-		{ key: "1b", label: "Subtyp", children: definition?.subType ?? "—" },
 		{ key: "3", label: "Name", children: nodeData.title },
 		{ key: "4", label: "Label", children: nodeData.label ?? "—" },
 		{ key: "5", label: "Descripton", children: nodeData.description },
@@ -207,15 +227,55 @@ const ElementHierarchyTreeView = observer(function ElementHierarchyTreeView({
 		setExpandedKeys([]);
 	}, [viewId]);
 
-	function onSelect(nextKeys: React.Key[], info: { node: ITreeNode }) {
-		if (!nextKeys?.length) {
-			return;
-		}
-		const elementId = treeNodeElementId(info.node);
+	function activateTreeNode(node: ITreeNode) {
+		const elementId = treeNodeElementId(node);
 		if (resolveIdentifier(GroupModel, rootStore, elementId) || resolveIdentifier(AssetModel, rootStore, elementId)) {
 			navigateToElement(navigate, elementId);
 		}
 	}
+
+	function onSelect(nextKeys: React.Key[], info: { node: ITreeNode }) {
+		if (!nextKeys?.length) {
+			return;
+		}
+		activateTreeNode(info.node);
+	}
+
+	React.useEffect(() => {
+		const handleTreeKeys = (event: KeyboardEvent) => {
+			if (event.key !== "ArrowDown" && event.key !== "ArrowUp") {
+				return;
+			}
+			if (isKeyboardTypingTarget(event.target)) {
+				return;
+			}
+			const visible = flattenVisibleTreeNodes(treeData, expandedKeys);
+			if (visible.length === 0) {
+				return;
+			}
+			const selectedKey = selectedKeys[0];
+			let index = selectedKey != null
+				? visible.findIndex((node) => String(node.key) === String(selectedKey))
+				: -1;
+			if (index < 0 && activeElementId) {
+				index = visible.findIndex((node) => treeNodeElementId(node) === activeElementId);
+			}
+			const nextIndex = event.key === "ArrowDown"
+				? (index < 0 ? 0 : Math.min(visible.length - 1, index + 1))
+				: (index < 0 ? visible.length - 1 : Math.max(0, index - 1));
+			if (nextIndex === index) {
+				return;
+			}
+			event.preventDefault();
+			activateTreeNode(visible[nextIndex]);
+			window.requestAnimationFrame(() => {
+				document.querySelector(".element-tree-hierarchy .ant-tree-node-selected")
+					?.scrollIntoView({ block: "nearest" });
+			});
+		};
+		window.addEventListener("keydown", handleTreeKeys);
+		return () => window.removeEventListener("keydown", handleTreeKeys);
+	}, [treeData, expandedKeys, selectedKeys, activeElementId, navigate]);
 
 	function loadChildren(node: ITreeNode) {
 		return new Promise<void>((resolve) => {
@@ -245,21 +305,23 @@ const ElementHierarchyTreeView = observer(function ElementHierarchyTreeView({
 	}
 
 	return (
-		<Tree
-			checkable={false}
-			selectable
-			showLine
-			showIcon
-			treeData={treeData}
-			expandedKeys={expandedKeys}
-			onExpand={(keys) => setExpandedKeys(keys)}
-			loadData={loadChildren}
-			onSelect={onSelect}
-			titleRender={(node) =>
-				renderTreeNodeTitle(node, marks?.get(treeNodeElementId(node)))
-			}
-			selectedKeys={selectedKeys}
-		/>
+		<div className="element-tree-hierarchy" tabIndex={0}>
+			<Tree
+				checkable={false}
+				selectable
+				showLine
+				showIcon
+				treeData={treeData}
+				expandedKeys={expandedKeys}
+				onExpand={(keys) => setExpandedKeys(keys)}
+				loadData={loadChildren}
+				onSelect={onSelect}
+				titleRender={(node) =>
+					renderTreeNodeTitle(node, marks?.get(treeNodeElementId(node)))
+				}
+				selectedKeys={selectedKeys}
+			/>
+		</div>
 	);
 });
 

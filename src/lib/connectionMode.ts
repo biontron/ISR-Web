@@ -1,6 +1,6 @@
 import { IConnection, ILink } from "../Stores/Models/Connection.Model";
 
-export type ConnectionMode = "logical" | "layered" | "stackPath";
+export type ConnectionMode = "logical" | "link" | "layered" | "stackPath" | "bridge" | "context";
 
 function isDockRefEmpty(ref: string | undefined | null): boolean {
 	return !ref?.trim();
@@ -23,6 +23,12 @@ function collectDistinctAssetRefs(links: ILink[], side: "from" | "to"): Set<stri
 }
 
 export function resolveConnectionMode(connection: IConnection): ConnectionMode {
+	if (connection.kind === "bridge" || connection.kind === "context") {
+		return connection.kind;
+	}
+	if (connection.kind === "link") {
+		return "link";
+	}
 	const links = connection.links;
 	if (links.length === 0) {
 		return "logical";
@@ -68,10 +74,16 @@ export function connectionModeLabel(mode: ConnectionMode): string {
 	switch (mode) {
 		case "logical":
 			return "Logisch";
+		case "link":
+			return "Link";
 		case "layered":
 			return "Layer";
 		case "stackPath":
 			return "Stack-Pfad";
+		case "bridge":
+			return "Brücke";
+		case "context":
+			return "Context";
 		default:
 			return mode;
 	}

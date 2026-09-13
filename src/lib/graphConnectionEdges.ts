@@ -59,7 +59,49 @@ function pushGraphEdge(
 
 	const fromNodeId = resolveLinkNodeId(assets, link, "from");
 	const toNodeId = resolveLinkNodeId(assets, link, "to");
-	if (!fromNodeId || !toNodeId || fromNodeId === toNodeId) {
+	if (fromNodeId && toNodeId && fromNodeId === toNodeId) {
+		return;
+	}
+	const isBridge = connection.kind === "bridge";
+	if (!isBridge && (!fromNodeId || !toNodeId)) {
+		return;
+	}
+	if (!isBridge && (!visibleNodeIds.has(fromNodeId!) || !visibleNodeIds.has(toNodeId!))) {
+		return;
+	}
+	if (isBridge) {
+		const stubId = `bridge-stub:${connection.peerEnvironmentRef || connection.bridgeId || connection.id}`;
+		if (fromNodeId && visibleNodeIds.has(fromNodeId) && (!toNodeId || !visibleNodeIds.has(toNodeId))) {
+			seen.add(key);
+			edges.push({
+				connectionId: connection.id,
+				linkId: String(link.id),
+				direction: resolveConnectionDirection(link.direction),
+				label: link.title?.trim() || connection.definition?.label?.trim() || connection.id,
+				fromNodeId,
+				toNodeId: stubId,
+				fromDockRef: link.fromDockRef?.trim() ?? "",
+				toDockRef: link.toDockRef?.trim() ?? "",
+			});
+			return;
+		}
+		if (toNodeId && visibleNodeIds.has(toNodeId) && (!fromNodeId || !visibleNodeIds.has(fromNodeId))) {
+			seen.add(key);
+			edges.push({
+				connectionId: connection.id,
+				linkId: String(link.id),
+				direction: resolveConnectionDirection(link.direction),
+				label: link.title?.trim() || connection.definition?.label?.trim() || connection.id,
+				fromNodeId: stubId,
+				toNodeId,
+				fromDockRef: link.fromDockRef?.trim() ?? "",
+				toDockRef: link.toDockRef?.trim() ?? "",
+			});
+			return;
+		}
+	}
+
+	if (!fromNodeId || !toNodeId) {
 		return;
 	}
 	if (!visibleNodeIds.has(fromNodeId) || !visibleNodeIds.has(toNodeId)) {

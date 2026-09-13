@@ -7,8 +7,9 @@
 
 import { Instance, flow, getRoot, types } from "mobx-state-tree";
 import { BaseStore } from "./Base.Store";
-import { IConfig } from "./Models/Config.Model";
 import { ConnectionModel, IConnection } from "./Models/Connection.Model";
+import { stampEnvironmentId } from "../lib/environmentIdentity";
+import { resolvePrimaryEnvironmentRef, resolveViewEnvironmentRefs } from "../lib/viewEnvironments";
 import { IRootStore } from "./Root.Store";
 import authStore from "./Auth.Store";
 import api from "../lib/api";
@@ -224,6 +225,8 @@ export const ConnectionStore = types.compose("ConnectionStore", BaseStore, types
 		const linkId = nextLinkId();
 		const newConnection = ConnectionModel.create({
 			id,
+			environmentId: fromAsset.environmentId || resolvePrimaryEnvironmentRef(root.ui.activeView),
+			kind: "logical",
 			definition: { label: definitionLabel, description: definitionDescription },
 			settings: {},
 			links: [
@@ -275,8 +278,11 @@ export const ConnectionStore = types.compose("ConnectionStore", BaseStore, types
 
 		const id = generateResourceID("Connection");
 		const linkId = nextLinkId();
+		const fromAsset = assets.find((asset) => asset.id === input.fromAssetId);
 		const newConnection = ConnectionModel.create({
 			id,
+			environmentId: fromAsset?.environmentId || resolvePrimaryEnvironmentRef(root.ui.activeView),
+			kind: "link",
 			definition: { label: definitionLabel, description: definitionDescription },
 			settings: {},
 			links: [
@@ -372,21 +378,37 @@ export const ConnectionStore = types.compose("ConnectionStore", BaseStore, types
 
 	const load = flow(function* load() {
 		const root = getRoot(self) as IRootStore;
-		const config = root.config as IConfig;
 		const domain = authStore.getDomain();
-		const restUrlIds = { env: config.environment };
+		const environmentIds = resolveViewEnvironmentRefs(root.ui.activeView);
+		const restUrlIds = { env: environmentIds[0] };
 		if (!domain) {
 			return;
 		}
 
 		try {
-			const jsonData = yield api.getConnections(domain, config.environment);
-			const { items } = normalizeRestArray(jsonData);
+			const merged: unknown[] = [];
+			const seen = new Set<string>();
+			for (const environmentId of environmentIds) {
+				const jsonData = yield api.getConnections(domain, environmentId);
+				const { items } = normalizeRestArray(jsonData);
+				for (const item of items) {
+					if (!item || typeof item !== "object") {
+						continue;
+					}
+					const stamped = stampEnvironmentId(item as Record<string, unknown>, environmentId);
+					const id = String(stamped.id ?? "");
+					if (!id || seen.has(id)) {
+						continue;
+					}
+					seen.add(id);
+					merged.push(stamped);
+				}
+			}
 			const report = enrichRestLoadReport(
 				loadRestArrayIntoStore(
 					self.connections,
 					ConnectionModel,
-					items,
+					merged,
 					"Connection",
 					{ domain, restUrlIds }
 				),

@@ -218,6 +218,10 @@ class Api {
 		return await this.get(`/${domain}/views`);
 	}
 
+	public async getEnvironments(domain: string) {
+		return await this.get(`/${domain}/environments`);
+	}
+
 	public async getAssets(domain: string, environment: string) {
 		return await this.get(`/${domain}/environments/${environment}/assets`);
 	}

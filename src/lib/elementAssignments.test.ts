@@ -88,9 +88,24 @@ describe("elementAssignments", () => {
 		expect(parent.elementIdRefs).toEqual([{ id: "a2" }]);
 	});
 
+	it("stempelt Environment-Refs an neue XPath-Regeln", () => {
+		const added = addXPathFilterRule([], "definition/type='DEVICE'", "Geräte", [
+			{ ref: "office" },
+		]);
+		expect(added[0]).toEqual({
+			xpath: "definition/type='DEVICE'",
+			description: "Geräte",
+			environments: [{ ref: "office" }],
+		});
+	});
+
 	it("XPath-Regeln anlegen und löschen", () => {
 		const added = addXPathFilterRule([], "//asset[type='DEVICE']", "Geräte");
-		expect(added[0]).toEqual({ xpath: "//asset[type='DEVICE']", description: "Geräte" });
+		expect(added[0]).toEqual({
+			xpath: "//asset[type='DEVICE']",
+			description: "Geräte",
+			environments: [],
+		});
 		expect(readXPathExpression(added[0])).toBe("//asset[type='DEVICE']");
 		expect(addXPathFilterRule(added, "//asset[type='DEVICE']")).toEqual(added);
 		expect(removeXPathFilterRule(added, 0)).toEqual([]);
@@ -102,6 +117,7 @@ describe("elementAssignments", () => {
 		expect(updated[0]).toEqual({
 			xpath: "definition/type='DEVICE'",
 			description: "Virtuelle Maschinen",
+			environments: [],
 		});
 	});
 

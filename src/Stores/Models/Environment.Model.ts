@@ -1,29 +1,41 @@
 /*
 # Infrastructure Repository (ISR) / Infrastruktur Repository (ISR)
-# SPDX-License-Identifier: GPL-2.0 
+# SPDX-License-Identifier: GPL-2.0
 */
-import { flow } from "mobx";
-import { types, getRoot, Instance } from "mobx-state-tree";
-import authStore from "../Auth.Store";
-import api from "../../lib/api";
+import { Instance, types } from "mobx-state-tree";
 
-export const EnvironmentModel = types.model("Environment", {
-}).actions(self => {
+export const EnvironmentModel = types
+	.model("Environment", {
+		id: types.identifier,
+		definition: types.optional(
+			types.model({
+				baseType: types.optional(types.string, "ENVIRONMENT"),
+				subType: types.optional(types.string, ""),
+				name: types.optional(types.string, ""),
+			}),
+			{}
+		),
+		properties: types.optional(
+			types.model({
+				bgColor: types.optional(types.string, ""),
+				responsibles: types.optional(types.frozen(), []),
+				notations: types.optional(types.frozen(), []),
+			}),
+			{}
+		),
+	})
+	.actions((self) => ({
+		setName(name: string) {
+			self.definition.name = name;
+		},
+	}));
 
-	const load = flow(function* load() {
-		// Explicit typing to avoid error with typescript / circular dependencies
-		const url = `/${authStore.getDomain()}/environments`;
-		const response = yield api.get(url);
-		const json = yield response.json();
-		// applySnapshot(self.views, json);
+export interface IEnvironment extends Instance<typeof EnvironmentModel> {}
 
-		console.log("json", json);
-	});
-
-	return {
-		load
-	};
-});
-
-// Typescript export
-export type IEnvironment = Instance<typeof EnvironmentModel>;
+export function environmentDisplayName(environment?: IEnvironment | null): string {
+	const name = environment?.definition?.name?.trim();
+	if (name) {
+		return name;
+	}
+	return environment?.id ?? "—";
+}

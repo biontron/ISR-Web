@@ -79,8 +79,7 @@ const router = createBrowserRouter([
 						void rootStore.configSchemas.loadByBaseType("DOCKPART", domain);
 					}
 					void rootStore.views.load();
-					void rootStore.assets.loadAssets();
-					void rootStore.connections.load();
+					void rootStore.environments.load();
 					return null;
 				},
 				children: [

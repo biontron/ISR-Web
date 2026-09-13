@@ -5,6 +5,14 @@ export const FilterRuleModel = types
 	.model("FilterRule", {
 		xpath: types.optional(types.string, ""),
 		description: types.optional(types.string, ""),
+		environments: types.optional(
+			types.array(
+				types.model({
+					ref: types.string,
+				})
+			),
+			[]
+		),
 	})
 	.preProcessSnapshot((snapshot) => toFilterRuleRecord(snapshot));
 

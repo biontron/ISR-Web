@@ -11,6 +11,7 @@ import { ViewStore } from "./View.Store";
 import { GroupStore } from "./Group.Store";
 import { AssetStore } from "./Asset.Store";
 import { IaCStore } from "./IaC.Store";
+import { EnvironmentStore } from "./Environment.Store";
 import { initialUIStore, UIStore } from "./UI.Store";
 import { I18NStoreModel } from "./i18n.Store";
 
@@ -23,6 +24,7 @@ export const RootStore = types
 		BaseStore,
 		types.model({
 			ui: types.optional(UIStore, initialUIStore),
+			environments: types.optional(EnvironmentStore, {}),
 			views: types.optional(ViewStore, {}),
 			groups: types.optional(GroupStore, {}),
 			assets: types.optional(AssetStore, {}),

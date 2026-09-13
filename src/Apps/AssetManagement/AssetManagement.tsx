@@ -78,6 +78,9 @@ const AssetManagement = observer(() => {
 	// ====================== KEYBOARD SHORTCUTS ======================
 	useEffect(() => {
 		const handleKeyDown = (e: KeyboardEvent) => {
+			if (e.ctrlKey || e.metaKey || e.altKey) {
+				return;
+			}
 			if (e.target instanceof HTMLInputElement || e.target instanceof HTMLTextAreaElement) return;
 
 			switch (e.key.toUpperCase()) {
