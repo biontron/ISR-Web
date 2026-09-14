@@ -9,7 +9,11 @@ import { Instance, flow, getRoot, types } from "mobx-state-tree";
 import { BaseStore } from "./Base.Store";
 import { ConnectionModel, IConnection } from "./Models/Connection.Model";
 import { stampEnvironmentId } from "../lib/environmentIdentity";
-import { resolvePrimaryEnvironmentRef, resolveViewEnvironmentRefs } from "../lib/viewEnvironments";
+import {
+	knownEnvironmentIds,
+	resolveViewEnvironmentRefs,
+	resolveWriteEnvironmentId,
+} from "../lib/viewEnvironments";
 import { IRootStore } from "./Root.Store";
 import authStore from "./Auth.Store";
 import api from "../lib/api";
@@ -50,6 +54,17 @@ import {
 	collectStackLinkDrafts,
 } from "../lib/connectionStackTraversal";
 import { resolveAssetStackChain } from "../lib/connectionStackChain";
+
+function writeEnvironmentId(
+	root: IRootStore,
+	...preferred: Array<string | null | undefined>
+): string {
+	return resolveWriteEnvironmentId(
+		knownEnvironmentIds(root),
+		root.ui.activeView,
+		...preferred
+	);
+}
 
 export type { ConnectionDirection };
 
@@ -290,7 +305,7 @@ export const ConnectionStore = types.compose("ConnectionStore", BaseStore, types
 		const linkId = nextLinkId();
 		const newConnection = ConnectionModel.create({
 			id,
-			environmentId: fromSide.environmentId || resolvePrimaryEnvironmentRef(root.ui.activeView),
+			environmentId: writeEnvironmentId(root, fromSide.environmentId),
 			kind: "logical",
 			definition: { label: definitionLabel, description: definitionDescription },
 			settings: {},
@@ -350,7 +365,7 @@ export const ConnectionStore = types.compose("ConnectionStore", BaseStore, types
 		const id = generateResourceID("Connection");
 		const newConnection = ConnectionModel.create({
 			id,
-			environmentId: fromAsset.environmentId || resolvePrimaryEnvironmentRef(root.ui.activeView),
+			environmentId: writeEnvironmentId(root, fromAsset.environmentId),
 			kind: "context",
 			definition: {
 				label: input.definitionLabel?.trim() ?? trimmedTitle ?? "",
@@ -407,7 +422,7 @@ export const ConnectionStore = types.compose("ConnectionStore", BaseStore, types
 		const id = generateResourceID("Connection");
 		const newConnection = ConnectionModel.create({
 			id,
-			environmentId: fromAsset.environmentId || resolvePrimaryEnvironmentRef(root.ui.activeView),
+			environmentId: writeEnvironmentId(root, fromAsset.environmentId),
 			kind: "bridge",
 			bridgeId: input.bridgeId?.trim() ?? "",
 			peerEnvironmentRef: input.peerEnvironmentRef.trim(),
@@ -469,7 +484,7 @@ export const ConnectionStore = types.compose("ConnectionStore", BaseStore, types
 		const fromAsset = assets.find((asset) => asset.id === input.fromAssetId);
 		const newConnection = ConnectionModel.create({
 			id,
-			environmentId: fromAsset?.environmentId || resolvePrimaryEnvironmentRef(root.ui.activeView),
+			environmentId: writeEnvironmentId(root, fromAsset?.environmentId),
 			kind: "link",
 			definition: { label: definitionLabel, description: definitionDescription },
 			settings: {},
@@ -523,8 +538,7 @@ export const ConnectionStore = types.compose("ConnectionStore", BaseStore, types
 		const id = generateResourceID("Connection");
 		const newConnection = ConnectionModel.create({
 			id,
-			environmentId:
-				fromChain[0]?.environmentId || resolvePrimaryEnvironmentRef(root.ui.activeView),
+			environmentId: writeEnvironmentId(root, fromChain[0]?.environmentId),
 			kind: "link",
 			definition: { label: definitionLabel, description: definitionDescription },
 			settings: {},
@@ -570,7 +584,10 @@ export const ConnectionStore = types.compose("ConnectionStore", BaseStore, types
 	const load = flow(function* load() {
 		const root = getRoot(self) as IRootStore;
 		const domain = authStore.getDomain();
-		const environmentIds = resolveViewEnvironmentRefs(root.ui.activeView);
+		const environmentIds = resolveViewEnvironmentRefs(
+			root.ui.activeView,
+			knownEnvironmentIds(root)
+		);
 		const restUrlIds = { env: environmentIds[0] };
 		if (!domain) {
 			return;

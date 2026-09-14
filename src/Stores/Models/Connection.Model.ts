@@ -69,6 +69,13 @@ export const ConnectionModel = types.compose(
 					self.peerConnectionRef = peerConnectionRef;
 				}
 			},
+			setEnvironmentId(environmentId: string) {
+				const next = environmentId.trim();
+				if (self.environmentId === next) {
+					return;
+				}
+				self.environmentId = next;
+			},
 		}))
 );
 

@@ -1,11 +1,23 @@
-import { IDock, IDockpart } from "../Stores/Models/Dock.Model";
+import { IDockpart } from "../Stores/Models/Dock.Model";
 import { parseValueRef } from "./connectionValueRef";
 import { connectionLayerColor } from "./connectionLayerColor";
 import { normalizeDockpartType } from "./dockpartBasedOn";
 
+export type ContextValueDockpartRef = {
+	id: string | number;
+	type?: string | null;
+	protocol?: string | null;
+	label?: string | null;
+};
+
 export type ContextValueHost = {
 	id: string;
-	docks?: ReadonlyArray<Pick<IDock, "id" | "type" | "label" | "dockparts">>;
+	docks?: ReadonlyArray<{
+		id: string;
+		type?: string;
+		label?: string;
+		dockparts?: ReadonlyArray<ContextValueDockpartRef>;
+	}>;
 };
 
 export type ContextValue = {

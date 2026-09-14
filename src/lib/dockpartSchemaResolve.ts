@@ -103,12 +103,12 @@ export function createEmptyDockpartInstance(
 	const resolved = resolveDockpartSchemaById(schemaId, allSchemas);
 	const defaults = resolved ? buildDockpartDefaultsFromSchema(resolved) : {};
 
+	delete defaults.versions;
 	return {
 		id: "",
 		type: schema?.type ?? schemaId,
 		protocol: "",
 		...defaults,
-		versions: Array.isArray(defaults.versions) ? defaults.versions : [],
 		basedOn: Array.isArray(defaults.basedOn) ? defaults.basedOn : [],
 	};
 }
@@ -136,7 +136,6 @@ export function createNewDockpartSnapshot(
 		notes: "",
 		protocol: type,
 		version,
-		versions: version ? [{ version }] : [],
 		basedOn: resolveBasedOnFromSiblings(type, siblings, allSchemas, partId),
 		state: { value: "", timestamp: "", reportedBy: "" },
 		settings: {},

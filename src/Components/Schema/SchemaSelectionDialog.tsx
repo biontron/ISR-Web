@@ -23,9 +23,10 @@ import { environmentDisplayName } from "../../Stores/Models/Environment.Model";
 import {
 	readViewEnvironmentBindings,
 	resolveCreateEnvironmentTarget,
-	resolvePrimaryEnvironmentRef,
-	viewRequiresEnvironmentPicker,
+	resolveWriteEnvironmentId,
+	knownEnvironmentIds,
 } from "../../lib/viewEnvironments";
+import { CreateTabKey, resolveCreateDialogTab } from "../../lib/schemaSelectionDialogTab";
 
 interface SchemaSelectionDialogProps {
 	visible: boolean;
@@ -43,8 +44,6 @@ interface SchemaData {
 	svgIcon: string;
 	createTarget: ElementCreateTarget;
 }
-
-type CreateTabKey = "structure" | "component";
 
 function resolveSchemaForSelection(selectedSchemaId: string): ISchemaModel | undefined {
 	return (
@@ -79,11 +78,16 @@ function createNewElement(
 	}
 
 	if (target === "asset") {
-		const asset = rootStore.assets.create(
-			selectedSchemaId,
-			parentElement!,
-			resolveCreateEnvironmentTarget(rootStore.ui.activeView, environmentId)
+		const targetEnv = resolveCreateEnvironmentTarget(
+			rootStore.ui.activeView,
+			environmentId,
+			knownEnvironmentIds(rootStore)
 		);
+		if (!targetEnv) {
+			message.error("Kein gültiges Environment. Bitte zuerst Environments laden und an die View binden.");
+			return undefined;
+		}
+		const asset = rootStore.assets.create(selectedSchemaId, parentElement!, targetEnv);
 		rootStore.ui.setActiveElement(asset);
 		return asset;
 	}
@@ -138,8 +142,13 @@ const SchemaSelectionDialog: React.FC<SchemaSelectionDialogProps> = ({
 	const [dataSource, setDataSource] = useState<SchemaData[]>([]);
 	const [targetEnvironmentId, setTargetEnvironmentId] = useState("");
 	const navigate = useNavigate();
-	const showEnvironmentPicker = viewRequiresEnvironmentPicker(rootStore.ui.activeView);
-	const environmentChoices = readViewEnvironmentBindings(rootStore.ui.activeView);
+	const knownIds = knownEnvironmentIds(rootStore);
+	const boundKnown = readViewEnvironmentBindings(rootStore.ui.activeView).filter((entry) =>
+		knownIds.includes(entry.ref)
+	);
+	const environmentChoices =
+		boundKnown.length > 0 ? boundKnown : knownIds.map((id) => ({ ref: id }));
+	const showEnvironmentPicker = environmentChoices.length > 1;
 
 	const parentType = isTreeElement(element)
 		? resolveElementSchemaParentType(element.definition)
@@ -171,10 +180,14 @@ const SchemaSelectionDialog: React.FC<SchemaSelectionDialogProps> = ({
 	}, [visible, element, activeTab, structureSchemas, componentSchemas]);
 
 	useEffect(() => {
-		if (visible) {
-			setTargetEnvironmentId(resolvePrimaryEnvironmentRef(rootStore.ui.activeView));
+		if (!visible) {
+			return;
 		}
-	}, [visible]);
+		setActiveTab(resolveCreateDialogTab(structureSchemas.length));
+		setTargetEnvironmentId(
+			resolveWriteEnvironmentId(knownEnvironmentIds(rootStore), rootStore.ui.activeView)
+		);
+	}, [visible, structureSchemas.length]);
 
 	const columns = [
 		{
@@ -241,15 +254,11 @@ const SchemaSelectionDialog: React.FC<SchemaSelectionDialogProps> = ({
 		<Modal
 			width="50%"
 			style={{ minWidth: 600 }}
-			title={
-				"Select Item for adding next to '" +
-				element.definition.name +
-				"' [" +
-				element.definition.type +
-				"/" +
-				element.definition.subType +
-				"]"
-			}
+			title={langtext("general.create_dialog_title", {
+				name: element.definition.name,
+				type: element.definition.type,
+				subType: element.definition.subType ?? "",
+			})}
 			open={visible}
 			onCancel={onCancel}
 			onOk={() => {
@@ -303,6 +312,7 @@ const SchemaSelectionDialog: React.FC<SchemaSelectionDialogProps> = ({
 					{
 						key: "structure",
 						label: langtext("general.create_tab_structure"),
+						disabled: structureSchemas.length === 0,
 						children: (
 							<Table
 								className="schema-selection-table schema-selection-table--structure"

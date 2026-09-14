@@ -50,4 +50,19 @@ describe("schemaAddFieldDefaults", () => {
 		expect(String(value)).toMatch(/^D-[A-Za-z0-9]{22}$/);
 		expect(String(value).slice(2)).toHaveLength(22);
 	});
+
+	it("erfindet keine Environment-ID aus E-Pattern", () => {
+		const value = resolveFieldValueOnAdd(
+			{
+				dataStructure: { itemName: "id", default: "" },
+				rules: "^E-[A-Za-z0-9]{22}$",
+			} as any,
+			{
+				element: {},
+				dataPathPrefix: "environments",
+				siblingArrayPath: "environments",
+			}
+		);
+		expect(value).toBeUndefined();
+	});
 });

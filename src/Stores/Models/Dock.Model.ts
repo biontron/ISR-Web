@@ -4,10 +4,6 @@ export const DockpartBasedOnEntryModel = types.model("DockpartBasedOnEntry", {
 	dockpartId: types.union(types.string, types.number),
 });
 
-export const DockpartVersionModel = types.model("DockpartVersion", {
-	version: types.string,
-});
-
 export const DockpartStateModel = types.model("DockpartState", {
 	value: types.optional(types.string, ""),
 	timestamp: types.optional(types.string, ""),
@@ -29,7 +25,6 @@ export const DOCKPART_CORE_KEYS = [
 	"notes",
 	"protocol",
 	"version",
-	"versions",
 	"basedOn",
 	"state",
 	"settings",
@@ -107,23 +102,6 @@ function normalizeState(value: unknown): { value: string; timestamp: string; rep
 	};
 }
 
-function normalizeVersions(value: unknown): Array<{ version: string }> {
-	if (value == null || value === "") {
-		return [];
-	}
-	const items = Array.isArray(value) ? value : [value];
-	return items.flatMap((item) => {
-		if (typeof item === "string") {
-			return item ? [{ version: item }] : [];
-		}
-		if (item && typeof item === "object" && "version" in item) {
-			const version = asOptionalString((item as { version?: unknown }).version);
-			return version ? [{ version }] : [];
-		}
-		return [];
-	});
-}
-
 function flattenDockpartSnapshot(snapshot: Record<string, unknown>): Record<string, unknown> {
 	const { schemaExtensions, ...core } = snapshot;
 	const flat: Record<string, unknown> = { ...core };
@@ -134,6 +112,7 @@ function flattenDockpartSnapshot(snapshot: Record<string, unknown>): Record<stri
 		}
 	}
 
+	delete flat.versions;
 	return flat;
 }
 
@@ -145,14 +124,7 @@ function normalizeIncomingDockpart(snapshot: Record<string, unknown>): Record<st
 	next.notes = asOptionalString(next.notes);
 	next.protocol = asOptionalString(next.protocol);
 	next.version = asOptionalString(next.version);
-	if ((next.version == null || next.version === "") && Array.isArray(next.versions)) {
-		const first = next.versions[0] as { version?: string } | string | undefined;
-		if (typeof first === "string") {
-			next.version = first;
-		} else if (first && typeof first === "object" && first.version) {
-			next.version = first.version;
-		}
-	}
+	delete next.versions;
 	if ((!next.type || next.type === "") && typeof next.protocol === "string") {
 		next.type = next.protocol;
 	}
@@ -184,7 +156,6 @@ function normalizeIncomingDockpart(snapshot: Record<string, unknown>): Record<st
 	next.valueRef = asOptionalString(next.valueRef);
 	next.basedOn = normalizeBasedOn(next.basedOn);
 	next.state = normalizeState(next.state);
-	next.versions = normalizeVersions(next.versions);
 	return next;
 }
 
@@ -200,7 +171,6 @@ export const DockpartModel = types
 		notes: types.optional(types.string, ""),
 		protocol: types.optional(types.string, ""),
 		version: types.optional(types.string, ""),
-		versions: types.optional(types.array(DockpartVersionModel), []),
 		basedOn: types.optional(types.array(DockpartBasedOnEntryModel), []),
 		state: types.optional(DockpartStateModel, {}),
 		settings: types.optional(types.map(types.frozen()), {}),

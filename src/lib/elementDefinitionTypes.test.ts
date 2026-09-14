@@ -247,6 +247,9 @@ describe("elementDefinitionTypes", () => {
 		expect(
 			isApplicationAssignedDefinitionField({ class: "Asset" }, "tag", "definition.tags[0].tag")
 		).toBe(false);
+		expect(
+			isApplicationAssignedDefinitionField({ class: "Asset" }, "environmentId", "environmentId")
+		).toBe(true);
 	});
 
 	it("wirft wenn Schema fehlt", () => {

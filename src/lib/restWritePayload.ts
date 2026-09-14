@@ -75,12 +75,40 @@ function mapConnectionLink(link: unknown): Record<string, unknown> {
 	return mapped;
 }
 
+function omitDockpartVersions(docks: unknown): unknown {
+	if (!Array.isArray(docks)) {
+		return docks;
+	}
+	return docks.map((dock) => {
+		const record = asRecord(dock);
+		if (!record || !Array.isArray(record.dockparts)) {
+			return dock;
+		}
+		return {
+			...record,
+			dockparts: record.dockparts.map((part) => {
+				const partRecord = asRecord(part);
+				if (!partRecord || !Object.prototype.hasOwnProperty.call(partRecord, "versions")) {
+					return part;
+				}
+				const { versions: _versions, ...rest } = partRecord;
+				return rest;
+			}),
+		};
+	});
+}
+
 /**
- * Asset-REST: Reihenfolge id → definition → ownerIdRef → environmentId.
- * Keine Felder streichen — auch nicht environmentId / elementIdRefs.environmentRef.
+ * Asset-REST: id, definition, ownerIdRef, environmentId (Live-XSD).
+ * environmentId muss ein existierendes Environment sein (URL + Körper).
  */
 export function restWritePayloadForAsset(snapshot: unknown): Record<string, unknown> {
-	return orderRecord(asRecord(snapshot) ?? {}, ASSET_KEY_ORDER);
+	const source = { ...(asRecord(snapshot) ?? {}) };
+	const payload = orderRecord(source, ASSET_KEY_ORDER);
+	if (Object.prototype.hasOwnProperty.call(payload, "docks")) {
+		payload.docks = omitDockpartVersions(payload.docks);
+	}
+	return payload;
 }
 
 /**

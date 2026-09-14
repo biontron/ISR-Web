@@ -73,12 +73,12 @@ export function createDockpartSchemaPreviewInstance(
 	const defaults = buildDefaultsFromSchemaItems(resolved.items as IConnectSchemaItem[] as any);
 	delete defaults.id;
 
+	delete defaults.versions;
 	return {
 		id: "",
 		type: schema.type,
 		protocol: "",
 		...defaults,
-		versions: Array.isArray(defaults.versions) ? defaults.versions : [],
 		basedOn: Array.isArray(defaults.basedOn) ? defaults.basedOn : [],
 	};
 }

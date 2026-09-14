@@ -73,7 +73,8 @@ const SchemaEditorField: React.FC<FieldComponentProps> = ({
 	const fieldKey = `${elementData.id}:${mstPath}`;
 	const defaultsAppliedRef = useRef(false);
 	const isApplicationAssignedField =
-		(schemaName === "ANY-DEFINITION" &&
+		((schemaName === "ANY-DEFINITION" ||
+			schemaDefinitionField.dataStructure.itemName === "environmentId") &&
 			isApplicationAssignedDefinitionField(
 				elementData,
 				schemaDefinitionField.dataStructure.itemName,

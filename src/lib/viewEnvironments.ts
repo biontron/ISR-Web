@@ -36,9 +36,69 @@ export function readViewEnvironmentBindings(view?: ViewEnvironmentSource | null)
 	return bindings;
 }
 
+export function knownEnvironmentIds(root?: {
+	environments?: { environments?: ReadonlyArray<{ id: string }> };
+} | null): string[] {
+	return (root?.environments?.environments ?? []).map((entry) => entry.id);
+}
+
+/** Erste ID, die in knownIds vorkommt; sonst das erste bekannte Environment. */
+export function pickKnownEnvironmentId(
+	knownIds: ReadonlyArray<string>,
+	...candidates: Array<string | null | undefined>
+): string {
+	const known: string[] = [];
+	const seen = new Set<string>();
+	for (const id of knownIds) {
+		const trimmed = typeof id === "string" ? id.trim() : "";
+		if (!trimmed || seen.has(trimmed)) {
+			continue;
+		}
+		seen.add(trimmed);
+		known.push(trimmed);
+	}
+	for (const candidate of candidates) {
+		const id = typeof candidate === "string" ? candidate.trim() : "";
+		if (id && seen.has(id)) {
+			return id;
+		}
+	}
+	return known[0] ?? "";
+}
+
+/**
+ * Schreib-/URL-Ziel: nur Environments, die GET /environments geliefert hat.
+ * View-Bindungen oder Store-IDs, die dort fehlen, werden nicht verwendet.
+ */
+export function resolveWriteEnvironmentId(
+	knownIds: ReadonlyArray<string>,
+	view?: ViewEnvironmentSource | null,
+	...preferred: Array<string | null | undefined>
+): string {
+	const bindings = readViewEnvironmentBindings(view);
+	return pickKnownEnvironmentId(
+		knownIds,
+		...preferred,
+		bindings.find((entry) => entry.primary)?.ref,
+		bindings[0]?.ref,
+		LEGACY_ENVIRONMENT_ID
+	);
+}
+
 /** Environment-IDs, die eine View lädt. Ohne Bindung: Legacy-München, damit Demo nicht leer aufgeht. */
-export function resolveViewEnvironmentRefs(view?: ViewEnvironmentSource | null): string[] {
+export function resolveViewEnvironmentRefs(
+	view?: ViewEnvironmentSource | null,
+	knownIds?: ReadonlyArray<string>
+): string[] {
 	const refs = readViewEnvironmentBindings(view).map((entry) => entry.ref);
+	if (knownIds && knownIds.length > 0) {
+		const matched = refs.filter((ref) => knownIds.includes(ref));
+		if (matched.length > 0) {
+			return matched;
+		}
+		const fallback = pickKnownEnvironmentId(knownIds, LEGACY_ENVIRONMENT_ID);
+		return fallback ? [fallback] : [];
+	}
 	if (refs.length > 0) {
 		return refs;
 	}
@@ -71,11 +131,15 @@ export function viewRequiresEnvironmentPicker(view?: ViewEnvironmentSource | nul
 	return readViewEnvironmentBindings(view).length > 1;
 }
 
-/** Schreibziel für neue Komponenten: Auswahl, sonst Primary. */
+/** Schreibziel für neue Komponenten: bekannte Environments, sonst Primary. */
 export function resolveCreateEnvironmentTarget(
 	view?: ViewEnvironmentSource | null,
-	selectedRef?: string | null
+	selectedRef?: string | null,
+	knownIds: ReadonlyArray<string> = []
 ): string {
+	if (knownIds.length > 0) {
+		return resolveWriteEnvironmentId(knownIds, view, selectedRef);
+	}
 	const selected = trimRef(selectedRef);
 	const refs = resolveViewEnvironmentRefs(view);
 	if (selected && refs.includes(selected)) {
@@ -88,7 +152,8 @@ export function defaultBindingsForNewView(
 	activeView?: ViewEnvironmentSource | null,
 	availableIds: ReadonlyArray<string> = []
 ): ViewEnvironmentBinding[] {
-	const fromActive = readViewEnvironmentBindings(activeView);
+	const known = new Set(availableIds.map((id) => trimRef(id)).filter(Boolean));
+	const fromActive = readViewEnvironmentBindings(activeView).filter((entry) => known.has(entry.ref));
 	if (fromActive.length > 0) {
 		return fromActive;
 	}

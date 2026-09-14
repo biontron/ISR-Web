@@ -238,6 +238,13 @@ export const AssetModel = types.compose(
 		self.ownerIdRef = ownerId;
 		self.markTouched();
 	},
+	setEnvironmentId(environmentId: string) {
+		const next = environmentId.trim();
+		if (self.environmentId === next) {
+			return;
+		}
+		self.environmentId = next;
+	},
 }));
 
 // Typescript type / interface export

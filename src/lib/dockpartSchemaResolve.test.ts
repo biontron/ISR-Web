@@ -212,6 +212,7 @@ describe("dockpartSchemaResolve", () => {
 		expect(empty.label).toBe("IPv4");
 		expect(empty.protocol).toBe("IP");
 		expect(empty.address).toEqual({ ip: "192.168.178.42" });
+		expect(empty).not.toHaveProperty("versions");
 
 		const created = createNewDockpartSnapshot("IPV4", "99", schemas);
 		expect(created.id).toBe("99");
@@ -255,11 +256,11 @@ describe("dockpartSchemaResolve", () => {
 			notes: "",
 			protocol: "IPv4",
 			version: "",
-			versions: [],
 			basedOn: [],
 			state: { value: "", timestamp: "", reportedBy: "" },
 			settings: {},
 		});
+		expect(snapshot).not.toHaveProperty("versions");
 	});
 
 	it("createNewDockpartSnapshot setzt basedOn auf die darunterliegende Schicht", () => {

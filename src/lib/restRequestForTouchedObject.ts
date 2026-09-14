@@ -3,7 +3,7 @@ import { IRootStore } from "../Stores/Root.Store";
 import { buildRestUrl, RestUrlKind } from "./restUrlCatalog";
 import { TouchedObjectRef } from "./touchedObjects";
 import { restWritePayloadForRef } from "./restWritePayload";
-import { resolvePrimaryEnvironmentRef } from "./viewEnvironments";
+import { knownEnvironmentIds, resolveWriteEnvironmentId } from "./viewEnvironments";
 
 export interface TouchedObjectRestRequest {
 	method: string;
@@ -25,12 +25,27 @@ export function buildRestRequestForTouchedObject(
 	const itemId = ref.id;
 	let env = "";
 	if (ref.kind === "Asset") {
-		env = root.assets.assets.find((asset) => asset.id === itemId)?.environmentId ?? "";
+		const asset = root.assets.assets.find((item) => item.id === itemId);
+		env = resolveWriteEnvironmentId(
+			knownEnvironmentIds(root),
+			root.ui.activeView,
+			asset?.environmentId
+		);
+		if (asset && env) {
+			asset.setEnvironmentId(env);
+		}
 	} else if (ref.kind === "Connection") {
-		env = root.connections.connections.find((connection) => connection.id === itemId)?.environmentId ?? "";
-	}
-	if (!env) {
-		env = resolvePrimaryEnvironmentRef(root.ui.activeView);
+		const connection = root.connections.connections.find((item) => item.id === itemId);
+		env = resolveWriteEnvironmentId(
+			knownEnvironmentIds(root),
+			root.ui.activeView,
+			connection?.environmentId
+		);
+		if (connection && env) {
+			connection.setEnvironmentId(env);
+		}
+	} else {
+		env = resolveWriteEnvironmentId(knownEnvironmentIds(root), root.ui.activeView);
 	}
 
 	let operation: "create" | "update" | "delete";

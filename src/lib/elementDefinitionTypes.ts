@@ -500,6 +500,13 @@ export function isApplicationAssignedDefinitionField(
 	if (!elementData.class || !TREE_ELEMENT_CLASSES.has(elementData.class)) {
 		return false;
 	}
+	if (
+		elementData.class === "Asset" &&
+		fieldItemName === "environmentId" &&
+		dataPath === "environmentId"
+	) {
+		return true;
+	}
 	if (!APPLICATION_ASSIGNED_DEFINITION_PATHS.has(dataPath)) {
 		return false;
 	}

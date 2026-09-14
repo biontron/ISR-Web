@@ -122,6 +122,9 @@ function generateFromPatternRules(rules: string): string | undefined {
 			E: "Environment",
 		};
 		const resourceType = typeByPrefix[prefix];
+		if (resourceType === "Environment") {
+			return undefined;
+		}
 		if (resourceType && repeat === 22) {
 			return generateResourceId(resourceType);
 		}

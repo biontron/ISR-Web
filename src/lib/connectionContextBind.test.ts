@@ -11,7 +11,7 @@ function web(): IAsset {
 				dockparts: [{ id: "p-vlan", type: "VLAN", protocol: "VLAN", label: "VLAN" }],
 			},
 		],
-	} as IAsset;
+	} as unknown as IAsset;
 }
 
 function context(valueIds: string[]): IAsset {
@@ -24,7 +24,7 @@ function context(valueIds: string[]): IAsset {
 				dockparts: valueIds.map((id) => ({ id, type: "VLAN", protocol: "VLAN", label: id })),
 			},
 		],
-	} as IAsset;
+	} as unknown as IAsset;
 }
 
 describe("connectionContextBind", () => {
@@ -50,10 +50,9 @@ describe("connectionContextBind", () => {
 			id: "server-4711",
 			definition: { type: "DEVICE" },
 			docks: [],
-		} as IAsset;
+		} as unknown as IAsset;
 		const ctx = context(["v10"]);
-		const otherCtx = context(["v11"]);
-		otherCtx.id = "ctx-b";
+		const otherCtx = { ...context(["v11"]), id: "ctx-b" } as unknown as IAsset;
 		const assets = [device, ctx, otherCtx];
 		expect(canDropAssetOnContextComponent(device, ctx, assets)).toBe(true);
 		expect(canDropAssetOnContextComponent(ctx, otherCtx, assets)).toBe(false);

@@ -9,7 +9,11 @@ import { ActiveElement } from "../Interfaces/Element";
 import { AssetModel, IAsset } from "./Models/Asset.Model";
 import authStore from "./Auth.Store";
 import { stampEnvironmentId } from "../lib/environmentIdentity";
-import { resolvePrimaryEnvironmentRef, resolveViewEnvironmentRefs } from "../lib/viewEnvironments";
+import {
+	knownEnvironmentIds,
+	resolveViewEnvironmentRefs,
+	resolveWriteEnvironmentId,
+} from "../lib/viewEnvironments";
 import { AssetDetailsModel } from "./Models/AssetDetails.Model";
 import { generateResourceID } from "../lib/common";
 import api from "../lib/api";
@@ -54,7 +58,14 @@ export const AssetStore = types.compose("Asset", BaseStore, types.model({
 				if (!data) {
 					return;
 				}
-				const env = data.environmentId || resolvePrimaryEnvironmentRef(root.ui.activeView);
+				const env = resolveWriteEnvironmentId(
+					knownEnvironmentIds(root),
+					root.ui.activeView,
+					data.environmentId
+				);
+				if (env && data.environmentId !== env) {
+					data.setEnvironmentId(env);
+				}
 				const isCreate = isNewElementStatus(data.status, data.statusBeforeInvalid);
 				const url = `/${authStore.getDomain()}/environments/${env}/assets${
 					isCreate ? "" : "/" + assetID
@@ -136,7 +147,10 @@ export const AssetStore = types.compose("Asset", BaseStore, types.model({
 		self.loading = true;
 		const root = getRoot(self) as any;
 		const domain = authStore.getDomain();
-		const environmentIds = resolveViewEnvironmentRefs(root.ui.activeView);
+		const environmentIds = resolveViewEnvironmentRefs(
+			root.ui.activeView,
+			knownEnvironmentIds(root)
+		);
 
 		try {
 			if (!domain) {
@@ -216,8 +230,12 @@ export const AssetStore = types.compose("Asset", BaseStore, types.model({
 				: "";
 		const newAsset = AssetModel.create({
 			id: id,
-			environmentId:
-				environmentId || parentEnvironmentId || resolvePrimaryEnvironmentRef(root.ui.activeView),
+			environmentId: resolveWriteEnvironmentId(
+				knownEnvironmentIds(root),
+				root.ui.activeView,
+				environmentId,
+				parentEnvironmentId
+			),
 			definition: {
 				storeType: definitionTypes.storeType,
 				baseType: definitionTypes.baseType,
@@ -260,7 +278,11 @@ export const AssetStore = types.compose("Asset", BaseStore, types.model({
 
 		try {
 			const asset = root.assets.assets.find((asset: IAsset) => asset.id === assetId);
-			const env = asset?.environmentId || resolvePrimaryEnvironmentRef(root.ui.activeView);
+			const env = resolveWriteEnvironmentId(
+				knownEnvironmentIds(root),
+				root.ui.activeView,
+				asset?.environmentId
+			);
 			const url = `/${authStore.getDomain()}/environments/${env}/assets/${assetId}`;
 
 			const response = yield api.delete(url);

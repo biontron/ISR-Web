@@ -5,6 +5,7 @@ import {
 	resolveCreateEnvironmentTarget,
 	resolvePrimaryEnvironmentRef,
 	resolveViewEnvironmentRefs,
+	resolveWriteEnvironmentId,
 	slugViewCollectionId,
 	viewRequiresEnvironmentPicker,
 } from "./viewEnvironments";
@@ -53,11 +54,24 @@ describe("viewEnvironments", () => {
 		expect(slugViewCollectionId("  Dev_1 ")).toBe("dev_1");
 	});
 
-	it("kopiert aktive Bindungen für eine neue View", () => {
+	it("kopiert aktive Bindungen für eine neue View nur wenn sie existieren", () => {
 		expect(
-			defaultBindingsForNewView({ environments: [{ ref: "home", primary: true }] }, ["office"])
+			defaultBindingsForNewView({ environments: [{ ref: "home", primary: true }] }, ["home", "office"])
 		).toEqual([{ ref: "home", primary: true }]);
+		expect(defaultBindingsForNewView({ environments: [{ ref: "missing" }] }, ["office"])).toEqual([
+			{ ref: "office", primary: true },
+		]);
 		expect(defaultBindingsForNewView({}, ["office"])).toEqual([{ ref: "office", primary: true }]);
 		expect(defaultBindingsForNewView({}, [])).toEqual([]);
+	});
+
+	it("nimmt nur Environments, die GET /environments kennt", () => {
+		const view = { environments: [{ ref: "E-0zGJkZIDBSXsfQAoGBwykN", primary: true }] };
+		const known = ["01e93fa0-1c74-44b1-bafd-6d8a988fea01"];
+		expect(resolveWriteEnvironmentId(known, view)).toBe("01e93fa0-1c74-44b1-bafd-6d8a988fea01");
+		expect(resolveCreateEnvironmentTarget(view, "E-0zGJkZIDBSXsfQAoGBwykN", known)).toBe(
+			"01e93fa0-1c74-44b1-bafd-6d8a988fea01"
+		);
+		expect(resolveViewEnvironmentRefs(view, known)).toEqual(known);
 	});
 });

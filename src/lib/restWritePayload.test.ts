@@ -56,10 +56,10 @@ describe("restWritePayloadForConnection", () => {
 });
 
 describe("restWritePayloadForAsset", () => {
-	it("stellt ownerIdRef direkt hinter definition; environmentId bleibt danach", () => {
+	it("stellt ownerIdRef direkt hinter definition; environmentId folgt danach", () => {
 		const payload = restWritePayloadForAsset({
 			id: "A-1M1BSTBv3zKbWBJ8LSYITg",
-			environmentId: "E-0zGJkZIDBSXsfQAoGBwykN",
+			environmentId: "01e93fa0-1c74-44b1-bafd-6d8a988fea01",
 			definition: {
 				storeType: "COMPONENT",
 				baseType: "COMPONENT",
@@ -72,7 +72,7 @@ describe("restWritePayloadForAsset", () => {
 			attachments: [],
 			properties: { style: { bgColor: "", graph: { layout: null } } },
 			settings: { dns: { dn: { names: "supergut" } } },
-			elementIdRefs: [{ id: "A-other", environmentRef: "E-0zGJkZIDBSXsfQAoGBwykN" }],
+			elementIdRefs: [{ id: "A-other", environmentRef: "01e93fa0-1c74-44b1-bafd-6d8a988fea01" }],
 			filterRules: [],
 		});
 		expect(Object.keys(payload).slice(0, 4)).toEqual([
@@ -81,11 +81,42 @@ describe("restWritePayloadForAsset", () => {
 			"ownerIdRef",
 			"environmentId",
 		]);
-		expect(payload.environmentId).toBe("E-0zGJkZIDBSXsfQAoGBwykN");
+		expect(payload.environmentId).toBe("01e93fa0-1c74-44b1-bafd-6d8a988fea01");
 		expect(payload.ownerIdRef).toBe("4b8c402c-87a4-494a-8c40-2c87a4c94a59");
 		expect(payload.elementIdRefs).toEqual([
-			{ id: "A-other", environmentRef: "E-0zGJkZIDBSXsfQAoGBwykN" },
+			{ id: "A-other", environmentRef: "01e93fa0-1c74-44b1-bafd-6d8a988fea01" },
 		]);
 		expect(payload.settings).toEqual({ dns: { dn: { names: "supergut" } } });
+	});
+
+	it("schreibt Dockpart-version, nicht versions[]", () => {
+		const payload = restWritePayloadForAsset({
+			id: "A-1M1BSTBv3zKbWBJ8LSYITg",
+			environmentId: "01e93fa0-1c74-44b1-bafd-6d8a988fea01",
+			definition: {
+				storeType: "COMPONENT",
+				baseType: "COMPONENT",
+				type: "HARDWARE",
+				name: "Neu",
+				label: "Neue Komponente",
+			},
+			docks: [
+				{
+					id: "D-A9JN75eH2eAkArEYjr6xAD",
+					dockparts: [
+						{
+							id: "1",
+							type: "IP",
+							version: "4",
+							versions: [{ version: "4" }],
+						},
+					],
+				},
+			],
+		});
+		const part = (payload.docks as Array<{ dockparts: Array<Record<string, unknown>> }>)[0]
+			.dockparts[0];
+		expect(part.version).toBe("4");
+		expect(part.versions).toBeUndefined();
 	});
 });
