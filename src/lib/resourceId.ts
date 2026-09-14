@@ -3,6 +3,9 @@ import { v4 as uuidv4 } from "uuid";
 /** Zielmuster: [VGADCE]-[A-Za-z0-9]{22} — verlustfreie UUID-v4-Kompression in Base62. */
 export const RESOURCE_ID_REGEX = /^[VGADCE]-[A-Za-z0-9]{22}$/;
 
+/** Server-XSD DockLinkRefType: Asset/Dock/Connection-IDs, nicht UUID. */
+export const DOCK_LINK_REF_REGEX = /^[VGADCE]-[A-Za-z0-9]{6,22}(#[0-9]{1,3})?$/;
+
 export const RESOURCE_ID_SUFFIX_LENGTH = 22;
 
 const BASE62_CHARSET = "0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz";
@@ -86,6 +89,11 @@ export function decodeBase62ToBytes(encoded: string): number[] {
 /** UUID v4 → 22 Base62-Zeichen. */
 export function compressUuidToResourceSuffix(length = RESOURCE_ID_SUFFIX_LENGTH): string {
 	return encodeBytesToBase62(uuidStringToBytes(uuidv4()), length);
+}
+
+export function isDockLinkRef(value: string | null | undefined): boolean {
+	const trimmed = value?.trim() ?? "";
+	return trimmed.length > 0 && DOCK_LINK_REF_REGEX.test(trimmed);
 }
 
 export function isResourceId(value: string, prefix?: string): boolean {

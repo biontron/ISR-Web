@@ -10,6 +10,7 @@ import ElementModel, { ElementDefinitionTagModel } from "./Element.Model";
 import { assignableElementToTreeNode } from "../../lib/treeNodeDisplay";
 import { collectFilterMatchedElementsExcluding } from "../../lib/elementXPathFilter";
 import { FilterRuleModel } from "./FilterRule.Model";
+import { DockModel } from "./Dock.Model";
 import { normalizeFilterRules } from "../../lib/filterRuleNormalize";
 import { resolvePrimaryEnvironmentRef } from "../../lib/viewEnvironments";
 
@@ -113,6 +114,7 @@ export const GroupModel = types.compose(
 				}),
 			}),
 			settings: types.map(types.frozen()),
+			docks: types.optional(types.array(DockModel), []),
 		})
 		// .volatile(() => ({ }))
 		// .actions((self) => ({ }))
@@ -218,6 +220,25 @@ export const GroupModel = types.compose(
 		self.elementIdRefs = cast(
 			refs.map((ref) => ({ id: ref.id, environmentRef: ref.environmentRef ?? "" }))
 		);
+		self.markTouched();
+	},
+	addContextValue(input: { id: string; type: string; label: string }) {
+		self.beginEdit();
+		if (self.docks.length === 0) {
+			self.docks.push({
+				id: `dctx-${self.id.slice(0, 8)}`,
+				type: "CONTEXT",
+				label: "Context",
+				dockparts: [],
+			});
+		}
+		self.docks[0].dockparts.push({
+			id: input.id,
+			type: input.type,
+			label: input.label,
+			protocol: input.type,
+			valueRef: "",
+		} as never);
 		self.markTouched();
 	},
 	setFilterRules(rules: unknown[]) {

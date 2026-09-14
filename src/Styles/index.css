@@ -534,6 +534,17 @@ svg .edgePath.graph-edge--negative path {
 	display: inline-block;
 }
 
+.graph-canvas__svg g.graph-device-shell .graph-node-shell {
+	width: 100%;
+	box-sizing: border-box;
+	background: rgba(255, 255, 255, 0.3);
+	padding: 4px 8px 4px 6px;
+}
+
+.graph-canvas__svg g.graph-device-shell rect.graph-device-titlebar {
+	fill: rgba(255, 255, 255, 0.3);
+}
+
 .graph-canvas__svg .graph-node-tooltip {
 	display: none;
 	position: absolute;
@@ -554,6 +565,21 @@ svg .edgePath.graph-edge--negative path {
 
 .graph-canvas__svg .graph-node-shell:hover .graph-node-tooltip {
 	display: block;
+}
+
+.graph-dock-circles {
+	display: flex;
+	justify-content: flex-end;
+	gap: 4px;
+	margin-top: 6px;
+}
+
+.graph-dock-circle {
+	width: 10px;
+	height: 10px;
+	border-radius: 50%;
+	border: 1px solid rgba(15, 23, 42, 0.35);
+	flex: 0 0 auto;
 }
 
 .graph-node-tooltip__title {

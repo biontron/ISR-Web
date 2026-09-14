@@ -54,6 +54,8 @@ export const UIStore = types
 		pendingValidationRuleViewId: types.optional(types.string, ""),
 		pendingValidationRuleXpath: types.optional(types.string, ""),
 		pendingValidationRuleComment: types.optional(types.string, ""),
+		pendingContextBindContextId: types.optional(types.string, ""),
+		pendingContextBindDockpartId: types.optional(types.string, ""),
 	})
 	.actions((self) => ({
 		syncActiveElementValidation() {
@@ -231,6 +233,15 @@ export const UIStore = types
 			self.pendingValidationRuleViewId = "";
 			self.pendingValidationRuleXpath = "";
 			self.pendingValidationRuleComment = "";
+		},
+		setPendingContextBind(contextId: string, dockpartId?: string) {
+			self.pendingContextBindContextId = contextId;
+			self.pendingContextBindDockpartId = dockpartId ?? "";
+			self.elementPropertiesTab = "2";
+		},
+		clearPendingContextBind() {
+			self.pendingContextBindContextId = "";
+			self.pendingContextBindDockpartId = "";
 		},
 	}))
 	.views((self) => ({

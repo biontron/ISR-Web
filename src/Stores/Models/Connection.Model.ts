@@ -39,8 +39,9 @@ export const ConnectionModel = types.compose(
 	ElementModel,
 	types
 		.model("Connection", {
-			id: types.identifier,
-			environmentId: types.optional(types.string, ""),
+			definition: types.optional(ConnectionDefinitionModel, {}),
+			links: types.optional(types.array(LinkModel), []),
+			settings: types.optional(types.map(types.frozen()), {}),
 			kind: types.optional(
 				types.enumeration("ConnectionKind", ["logical", "link", "bridge", "context"]),
 				"logical"
@@ -48,9 +49,7 @@ export const ConnectionModel = types.compose(
 			bridgeId: types.optional(types.string, ""),
 			peerEnvironmentRef: types.optional(types.string, ""),
 			peerConnectionRef: types.optional(types.string, ""),
-			definition: types.optional(ConnectionDefinitionModel, {}),
-			links: types.optional(types.array(LinkModel), []),
-			settings: types.optional(types.map(types.frozen()), {}),
+			environmentId: types.optional(types.string, ""),
 		})
 		.views((self) => ({
 			get class(): string {
@@ -61,10 +60,13 @@ export const ConnectionModel = types.compose(
 			setKind(kind: "logical" | "link" | "bridge" | "context") {
 				self.kind = kind;
 			},
-			setBridgePeer(peerEnvironmentRef: string, bridgeId = "") {
+			setBridgePeer(peerEnvironmentRef: string, bridgeId = "", peerConnectionRef = "") {
 				self.peerEnvironmentRef = peerEnvironmentRef;
 				if (bridgeId) {
 					self.bridgeId = bridgeId;
+				}
+				if (peerConnectionRef) {
+					self.peerConnectionRef = peerConnectionRef;
 				}
 			},
 		}))

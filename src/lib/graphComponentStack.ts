@@ -3,11 +3,16 @@ import { IAsset } from "../Stores/Models/Asset.Model";
 
 export const GRAPH_STACK_CLUSTER_PREFIX = "__stack__";
 
-/** Kein Abstand zwischen Stapel-Ebenen — Kästen direkt übereinander. */
+/** Kein Abstand zwischen Funktions-Ebenen — Kästen direkt übereinander. */
 export const STACK_LAYER_GAP = 0;
 export const STACK_PARALLEL_GAP = 2;
 export const STACK_PAD = 4;
+/** Innenabstand der Device-Box links/rechts um die Funktions-Components. */
+export const STACK_INNER_PAD_X = 8;
+/** Abstand unter der Titelleiste und am unteren Rand der Device-Box. */
+export const STACK_INNER_PAD_Y = 4;
 export const STACK_COLUMN_GAP = 20;
+export const DEVICE_TITLE_BAR_FILL = "rgba(255,255,255,0.3)";
 
 export function graphStackClusterId(rootAssetId: string): string {
 	return `${GRAPH_STACK_CLUSTER_PREFIX}${rootAssetId}`;

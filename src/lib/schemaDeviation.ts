@@ -76,7 +76,44 @@ export function buildSchemaDataPath(
 		return pathPrefix;
 	}
 
+	// CONNECTION: Wrapper um links[n] / linkparts[n] — REST ist flach, ohne extra Objekt-Key.
+	if (isFixedObjectGroup(group) && isConnectionFlatWrapperPath(pathPrefix, itemName)) {
+		return pathPrefix;
+	}
+
 	return buildDockpartDataPath(pathPrefix, itemName);
+}
+
+const CONNECTION_LINK_NESTED_GROUPS = new Set(["linkparts", "credentials", "metadata"]);
+
+function isConnectionFlatWrapperPath(pathPrefix: string, itemName: string): boolean {
+	if (/^links\[\d+\]$/.test(pathPrefix)) {
+		return !CONNECTION_LINK_NESTED_GROUPS.has(itemName);
+	}
+	return /(?:^|\.)linkparts\[\d+\]$/.test(pathPrefix);
+}
+
+/** Schema-Gruppen, deren Pfad auf denselben Datenknoten zeigt (leerer Name / Array-Wrapper). */
+export function schemaGroupFlattensOntoPrefix(
+	group: ISchemaGroupModel,
+	pathPrefix: string
+): boolean {
+	return buildSchemaDataPath(pathPrefix, group) === pathPrefix;
+}
+
+function expandFlattenedSchemaItems(
+	schemaItems: ISchemaItem[],
+	pathPrefix: string
+): ISchemaItem[] {
+	const expanded: ISchemaItem[] = [];
+	for (const item of schemaItems) {
+		if (isSchemaGroup(item) && schemaGroupFlattensOntoPrefix(item, pathPrefix)) {
+			expanded.push(...expandFlattenedSchemaItems(item.items, pathPrefix));
+			continue;
+		}
+		expanded.push(item);
+	}
+	return expanded;
 }
 
 /**
@@ -274,8 +311,9 @@ function findExtraPathsInScopePlain(
 	}
 
 	const extras: ExtraDataEntry[] = [];
+	const effectiveSchemaItems = expandFlattenedSchemaItems(schemaItems, pathPrefix);
 	const schemaByName = new Map(
-		schemaItems.map((item) => [item.dataStructure.itemName, item])
+		effectiveSchemaItems.map((item) => [item.dataStructure.itemName, item])
 	);
 
 	for (const [key, value] of getDataEntries(data)) {
@@ -550,7 +588,7 @@ export function findStructuralMissingInScope(
 ): StructuralMissingEntry[] {
 	const entries: StructuralMissingEntry[] = [];
 
-	for (const item of schemaItems) {
+	for (const item of expandFlattenedSchemaItems(schemaItems, pathPrefix)) {
 		const itemPath = joinPath(pathPrefix, item.dataStructure.itemName);
 
 		if (isSchemaField(item)) {
@@ -584,7 +622,7 @@ function hasContentValidationErrorsInScope(
 	schemaItems: ISchemaItem[],
 	pathPrefix: string
 ): boolean {
-	for (const item of schemaItems) {
+	for (const item of expandFlattenedSchemaItems(schemaItems, pathPrefix)) {
 		const itemPath = joinPath(pathPrefix, item.dataStructure.itemName);
 
 		if (isSchemaField(item)) {

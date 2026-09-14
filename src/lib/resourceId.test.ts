@@ -6,6 +6,7 @@ import {
 	encodeBytesToBase62,
 	generateResourceId,
 	isResourceId,
+	isDockLinkRef,
 } from "./resourceId";
 
 describe("resourceId", () => {
@@ -54,5 +55,12 @@ describe("resourceId", () => {
 		expect(isResourceId(sample, "C")).toBe(true);
 		expect(isResourceId(sample, "c")).toBe(true);
 		expect(isResourceId(sample, "A")).toBe(false);
+	});
+
+	it("isDockLinkRef akzeptiert XSD DockLinkRefType, keine UUIDs", () => {
+		expect(isDockLinkRef("A-0123456789ABCDEFGHIJKL")).toBe(true);
+		expect(isDockLinkRef("D-A9JN75eH2eAkArEYjr6xAD")).toBe(true);
+		expect(isDockLinkRef("4b8c402c-87a4-494a-8c40-2c87a4c94a59")).toBe(false);
+		expect(isDockLinkRef("from")).toBe(false);
 	});
 });

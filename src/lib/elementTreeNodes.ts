@@ -358,6 +358,62 @@ export function ancestorIdsFromTreeKey(key: string, viewId?: string): Set<string
 	return ids;
 }
 
+function findUnloadedExpandedNode(
+	nodes: ITreeNode[],
+	expandedKeys: Set<string>
+): ITreeNode | undefined {
+	for (const node of nodes) {
+		if (expandedKeys.has(String(node.key)) && !node.isLeaf && !node.children?.length) {
+			return node;
+		}
+		if (node.children?.length) {
+			const nested = findUnloadedExpandedNode(node.children, expandedKeys);
+			if (nested) {
+				return nested;
+			}
+		}
+	}
+	return undefined;
+}
+
+/** Lädt Kinder für bereits aufgeklappte Knoten nach einem Tree-Rebuild nach. */
+export function fillExpandedTreeNodes(
+	root: TreeRoot & {
+		views?: { views: TreeParentSpec[] };
+		groups: { groups: TreeParentSpec[] };
+		assets: { assets: TreeParentSpec[] };
+	},
+	nodes: ITreeNode[],
+	expandedKeys: Iterable<string>,
+	viewId?: string
+): ITreeNode[] {
+	const expanded = new Set(Array.from(expandedKeys).map(String).filter(Boolean));
+	if (expanded.size === 0) {
+		return nodes;
+	}
+	let tree = nodes;
+	for (let step = 0; step < 40; step += 1) {
+		const pending = findUnloadedExpandedNode(tree, expanded);
+		if (!pending) {
+			break;
+		}
+		const elementId = treeNodeElementId(pending);
+		const parent = resolveTreeParentSpec(root, elementId);
+		if (!parent) {
+			tree = setTreeNodeChildren(tree, pending.key, []);
+			continue;
+		}
+		const ancestorIds = ancestorIdsFromTreeKey(String(pending.key), viewId);
+		ancestorIds.add(elementId);
+		const children = buildElementTreeNodes(root, parent, {
+			parentKey: String(pending.key),
+			ancestorIds,
+		});
+		tree = setTreeNodeChildren(tree, pending.key, children);
+	}
+	return tree;
+}
+
 export function setTreeNodeChildren(
 	nodes: ITreeNode[],
 	key: string,

@@ -54,9 +54,13 @@ describe("connectionStackTraversal", () => {
 		});
 		expect(snapshot.fromComponentRef).toBe("from");
 		expect(snapshot.toComponentRef).toBe("to");
-		expect(snapshot.fromLabelSnapshot).toBe("From App");
-		expect(snapshot.toLabelSnapshot).toBe("To App");
+		expect(snapshot.fromDockRef).toBe("dFrom");
+		expect(snapshot.toDockRef).toBe("dTo");
+		expect(snapshot.fromLabelSnapshot).toBe("dFrom");
+		expect(snapshot.toLabelSnapshot).toBe("dTo");
 		expect(snapshot.linkparts).toHaveLength(1);
+		expect(snapshot.linkparts[0].fromDockpartRef).toBe("2");
+		expect(snapshot.linkparts[0].toDockpartRef).toBe("20");
 		expect(snapshot.linkparts[0].fromLabelSnapshot).toBe("HTTP");
 	});
 
@@ -68,5 +72,22 @@ describe("connectionStackTraversal", () => {
 		const drafts = collectStackLinkDrafts(fromChain, toChain, fromSelections, toSelections);
 		expect(drafts).toHaveLength(1);
 		expect(drafts[0].fromAssetId).toBe("from");
+	});
+
+	it("setzt fromComponentRef auf die Component-IDs", () => {
+		const fromId = "A-0123456789ABCDEFGHIJKL";
+		const toId = "A-0123456789ABCDEFGHIJKM";
+		const typedFrom = { ...fromAsset, id: fromId } as IAsset;
+		const typedTo = { ...toAsset, id: toId } as IAsset;
+		const snapshot = buildSingleLinkSnapshot([typedFrom, typedTo], {
+			fromAssetId: fromId,
+			fromDockId: "dFrom",
+			fromDockpartIds: ["2"],
+			toAssetId: toId,
+			toDockId: "dTo",
+			toDockpartIds: ["20"],
+		});
+		expect(snapshot.fromComponentRef).toBe(fromId);
+		expect(snapshot.toComponentRef).toBe(toId);
 	});
 });

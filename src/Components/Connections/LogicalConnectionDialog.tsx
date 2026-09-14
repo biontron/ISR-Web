@@ -2,36 +2,43 @@ import React, { useMemo, useState } from "react";
 import { Button, Input, Modal, Select, Space, message } from "antd";
 import { observer } from "mobx-react";
 import { IAsset } from "../../Stores/Models/Asset.Model";
+import { IGroup } from "../../Stores/Models/Group.Model";
 import { rootStore } from "../../Stores/Root.Store";
-import { assetDisplayName } from "../../lib/connectionCandidateFilter";
-import { ConnectionDirection } from "../../lib/connectionDirection";
-import { connectionDirectionSelectOptions } from "../../lib/connectionDirection";
+import { ConnectionDirection, connectionDirectionSelectOptions } from "../../lib/connectionDirection";
+import { collectLogicalEndpointOptions, formatLogicalEndpointName } from "../../lib/connectionLogicalEndpoints";
+import { useLangtext } from "../../lib/common";
 
 interface LogicalConnectionDialogProps {
 	visible: boolean;
-	fromAsset: IAsset;
+	fromElement: IAsset | IGroup;
 	onCancel: () => void;
 	onCreated?: (connectionId: string) => void;
 }
 
 const LogicalConnectionDialog: React.FC<LogicalConnectionDialogProps> = ({
 	visible,
-	fromAsset,
+	fromElement,
 	onCancel,
 	onCreated,
 }) => {
-	const [toAssetId, setToAssetId] = useState<string | null>(null);
+	const langtext = useLangtext();
+	const [toElementId, setToElementId] = useState<string | null>(null);
 	const [title, setTitle] = useState("");
 	const [description, setDescription] = useState("");
 	const [direction, setDirection] = useState<ConnectionDirection>("LOGICAL");
 
 	const candidates = useMemo(
-		() => rootStore.assets.assets.filter((asset) => asset.id !== fromAsset.id),
-		[fromAsset.id, rootStore.assets.assets.length]
+		() =>
+			collectLogicalEndpointOptions(
+				rootStore.assets.assets.slice(),
+				rootStore.groups.groups.slice(),
+				fromElement.id
+			),
+		[fromElement.id, rootStore.assets.assets.length, rootStore.groups.groups.length]
 	);
 
 	const reset = () => {
-		setToAssetId(null);
+		setToElementId(null);
 		setTitle("");
 		setDescription("");
 		setDirection("LOGICAL");
@@ -43,64 +50,65 @@ const LogicalConnectionDialog: React.FC<LogicalConnectionDialogProps> = ({
 	};
 
 	const handleCreate = () => {
-		if (!toAssetId) {
+		if (!toElementId) {
 			return;
 		}
 		try {
 			const connection = rootStore.connections.createLogicalConnection({
-				fromAssetId: fromAsset.id,
-				toAssetId,
+				fromElementId: fromElement.id,
+				toElementId,
 				title: title.trim() || undefined,
 				definitionLabel: title.trim() || undefined,
 				definitionDescription: description.trim() || undefined,
 				direction,
 			});
-			message.success("Logische Verbindung erstellt");
+			message.success(langtext("general.connection_logical_add"));
 			onCreated?.(connection.id);
 			reset();
 			onCancel();
 		} catch (error) {
-			message.error(error instanceof Error ? error.message : "Verbindung konnte nicht erstellt werden.");
+			message.error(error instanceof Error ? error.message : langtext("general.connection_create_failed"));
 		}
 	};
 
 	return (
 		<Modal
-			title="Logische Verbindung"
+			title={langtext("general.connection_logical_add")}
 			open={visible}
 			onCancel={handleCancel}
 			footer={
 				<Space>
-					<Button onClick={handleCancel}>Abbrechen</Button>
-					<Button type="primary" disabled={!toAssetId} onClick={handleCreate}>
-						Erstellen
+					<Button onClick={handleCancel}>{langtext("general.cancel")}</Button>
+					<Button type="primary" disabled={!toElementId} onClick={handleCreate}>
+						{langtext("general.create")}
 					</Button>
 				</Space>
 			}
 		>
 			<Space direction="vertical" style={{ width: "100%" }} size="middle">
 				<div>
-					<strong>Von:</strong> {assetDisplayName(fromAsset)}
+					<strong>{langtext("general.connection_overview_col_from")}:</strong>{" "}
+					{formatLogicalEndpointName(fromElement)}
 				</div>
 				<Select
 					showSearch
-					placeholder="Ziel-Asset wählen"
+					placeholder={langtext("general.connection_overview_col_to")}
 					style={{ width: "100%" }}
-					value={toAssetId ?? undefined}
-					onChange={(value) => setToAssetId(value)}
-					options={candidates.map((asset) => ({
-						value: asset.id,
-						label: assetDisplayName(asset),
+					value={toElementId ?? undefined}
+					onChange={(value) => setToElementId(value)}
+					options={candidates.map((entry) => ({
+						value: entry.id,
+						label: entry.label,
 					}))}
 					optionFilterProp="label"
 				/>
 				<Input
-					placeholder="Titel / Label (optional)"
+					placeholder={langtext("general.connection_title_optional")}
 					value={title}
 					onChange={(event) => setTitle(event.target.value)}
 				/>
 				<Input.TextArea
-					placeholder="Beschreibung (optional)"
+					placeholder={langtext("general.connection_title_optional")}
 					value={description}
 					onChange={(event) => setDescription(event.target.value)}
 					autoSize={{ minRows: 1, maxRows: 3 }}

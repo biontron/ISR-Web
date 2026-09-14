@@ -384,6 +384,70 @@ describe("schemaDeviation", () => {
 			expect(buildSchemaDataPath("links[0]", linkpartsGroup)).toBe("links[0].linkparts");
 		});
 
+		it("buildSchemaDataPath flacht Connection-Wrapper auf links[n] / linkparts[n]", () => {
+			const linkWrapper = createGroup(
+				"link",
+				[createField("id"), createField("title")],
+				"map",
+				1,
+				1
+			);
+			const linkpartWrapper = createGroup(
+				"linkpart",
+				[createField("fromDockpartRef")],
+				"map",
+				1,
+				1
+			);
+			const unnamedWrapper = createGroup(
+				"",
+				[createField("fromLabelSnapshot")],
+				"map",
+				1,
+				1
+			);
+
+			expect(buildSchemaDataPath("links[0]", linkWrapper)).toBe("links[0]");
+			expect(buildSchemaDataPath("links[0].linkparts[0]", linkpartWrapper)).toBe(
+				"links[0].linkparts[0]"
+			);
+			expect(buildSchemaDataPath("links[0].linkparts[0]", unnamedWrapper)).toBe(
+				"links[0].linkparts[0]"
+			);
+		});
+
+		it("findExtraPathsInScope ignoriert flache Connection-Wrapper", () => {
+			const linkpartWrapper = createGroup(
+				"",
+				[
+					createField("fromLabelSnapshot", 0),
+					createField("fromDockpartRef"),
+					createField("stackOrder", 1, { fieldType: "number" }),
+				],
+				"map",
+				1,
+				1
+			);
+			const extras = findExtraPathsInScope(
+				{
+					links: [
+						{
+							linkparts: [
+								{
+									fromLabelSnapshot: "Ethernet",
+									fromDockpartRef: "1",
+									stackOrder: 1,
+								},
+							],
+						},
+					],
+				},
+				[linkpartWrapper],
+				"links[0].linkparts[0]"
+			);
+			expect(extras).toEqual([]);
+		});
+
 		it("resolveSchemaValidationScope scopes ANY-PROPERTIES to element.properties", () => {
 			const propertiesWrapper = createGroup(
 				"properties",

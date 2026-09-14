@@ -1,6 +1,7 @@
 import {
 	buildElementTreeNodes,
 	collectTreeKeysForElementId,
+	fillExpandedTreeNodes,
 	treeNodeElementId,
 } from "./elementTreeNodes";
 
@@ -142,5 +143,37 @@ describe("elementTreeNodes", () => {
 			filterRules: [{ xpath: "id='g-a'", description: "" }],
 		}, { parentKey: "g-a/g-b", ancestorIds: new Set(["view1", "g-a", "g-b"]) });
 		expect(underBA[0]?.isLeaf).toBe(true);
+	});
+
+	it("hängt Funktions-Components unter dem Device auf", () => {
+		const device = asset("device-1");
+		const os = asset("os-1", { ownerIdRef: "device-1", type: "OS", name: "OS" });
+		const root = rootWith(
+			[group("g-a", { parentIdRef: "view1", elementIdRefs: [{ id: "device-1" }] })],
+			[device, os]
+		);
+		const underDevice = buildElementTreeNodes(root, {
+			id: "device-1",
+			class: "Asset",
+		}, { parentKey: "g-a/device-1", ancestorIds: new Set(["view1", "g-a", "device-1"]) });
+		expect(underDevice.map((node) => treeNodeElementId(node))).toEqual(["os-1"]);
+	});
+
+	it("fillExpandedTreeNodes lädt Device-Kinder nach einem Rebuild nach", () => {
+		const device = asset("device-1");
+		const os = asset("os-1", { ownerIdRef: "device-1", type: "OS", name: "OS" });
+		const root = rootWith(
+			[group("g-a", { parentIdRef: "view1", elementIdRefs: [{ id: "device-1" }] })],
+			[device, os]
+		);
+		const firstLevel = buildElementTreeNodes(root, {
+			id: "view1",
+			class: "View",
+			filterRules: [],
+		});
+		const filled = fillExpandedTreeNodes(root, firstLevel, ["g-a", "g-a/device-1"], "view1");
+		const groupNode = filled.find((node) => treeNodeElementId(node) === "g-a");
+		const deviceNode = groupNode?.children?.find((node) => treeNodeElementId(node) === "device-1");
+		expect(deviceNode?.children?.map((node) => treeNodeElementId(node))).toEqual(["os-1"]);
 	});
 });

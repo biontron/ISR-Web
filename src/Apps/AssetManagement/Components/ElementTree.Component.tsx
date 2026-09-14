@@ -2,7 +2,7 @@
 # Infrastructure Repository (ISR) / Infrastruktur Repository (ISR)
 # SPDX-License-Identifier: GPL-2.0 
 */
-import { Select, Button, Col, Row, Space, Tree, List } from "antd";
+import { Select, Button, Col, Row, Space, Tree, List, message } from "antd";
 import { observer } from "mobx-react";
 import { resolveIdentifier } from "mobx-state-tree";
 import { useNavigate } from "react-router-dom";
@@ -34,11 +34,16 @@ import {
 	ancestorIdsFromTreeKey,
 	buildElementTreeNodes,
 	collectTreeKeysForElementId,
+	fillExpandedTreeNodes,
 	resolveTreeParentSpec,
 	setTreeNodeChildren,
 	treeNodeElementId,
 } from "../../../lib/elementTreeNodes";
 import { filterRuleExpression } from "../../../lib/filterRuleNormalize";
+import {
+	canDropAssetOnContextComponent,
+	resolveContextBind,
+} from "../../../lib/connectionContextBind";
 
 function viewIdFromSelectValue(val: unknown): string | undefined {
 	if (typeof val === "string" && val.trim() !== "") {
@@ -186,7 +191,6 @@ const ElementHierarchyTree = observer(function ElementHierarchyTree() {
 			return;
 		}
 		setBuilding(true);
-		setTreeData([]);
 		const timer = window.setTimeout(() => {
 			setTreeData(buildElementTreeNodes(rootStore, view));
 			setBuilding(false);
@@ -227,6 +231,21 @@ const ElementHierarchyTreeView = observer(function ElementHierarchyTreeView({
 		setExpandedKeys([]);
 	}, [viewId]);
 
+	React.useEffect(() => {
+		if (!viewId || treeData.length === 0 || expandedKeys.length === 0) {
+			return;
+		}
+		const filled = fillExpandedTreeNodes(
+			rootStore,
+			treeData,
+			expandedKeys.map(String),
+			viewId
+		);
+		if (filled !== treeData) {
+			onTreeDataChange(filled);
+		}
+	}, [treeData, expandedKeys, viewId, onTreeDataChange]);
+
 	function activateTreeNode(node: ITreeNode) {
 		const elementId = treeNodeElementId(node);
 		if (resolveIdentifier(GroupModel, rootStore, elementId) || resolveIdentifier(AssetModel, rootStore, elementId)) {
@@ -239,6 +258,38 @@ const ElementHierarchyTreeView = observer(function ElementHierarchyTreeView({
 			return;
 		}
 		activateTreeNode(info.node);
+	}
+
+	function onDrop(info: { dragNode: ITreeNode; node: ITreeNode }) {
+		const dragId = treeNodeElementId(info.dragNode);
+		const dropId = treeNodeElementId(info.node);
+		const dragAsset = resolveIdentifier(AssetModel, rootStore, dragId);
+		const dropAsset = resolveIdentifier(AssetModel, rootStore, dropId);
+		const assets = rootStore.assets.assets.slice();
+		if (!canDropAssetOnContextComponent(dragAsset, dropAsset, assets) || !dragAsset || !dropAsset) {
+			return;
+		}
+		const resolution = resolveContextBind(dragAsset, dropAsset);
+		if (resolution.status === "ready") {
+			try {
+				rootStore.connections.createContextConnection(resolution.choice);
+				message.success(rootStore.i18n.text("general.connection_context_created"));
+			} catch (error) {
+				message.error(error instanceof Error ? error.message : String(error));
+			}
+			return;
+		}
+		if (resolution.status === "needs-choice") {
+			rootStore.ui.setPendingContextBind(dropAsset.id, resolution.fromDockpartId);
+			message.info(rootStore.i18n.text("general.connection_drop_needs_choice"));
+			navigateToElement(navigate, dragAsset.id);
+			return;
+		}
+		if (resolution.status === "no-dockpart") {
+			message.error(rootStore.i18n.text("general.connection_drop_no_dockpart"));
+			return;
+		}
+		message.error(rootStore.i18n.text("general.connection_drop_no_value"));
 	}
 
 	React.useEffect(() => {
@@ -309,6 +360,22 @@ const ElementHierarchyTreeView = observer(function ElementHierarchyTreeView({
 			<Tree
 				checkable={false}
 				selectable
+				draggable={{
+					icon: false,
+					nodeDraggable: (node) => (node as ITreeNode).class === "Asset",
+				}}
+				allowDrop={({ dragNode, dropNode }) => {
+					const dropId = treeNodeElementId(dropNode as ITreeNode);
+					const dragId = treeNodeElementId(dragNode as ITreeNode);
+					const dropAsset = resolveIdentifier(AssetModel, rootStore, dropId);
+					const dragAsset = resolveIdentifier(AssetModel, rootStore, dragId);
+					return canDropAssetOnContextComponent(
+						dragAsset,
+						dropAsset,
+						rootStore.assets.assets.slice()
+					);
+				}}
+				onDrop={onDrop}
 				showLine
 				showIcon
 				treeData={treeData}

@@ -3,9 +3,11 @@ import { IAsset } from "../Stores/Models/Asset.Model";
 import { IConnection, ILink } from "../Stores/Models/Connection.Model";
 import {
 	findAssetByEndpointRef,
-	formatDockEndpointRef,
+	parseDockRef,
+	resolveLinkSideAssetId,
 } from "./connectionEndpointRef";
 import { resolveConnectionDirection } from "./connectionDirection";
+import { resolveAssetStackRootId } from "./graphComponentStack";
 
 export type ConnectionGraphEdge = {
 	connectionId: string;
@@ -22,26 +24,51 @@ function edgeKey(connectionId: string, linkId: string): string {
 	return `${connectionId}:${linkId}`;
 }
 
-function resolveAssetIdForDockRef(assets: IAsset[], dockRef: string): string | null {
-	const asset = findAssetByEndpointRef(assets, dockRef);
-	return asset?.id ?? null;
+function isUtilityGraphNodeId(nodeId: string): boolean {
+	return !nodeId || nodeId.startsWith("__");
+}
+
+/** Knoten, die nach dem Graph-Aufbau wirklich existieren — inkl. innerer Stack-Components. */
+export function collectRenderedGraphNodeIds(graph: { nodes: () => string[] }): Set<string> {
+	return new Set(graph.nodes().filter((nodeId) => !isUtilityGraphNodeId(nodeId)));
+}
+
+function resolveVisibleAncestorId(
+	assets: IAsset[],
+	assetId: string,
+	visibleNodeIds: Set<string>
+): string | null {
+	if (visibleNodeIds.has(assetId)) {
+		return assetId;
+	}
+	let current = assets.find((asset) => asset.id === assetId);
+	const seen = new Set<string>();
+	while (current && !seen.has(current.id)) {
+		seen.add(current.id);
+		if (visibleNodeIds.has(current.id)) {
+			return current.id;
+		}
+		const ownerId = current.ownerIdRef?.trim();
+		if (!ownerId) {
+			break;
+		}
+		current = assets.find((asset) => asset.id === ownerId);
+	}
+	const rootId = resolveAssetStackRootId(assetId, assets);
+	return visibleNodeIds.has(rootId) ? rootId : null;
 }
 
 function resolveLinkNodeId(
 	assets: IAsset[],
 	link: ILink,
-	side: "from" | "to"
+	side: "from" | "to",
+	visibleNodeIds: Set<string>
 ): string | null {
-	const componentRef = side === "from" ? link.fromComponentRef : link.toComponentRef;
-	const trimmedComponentRef = componentRef?.trim();
-	if (trimmedComponentRef) {
-		return trimmedComponentRef;
-	}
-	const dockRef = (side === "from" ? link.fromDockRef : link.toDockRef)?.trim();
-	if (!dockRef) {
+	const directId = resolveLinkSideAssetId(link, assets, side);
+	if (!directId) {
 		return null;
 	}
-	return resolveAssetIdForDockRef(assets, dockRef);
+	return resolveVisibleAncestorId(assets, directId, visibleNodeIds) ?? directId;
 }
 
 function pushGraphEdge(
@@ -57,8 +84,8 @@ function pushGraphEdge(
 		return;
 	}
 
-	const fromNodeId = resolveLinkNodeId(assets, link, "from");
-	const toNodeId = resolveLinkNodeId(assets, link, "to");
+	const fromNodeId = resolveLinkNodeId(assets, link, "from", visibleNodeIds);
+	const toNodeId = resolveLinkNodeId(assets, link, "to", visibleNodeIds);
 	if (fromNodeId && toNodeId && fromNodeId === toNodeId) {
 		return;
 	}
@@ -179,9 +206,17 @@ export function collectConnectionGraphEdgesFromTree(
 			const toRef = link.toDockRef?.trim();
 			if (fromRef) {
 				connectionByEndpoint.set(fromRef, connection);
+				const fromDockId = parseDockRef(fromRef);
+				if (fromDockId) {
+					connectionByEndpoint.set(fromDockId, connection);
+				}
 			}
 			if (toRef) {
 				connectionByEndpoint.set(toRef, connection);
+				const toDockId = parseDockRef(toRef);
+				if (toDockId) {
+					connectionByEndpoint.set(toDockId, connection);
+				}
 			}
 		}
 	}
@@ -199,42 +234,43 @@ export function collectConnectionGraphEdgesFromTree(
 		) {
 			if ("docks" in node && Array.isArray(node.docks)) {
 				for (const dock of node.docks) {
-					for (const part of dock.dockparts ?? []) {
-						const endpointRef = formatDockEndpointRef(String(dock.id), String(part.id));
-						const connection = connectionByEndpoint.get(endpointRef);
-						if (!connection) {
-							continue;
-						}
-						const link = connection.links.find(
-							(entry) =>
-								entry.fromDockRef === endpointRef || entry.toDockRef === endpointRef
-						);
-						if (!link) {
-							continue;
-						}
-						const otherRef =
-							link.fromDockRef === endpointRef ? link.toDockRef : link.fromDockRef;
-						if (!otherRef) {
-							continue;
-						}
-						const otherAsset = findAssetByEndpointRef(assets, otherRef);
-						if (!otherAsset) {
-							continue;
-						}
-						const fromNodeId = node.id;
-						const toNodeId = otherAsset.id;
-						if (fromNodeId === toNodeId) {
-							continue;
-						}
-						pushConnectionEdge(
-							edges,
-							seenConnections,
-							fromNodeId,
-							toNodeId,
-							connection,
-							link
-						);
+					const dockId = String(dock.id);
+					const connection = connectionByEndpoint.get(dockId);
+					if (!connection) {
+						continue;
 					}
+					const link = connection.links.find(
+						(entry) =>
+							parseDockRef(entry.fromDockRef) === dockId ||
+							parseDockRef(entry.toDockRef) === dockId
+					);
+					if (!link) {
+						continue;
+					}
+					const otherRef =
+						parseDockRef(link.fromDockRef) === dockId
+							? link.toDockRef
+							: link.fromDockRef;
+					if (!otherRef) {
+						continue;
+					}
+					const otherAsset = findAssetByEndpointRef(assets, otherRef);
+					if (!otherAsset) {
+						continue;
+					}
+					const fromNodeId = node.id;
+					const toNodeId = otherAsset.id;
+					if (fromNodeId === toNodeId) {
+						continue;
+					}
+					pushConnectionEdge(
+						edges,
+						seenConnections,
+						fromNodeId,
+						toNodeId,
+						connection,
+						link
+					);
 				}
 			}
 		}
@@ -284,7 +320,11 @@ export function collectVisibleAssetIdsFromTree(
 			return;
 		}
 		seen.add(current.id);
-		if (current.class === "Asset" || current.class === "AssetDetails") {
+		if (
+			current.class === "Asset" ||
+			current.class === "AssetDetails" ||
+			current.class === "Group"
+		) {
 			ids.add(current.id);
 		}
 		if (remaining > 0 && typeof current.children === "function") {
@@ -299,5 +339,3 @@ export function collectVisibleAssetIdsFromTree(
 	walk(node, depth);
 	return ids;
 }
-
-export { formatDockEndpointRef };

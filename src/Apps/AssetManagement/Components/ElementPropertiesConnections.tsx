@@ -11,6 +11,7 @@ import { Empty } from "antd";
 import { observer } from "mobx-react";
 import { rootStore } from "../../../Stores/Root.Store";
 import { IAsset } from "../../../Stores/Models/Asset.Model";
+import { IGroup } from "../../../Stores/Models/Group.Model";
 import CardCollapse from "./CardCollapse.Component";
 import ConnectionMapping from "../../../Components/Schema/SchemaEditor/Mappings/ConnectionMapping.Component";
 import AssetDocksSection from "./AssetDocksSection";
@@ -24,7 +25,7 @@ export const ElementPropertiesConnections: React.FC<ElementPropertiesConnections
 		const { activeElement } = rootStore.ui;
 		const canEdit = rootStore.ui.canEditActiveElement();
 
-		if (!activeElement || activeElement.class !== "Asset") {
+		if (!activeElement || (activeElement.class !== "Asset" && activeElement.class !== "Group")) {
 			return (
 				<div style={{ padding: 24 }}>
 					<Empty description="..." />
@@ -32,7 +33,24 @@ export const ElementPropertiesConnections: React.FC<ElementPropertiesConnections
 			);
 		}
 
+		if (activeElement.class === "Group") {
+			const group = activeElement as IGroup;
+			return (
+				<div style={{ padding: "16px 24px" }}>
+					<CardCollapse title={langtext("general.connection_overview")}>
+						<ConnectionMapping element={group} />
+					</CardCollapse>
+				</div>
+			);
+		}
+
 		const asset = activeElement as IAsset;
+		const contextPrefill = rootStore.ui.pendingContextBindContextId
+			? {
+					contextId: rootStore.ui.pendingContextBindContextId,
+					dockpartId: rootStore.ui.pendingContextBindDockpartId || undefined,
+				}
+			: undefined;
 
 		return (
 			<Fragment>
@@ -40,7 +58,7 @@ export const ElementPropertiesConnections: React.FC<ElementPropertiesConnections
 					<AssetDocksSection asset={asset} canEdit={canEdit} />
 
 					<CardCollapse title={langtext("general.connection_overview")}>
-						<ConnectionMapping element={asset} />
+						<ConnectionMapping element={asset} contextPrefill={contextPrefill} />
 					</CardCollapse>
 				</div>
 			</Fragment>

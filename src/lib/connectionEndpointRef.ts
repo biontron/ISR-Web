@@ -34,30 +34,38 @@ export function parseDockEndpointRef(ref: string | undefined | null): DockEndpoi
 	};
 }
 
+/** Dock-ID aus fromDockRef / toDockRef. Legacy `dockId#dockpartId` wird nur gelesen. */
+export function parseDockRef(ref: string | undefined | null): string | undefined {
+	const trimmed = ref?.trim();
+	if (!trimmed) {
+		return undefined;
+	}
+	return parseDockEndpointRef(trimmed)?.dockId ?? trimmed;
+}
+
 export function resolveEndpointLabelInfo(
 	assets: IAsset[],
 	ref: string
 ): EndpointLabelInfo | undefined {
-	const parsed = parseDockEndpointRef(ref);
-	if (!parsed) {
+	const dockId = parseDockRef(ref);
+	if (!dockId) {
 		return undefined;
 	}
+	const dockpartId = parseDockEndpointRef(ref)?.dockpartId ?? "";
 	for (const asset of assets) {
 		for (const dock of asset.docks) {
-			if (String(dock.id) !== parsed.dockId) {
+			if (String(dock.id) !== dockId) {
 				continue;
 			}
-			for (const part of dock.dockparts) {
-				if (String(part.id) !== parsed.dockpartId) {
-					continue;
-				}
-				return {
-					dockId: parsed.dockId,
-					dockpartId: parsed.dockpartId,
-					dockLabel: dock.label || dock.type || parsed.dockId,
-					dockpartLabel: part.label || part.type || parsed.dockpartId,
-				};
-			}
+			const part = dockpartId
+				? dock.dockparts.find((entry) => String(entry.id) === dockpartId)
+				: undefined;
+			return {
+				dockId,
+				dockpartId,
+				dockLabel: dock.label || dock.type || dockId,
+				dockpartLabel: part ? part.label || part.type || dockpartId : "",
+			};
 		}
 	}
 	return undefined;
@@ -161,21 +169,43 @@ export function collectAssetDockEndpoints(asset: IAsset): AssetDockEndpoint[] {
 	return endpoints;
 }
 
-export function connectionTouchesEndpoint(connection: IConnection, ref: string): boolean {
-	for (const link of connection.links) {
-		if (link.fromDockRef === ref || link.toDockRef === ref) {
+function linkTouchesDockOrDockpart(link: ILink, ref: string): boolean {
+	const needle = ref.trim();
+	if (!needle) {
+		return false;
+	}
+	if (link.fromDockRef === needle || link.toDockRef === needle) {
+		return true;
+	}
+	const needleDock = parseDockRef(needle);
+	if (
+		needleDock &&
+		(parseDockRef(link.fromDockRef) === needleDock || parseDockRef(link.toDockRef) === needleDock)
+	) {
+		return true;
+	}
+	const hashedPart = parseDockEndpointRef(needle)?.dockpartId;
+	for (const part of link.linkparts) {
+		if (part.fromDockpartRef === needle || part.toDockpartRef === needle) {
+			return true;
+		}
+		if (hashedPart && (part.fromDockpartRef === hashedPart || part.toDockpartRef === hashedPart)) {
 			return true;
 		}
 	}
 	return false;
 }
 
+export function connectionTouchesEndpoint(connection: IConnection, ref: string): boolean {
+	return connection.links.some((link) => linkTouchesDockOrDockpart(link, ref));
+}
+
 export function connectionTouchesAnyEndpoint(
 	connection: IConnection,
 	refs: Set<string>
 ): boolean {
-	for (const link of connection.links) {
-		if (refs.has(link.fromDockRef) || refs.has(link.toDockRef)) {
+	for (const ref of Array.from(refs)) {
+		if (connectionTouchesEndpoint(connection, ref)) {
 			return true;
 		}
 	}
@@ -202,7 +232,7 @@ export function assetHasDockId(asset: IAsset, dockId: string | undefined | null)
 
 export type ConnectionSide = "from" | "to";
 
-function resolveLinkSideAssetId(
+export function resolveLinkSideAssetId(
 	link: ILink,
 	assets: IAsset[],
 	side: ConnectionSide
@@ -210,7 +240,14 @@ function resolveLinkSideAssetId(
 	const componentRef = side === "from" ? link.fromComponentRef : link.toComponentRef;
 	const trimmedRef = componentRef?.trim();
 	if (trimmedRef) {
-		return trimmedRef;
+		const byId = assets.find((asset) => asset.id === trimmedRef);
+		if (byId) {
+			return byId.id;
+		}
+		const byEndpoint = findAssetByEndpointRef(assets, trimmedRef);
+		if (byEndpoint) {
+			return byEndpoint.id;
+		}
 	}
 
 	const dockRef = side === "from" ? link.fromDockRef : link.toDockRef;
@@ -307,7 +344,8 @@ export function formatAssetDisplayName(asset: IAsset | undefined, fallback = "�
 export function formatConnectionSideSummary(
 	connection: IConnection,
 	assets: IAsset[],
-	side: ConnectionSide
+	side: ConnectionSide,
+	groups?: ReadonlyArray<{ id: string; definition?: { name?: string; label?: string } }>
 ): string {
 	for (const link of connection.links) {
 		const snapshot =
@@ -321,7 +359,9 @@ export function formatConnectionSideSummary(
 			? resolveConnectionEndpointSide(assets, dockRef)
 			: undefined;
 		if (resolved) {
-			return `${resolved.assetName} · ${resolved.dockLabel} · ${resolved.dockpartLabel}`;
+			return [resolved.assetName, resolved.dockLabel, resolved.dockpartLabel]
+				.filter(Boolean)
+				.join(" · ");
 		}
 		if (dockRef?.trim()) {
 			return dockRef.trim();
@@ -331,7 +371,14 @@ export function formatConnectionSideSummary(
 	const assetId = resolveSideAssetId(connection, assets, side);
 	if (assetId) {
 		const asset = assets.find((candidate) => candidate.id === assetId);
-		return formatAssetDisplayName(asset, assetId);
+		if (asset) {
+			return formatAssetDisplayName(asset, assetId);
+		}
+		const group = groups?.find((entry) => entry.id === assetId);
+		if (group) {
+			return group.definition?.name?.trim() || group.definition?.label?.trim() || assetId;
+		}
+		return assetId;
 	}
 
 	return "—";
@@ -363,14 +410,22 @@ export function findAssetByEndpointRef(
 	ref: string
 ): IAsset | undefined {
 	const parsed = parseDockEndpointRef(ref);
-	if (!parsed) {
-		return findAssetByDockpartId(assets, ref);
+	if (parsed) {
+		const byDockAndPart = assets.find((asset) =>
+			asset.docks.some(
+				(dock) =>
+					String(dock.id) === parsed.dockId &&
+					dock.dockparts.some((part) => String(part.id) === parsed.dockpartId)
+			)
+		);
+		if (byDockAndPart) {
+			return byDockAndPart;
+		}
+		return assets.find((asset) => assetHasDockId(asset, parsed.dockId));
 	}
-	return assets.find((asset) =>
-		asset.docks.some(
-			(dock) =>
-				String(dock.id) === parsed.dockId &&
-				dock.dockparts.some((part) => String(part.id) === parsed.dockpartId)
-		)
-	);
+	const byDock = assets.find((asset) => assetHasDockId(asset, ref));
+	if (byDock) {
+		return byDock;
+	}
+	return findAssetByDockpartId(assets, ref);
 }

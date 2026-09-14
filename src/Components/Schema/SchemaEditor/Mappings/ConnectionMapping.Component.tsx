@@ -15,98 +15,81 @@ import {
 	IConnection,
 } from "../../../../Stores/Models/Connection.Model";
 import { IAsset } from "../../../../Stores/Models/Asset.Model";
+import { IGroup } from "../../../../Stores/Models/Group.Model";
 import { useLangtext } from "../../../../lib/common";
 import ConnectionSelectionDialog from "../../../Connections/ConnectionSelectionDialog";
 import LogicalConnectionDialog from "../../../Connections/LogicalConnectionDialog";
+import ContextConnectionDialog from "../../../Connections/ContextConnectionDialog";
+import BridgeConnectionDialog from "../../../Connections/BridgeConnectionDialog";
 import ConnectionEditDialog from "../../../Connections/ConnectionEditDialog";
 import ConnectionOverviewDialog from "../../../Connections/ConnectionOverviewDialog";
 import { canOpenConnectionSelectionDialog } from "../../../../lib/connectionDockpartPairing";
-import { filterConnectionsForAssetEndpoints } from "../../../../Stores/Connection.Store";
+import { filterConnectionsForElement } from "../../../../Stores/Connection.Store";
 import { formatConnectionSideSummary } from "../../../../lib/connectionEndpointRef";
 import { resolveConnectionMode, connectionModeLabel } from "../../../../lib/connectionMode";
 
 interface ConnectionMappingProps {
-	element: IAsset;
+	element: IAsset | IGroup;
+	contextPrefill?: { contextId?: string; dockpartId?: string };
 }
 
-const ConnectionMapping: React.FC<ConnectionMappingProps> = observer(({ element }) => {
+const ConnectionMapping: React.FC<ConnectionMappingProps> = observer(({ element, contextPrefill }) => {
 	const langtext = useLangtext();
 	const [selectionVisible, setSelectionVisible] = useState(false);
 	const [logicalVisible, setLogicalVisible] = useState(false);
+	const [contextVisible, setContextVisible] = useState(!!contextPrefill?.contextId);
+	const [bridgeVisible, setBridgeVisible] = useState(false);
 	const [overviewVisible, setOverviewVisible] = useState(false);
 	const [editingConnectionId, setEditingConnectionId] = useState<string | null>(null);
-	const [pendingKind, setPendingKind] = useState<"logical" | "bridge" | "context">("logical");
 
+	const isAsset = element.class === "Asset";
+	const asset = isAsset ? (element as IAsset) : null;
 	const allAssets = rootStore.assets.assets.slice();
+	const allGroups = rootStore.groups.groups.slice();
 	const allConnections = rootStore.connections.connections.slice();
-	const connections = filterConnectionsForAssetEndpoints(
-		allConnections,
-		element,
-		allAssets
-	);
+	const connections = filterConnectionsForElement(allConnections, element, allAssets);
 
-	const openAddDialog = () => {
-		if (!canAdd) {
-			return;
-		}
-		setSelectionVisible(true);
-	};
-
-	const handleDelete = (connectionId: string) => {
-		rootStore.connections.remove(connectionId);
-	};
-
-	const handleOpenConnection = (connection: IConnection) => {
-		setEditingConnectionId(connection.id);
-	};
-
-	const canAdd = canOpenConnectionSelectionDialog(allAssets, element);
-
+	const canAddLink = !!asset && canOpenConnectionSelectionDialog(allAssets, asset);
 	const hiddenConnectionCount = allConnections.length - connections.length;
+	const closeContextDialog = () => {
+		setContextVisible(false);
+		rootStore.ui.clearPendingContextBind();
+	};
 
 	return (
 		<Fragment>
 			<div style={{ marginBottom: 16, display: "flex", justifyContent: "flex-end" }}>
-				<Space>
+				<Space wrap>
 					<Button icon={<UnorderedListOutlined />} onClick={() => setOverviewVisible(true)}>
 						{langtext("general.connection_overview_open")}
 					</Button>
 					<Button
 						icon={<LinkOutlined />}
-						onClick={() => {
-							setPendingKind("logical");
-							setLogicalVisible(true);
-						}}
-						disabled={allAssets.length < 2}
+						onClick={() => setLogicalVisible(true)}
+						disabled={allAssets.length + allGroups.length < 2}
 					>
 						{langtext("general.connection_logical_add")}
 					</Button>
-					<Button
-						onClick={() => {
-							setPendingKind("bridge");
-							setLogicalVisible(true);
-						}}
-						disabled={allAssets.length < 1}
-					>
-						{langtext("general.connection_bridge_add")}
-					</Button>
-					<Button
-						onClick={() => {
-							setPendingKind("context");
-							setLogicalVisible(true);
-						}}
-						disabled={allAssets.length < 2}
-					>
-						{langtext("general.connection_context_add")}
-					</Button>
-					<Button
-						type="primary"
-						icon={<PlusOutlined />}
-						onClick={openAddDialog}
-						disabled={!canAdd}
-					>
-						{langtext("general.connection_add")}
-					</Button>
+					{asset ? (
+						<Button onClick={() => setBridgeVisible(true)}>
+							{langtext("general.connection_bridge_add")}
+						</Button>
+					) : null}
+					{asset ? (
+						<Button onClick={() => setContextVisible(true)}>
+							{langtext("general.connection_context_add")}
+						</Button>
+					) : null}
+					{asset ? (
+						<Button
+							type="primary"
+							icon={<PlusOutlined />}
+							onClick={() => setSelectionVisible(true)}
+							disabled={!canAddLink}
+						>
+							{langtext("general.connection_add")}
+						</Button>
+					) : null}
 				</Space>
 			</div>
 
@@ -143,15 +126,15 @@ const ConnectionMapping: React.FC<ConnectionMappingProps> = observer(({ element 
 				renderItem={(item: IConnection) => {
 					const label = getConnectionDisplayName(item);
 					const mode = connectionModeLabel(resolveConnectionMode(item));
-					const endpoints = `${formatConnectionSideSummary(item, allAssets, "from")} ↔ ${formatConnectionSideSummary(item, allAssets, "to")}`;
+					const endpoints = `${formatConnectionSideSummary(item, allAssets, "from", allGroups)} ↔ ${formatConnectionSideSummary(item, allAssets, "to", allGroups)}`;
 					const linkCount = item.links.length;
 					return (
 						<List.Item
 							actions={[
-								<Button key="open" type="link" onClick={() => handleOpenConnection(item)}>
+								<Button key="open" type="link" onClick={() => setEditingConnectionId(item.id)}>
 									{langtext("general.connection_edit")}
 								</Button>,
-								<Button key="delete" danger onClick={() => handleDelete(item.id)}>
+								<Button key="delete" danger onClick={() => rootStore.connections.remove(item.id)}>
 									{langtext("general.delete")}
 								</Button>,
 							]}
@@ -167,31 +150,48 @@ const ConnectionMapping: React.FC<ConnectionMappingProps> = observer(({ element 
 					);
 				}}
 			/>
-			<ConnectionSelectionDialog
-				visible={selectionVisible}
-				currentAsset={element}
-				onCancel={() => setSelectionVisible(false)}
-				onCreated={(connectionId) => setEditingConnectionId(connectionId)}
-			/>
+			{asset ? (
+				<ConnectionSelectionDialog
+					visible={selectionVisible}
+					currentAsset={asset}
+					onCancel={() => setSelectionVisible(false)}
+					onCreated={(connectionId) => setEditingConnectionId(connectionId)}
+				/>
+			) : null}
 			<LogicalConnectionDialog
 				visible={logicalVisible}
-				fromAsset={element}
+				fromElement={element}
 				onCancel={() => setLogicalVisible(false)}
-				onCreated={(connectionId) => {
-					const created = rootStore.connections.connections.find((item) => item.id === connectionId);
-					if (created && pendingKind !== "logical") {
-						created.setKind(pendingKind);
-					}
-					setEditingConnectionId(connectionId);
-				}}
+				onCreated={(connectionId) => setEditingConnectionId(connectionId)}
 			/>
+			{asset ? (
+				<ContextConnectionDialog
+					visible={contextVisible}
+					fromAsset={asset}
+					preferredContextId={contextPrefill?.contextId}
+					preferredDockpartId={contextPrefill?.dockpartId}
+					onCancel={closeContextDialog}
+					onCreated={(connectionId) => {
+						closeContextDialog();
+						setEditingConnectionId(connectionId);
+					}}
+				/>
+			) : null}
+			{asset ? (
+				<BridgeConnectionDialog
+					visible={bridgeVisible}
+					fromAsset={asset}
+					onCancel={() => setBridgeVisible(false)}
+					onCreated={(connectionId) => setEditingConnectionId(connectionId)}
+				/>
+			) : null}
 			<ConnectionEditDialog
 				connectionId={editingConnectionId}
 				onClose={() => setEditingConnectionId(null)}
 			/>
 			<ConnectionOverviewDialog
 				visible={overviewVisible}
-				currentAsset={element}
+				currentAsset={asset}
 				onClose={() => setOverviewVisible(false)}
 			/>
 		</Fragment>

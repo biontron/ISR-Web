@@ -42,7 +42,6 @@ export const AssetModel = types.compose(
 				description: types.string,
 				tags: types.optional(types.array(ElementDefinitionTagModel), []),
 			}),
-			environmentId: types.optional(types.string, ""),
 			ownerIdRef: types.maybeNull(types.string),
 			docks: types.optional(types.array(DockModel), []),
 			attachments: types.array(types.frozen()),
@@ -71,6 +70,7 @@ export const AssetModel = types.compose(
 				})
 			),
 			filterRules: types.array(types.frozen()),
+			environmentId: types.optional(types.string, ""),
 		})
 		// .volatile(() => ({ }))
 		// .actions((self) => ({ }))

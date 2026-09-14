@@ -24,13 +24,22 @@ import {
 	publishRestLoadReport,
 } from "../lib/restSnapshot";
 import { IAsset } from "./Models/Asset.Model";
+import { IGroup } from "./Models/Group.Model";
 import {
 	connectionTouchesAsset,
 	connectionTouchesEndpoint,
 	formatAssetDisplayName,
 	parseDockEndpointRef,
+	parseDockRef,
 	resolveConnectionEndpointSide,
 } from "../lib/connectionEndpointRef";
+import {
+	formatLogicalEndpointName,
+	resolveLogicalEndpoint,
+	connectionTouchesGroup,
+} from "../lib/connectionLogicalEndpoints";
+import { collectContextValues, matchingContextValuesForDockpart } from "../lib/connectionContextValues";
+import { formatValueRef } from "../lib/connectionValueRef";
 import { ConnectionDirection } from "../lib/connectionDirection";
 import { PairedLinkpartSnapshot } from "../lib/connectionDockpartPairing";
 import {
@@ -59,14 +68,39 @@ export type CreateWithLinkpartsInput = {
 };
 
 export type CreateLogicalConnectionInput = {
-	fromAssetId: string;
-	toAssetId: string;
+	fromAssetId?: string;
+	toAssetId?: string;
+	fromElementId?: string;
+	toElementId?: string;
 	title?: string;
 	definitionLabel?: string;
 	definitionDescription?: string;
 	direction?: ConnectionDirection;
 	purpose?: string;
 	owner?: string;
+};
+
+export type CreateContextConnectionInput = {
+	fromAssetId: string;
+	toContextId: string;
+	fromDockId: string;
+	fromDockpartId: string;
+	contextValueId: string;
+	title?: string;
+	definitionLabel?: string;
+	definitionDescription?: string;
+};
+
+export type CreateBridgeConnectionInput = {
+	fromAssetId: string;
+	toAssetId?: string;
+	peerEnvironmentRef: string;
+	peerConnectionRef?: string;
+	bridgeId?: string;
+	title?: string;
+	definitionLabel?: string;
+	definitionDescription?: string;
+	direction?: ConnectionDirection;
 };
 
 export type CreateWithStackAnchorsInput = {
@@ -156,21 +190,23 @@ export const ConnectionStore = types.compose("ConnectionStore", BaseStore, types
 		const assets = root.assets.assets.slice();
 		const from = resolveConnectionEndpointSide(assets, fromDockRef);
 		const to = resolveConnectionEndpointSide(assets, toDockRef);
-		const parsedFrom = parseDockEndpointRef(fromDockRef);
-		const parsedTo = parseDockEndpointRef(toDockRef);
+		const fromDockId = parseDockRef(fromDockRef);
+		const toDockId = parseDockRef(toDockRef);
+		const fromPartId = parseDockEndpointRef(fromDockRef)?.dockpartId;
+		const toPartId = parseDockEndpointRef(toDockRef)?.dockpartId;
 		const fromAsset = assets.find((asset) => asset.id === from?.assetId);
 		const toAsset = assets.find((asset) => asset.id === to?.assetId);
-		const fromDock = fromAsset?.docks.find((dock) => String(dock.id) === parsedFrom?.dockId);
-		const toDock = toAsset?.docks.find((dock) => String(dock.id) === parsedTo?.dockId);
+		const fromDock = fromAsset?.docks.find((dock) => String(dock.id) === fromDockId);
+		const toDock = toAsset?.docks.find((dock) => String(dock.id) === toDockId);
 
-		if (fromDock && toDock && parsedFrom && parsedTo && from && to) {
+		if (fromDock && toDock && fromDockId && toDockId && fromPartId && toPartId && from && to) {
 			return createWithLinkparts({
 				fromAssetId: from.assetId,
-				fromDockId: parsedFrom.dockId,
-				fromDockpartIds: [parsedFrom.dockpartId],
+				fromDockId,
+				fromDockpartIds: [fromPartId],
 				toAssetId: to.assetId,
-				toDockId: parsedTo.dockId,
-				toDockpartIds: [parsedTo.dockpartId],
+				toDockId,
+				toDockpartIds: [toPartId],
 				linkTitle,
 			});
 		}
@@ -204,19 +240,48 @@ export const ConnectionStore = types.compose("ConnectionStore", BaseStore, types
 		return newConnection;
 	}
 
+	function resolveLogicalSide(elementId: string) {
+		const root = getRoot(self) as IRootStore;
+		const element = resolveLogicalEndpoint(
+			root.assets.assets.slice(),
+			root.groups.groups.slice(),
+			elementId
+		);
+		if (!element) {
+			throw new Error(`Endpunkt '${elementId}' für logische Connection konnte nicht aufgelöst werden.`);
+		}
+		const environmentId =
+			element.class === "Asset" ? (element as IAsset).environmentId : "";
+		return {
+			id: element.id,
+			name: formatLogicalEndpointName(element),
+			environmentId,
+		};
+	}
+
+	function applyDockpartValueRef(asset: IAsset, dockpartId: string, valueRef: string) {
+		for (const dock of asset.docks) {
+			const part = dock.dockparts.find((entry) => String(entry.id) === dockpartId);
+			if (!part) {
+				continue;
+			}
+			asset.beginEdit();
+			part.setValueRef(valueRef);
+			asset.markTouched();
+			return;
+		}
+		throw new Error(`Dockpart '${dockpartId}' für valueRef nicht gefunden.`);
+	}
+
 	function createLogicalConnection(input: CreateLogicalConnectionInput) {
 		const root = getRoot(self) as IRootStore;
-		const assets = root.assets.assets.slice();
-		const fromAsset = assets.find((asset) => asset.id === input.fromAssetId);
-		const toAsset = assets.find((asset) => asset.id === input.toAssetId);
-		if (!fromAsset || !toAsset) {
-			throw new Error("From/To-Asset für logische Connection konnte nicht aufgelöst werden.");
-		}
+		const fromId = input.fromElementId ?? input.fromAssetId ?? "";
+		const toId = input.toElementId ?? input.toAssetId ?? "";
+		const fromSide = resolveLogicalSide(fromId);
+		const toSide = resolveLogicalSide(toId);
 
-		const fromName = formatAssetDisplayName(fromAsset);
-		const toName = formatAssetDisplayName(toAsset);
 		const trimmedTitle = input.title?.trim();
-		const linkTitle = trimmedTitle || `${fromName} ↔ ${toName}`;
+		const linkTitle = trimmedTitle || `${fromSide.name} ↔ ${toSide.name}`;
 		const definitionLabel = input.definitionLabel?.trim() ?? trimmedTitle ?? "";
 		const definitionDescription = input.definitionDescription?.trim() ?? "";
 		const direction = input.direction ?? "DUAL";
@@ -225,7 +290,7 @@ export const ConnectionStore = types.compose("ConnectionStore", BaseStore, types
 		const linkId = nextLinkId();
 		const newConnection = ConnectionModel.create({
 			id,
-			environmentId: fromAsset.environmentId || resolvePrimaryEnvironmentRef(root.ui.activeView),
+			environmentId: fromSide.environmentId || resolvePrimaryEnvironmentRef(root.ui.activeView),
 			kind: "logical",
 			definition: { label: definitionLabel, description: definitionDescription },
 			settings: {},
@@ -233,16 +298,139 @@ export const ConnectionStore = types.compose("ConnectionStore", BaseStore, types
 				{
 					id: linkId,
 					title: linkTitle,
-					fromComponentRef: fromAsset.id,
+					fromComponentRef: fromSide.id,
 					fromDockRef: "",
-					fromLabelSnapshot: fromName,
-					toComponentRef: toAsset.id,
+					fromLabelSnapshot: fromSide.name,
+					toComponentRef: toSide.id,
 					toDockRef: "",
-					toLabelSnapshot: toName,
+					toLabelSnapshot: toSide.name,
 					direction,
 					linkparts: [],
 					credentials: [],
 					metadata: defaultLinkMetadata(input.purpose ?? "", input.owner ?? ""),
+				},
+			],
+		});
+		self.connections.push(newConnection);
+		newConnection.setStatus("new");
+		newConnection.beginEdit();
+		return newConnection;
+	}
+
+	function createContextConnection(input: CreateContextConnectionInput) {
+		const root = getRoot(self) as IRootStore;
+		const fromAsset = root.assets.assets.find((asset) => asset.id === input.fromAssetId);
+		const contextAsset = root.assets.assets.find((asset) => asset.id === input.toContextId);
+		if (!fromAsset || !contextAsset) {
+			throw new Error("Component oder Context-Component für Context-Connection nicht gefunden.");
+		}
+		const fromDock = fromAsset.docks.find((dock) => String(dock.id) === input.fromDockId);
+		const fromPart = fromDock?.dockparts.find((part) => String(part.id) === input.fromDockpartId);
+		if (!fromDock || !fromPart) {
+			throw new Error("Dockpart der Component für Context-Connection nicht gefunden.");
+		}
+		const contextValues = collectContextValues(contextAsset);
+		const chosen = contextValues.find((value) => value.valueId === input.contextValueId);
+		if (!chosen) {
+			throw new Error("Context-Wert nicht gefunden. Die Context-Component hat keinen passenden Dockpart.");
+		}
+		const matches = matchingContextValuesForDockpart([contextAsset], fromPart);
+		if (matches.length > 0 && !matches.some((value) => value.valueId === chosen.valueId)) {
+			throw new Error("Context-Wert passt nicht zur Dockpart-Schicht.");
+		}
+
+		const valueRef = formatValueRef(contextAsset.id, chosen.valueId);
+		applyDockpartValueRef(fromAsset, String(fromPart.id), valueRef);
+
+		const contextDock = contextAsset.docks.find((dock) => String(dock.id) === chosen.dockId);
+		const fromName = formatAssetDisplayName(fromAsset);
+		const toName = formatAssetDisplayName(contextAsset);
+		const trimmedTitle = input.title?.trim();
+		const linkTitle = trimmedTitle || `${fromName} → ${toName} (${chosen.label})`;
+		const id = generateResourceID("Connection");
+		const newConnection = ConnectionModel.create({
+			id,
+			environmentId: fromAsset.environmentId || resolvePrimaryEnvironmentRef(root.ui.activeView),
+			kind: "context",
+			definition: {
+				label: input.definitionLabel?.trim() ?? trimmedTitle ?? "",
+				description: input.definitionDescription?.trim() ?? "",
+			},
+			settings: {},
+			links: [
+				{
+					id: nextLinkId(),
+					title: linkTitle,
+					fromComponentRef: fromAsset.id,
+					fromDockRef: String(fromDock.id),
+					fromLabelSnapshot: fromDock.label || fromDock.type || fromName,
+					toComponentRef: contextAsset.id,
+					toDockRef: chosen.dockId,
+					toLabelSnapshot: contextDock?.label || contextDock?.type || toName,
+					direction: "OUT",
+					linkparts: [
+						{
+							fromLabelSnapshot: fromPart.label || fromPart.type || fromName,
+							toLabelSnapshot: chosen.label,
+							fromDockpartRef: String(fromPart.id),
+							toDockpartRef: chosen.valueId,
+							stackOrder: 0,
+						},
+					],
+					credentials: [],
+					metadata: defaultLinkMetadata(),
+				},
+			],
+		});
+		self.connections.push(newConnection);
+		newConnection.setStatus("new");
+		newConnection.beginEdit();
+		return newConnection;
+	}
+
+	function createBridgeConnection(input: CreateBridgeConnectionInput) {
+		const root = getRoot(self) as IRootStore;
+		const fromAsset = root.assets.assets.find((asset) => asset.id === input.fromAssetId);
+		if (!fromAsset) {
+			throw new Error("From-Asset für Brücke nicht gefunden.");
+		}
+		const toAsset = input.toAssetId
+			? root.assets.assets.find((asset) => asset.id === input.toAssetId)
+			: undefined;
+		if (input.toAssetId && !toAsset) {
+			throw new Error("To-Asset für Brücke nicht gefunden.");
+		}
+		const fromName = formatAssetDisplayName(fromAsset);
+		const toName = toAsset ? formatAssetDisplayName(toAsset) : input.peerEnvironmentRef;
+		const trimmedTitle = input.title?.trim();
+		const linkTitle = trimmedTitle || `${fromName} ↔ ${toName}`;
+		const id = generateResourceID("Connection");
+		const newConnection = ConnectionModel.create({
+			id,
+			environmentId: fromAsset.environmentId || resolvePrimaryEnvironmentRef(root.ui.activeView),
+			kind: "bridge",
+			bridgeId: input.bridgeId?.trim() ?? "",
+			peerEnvironmentRef: input.peerEnvironmentRef.trim(),
+			peerConnectionRef: input.peerConnectionRef?.trim() ?? "",
+			definition: {
+				label: input.definitionLabel?.trim() ?? trimmedTitle ?? "",
+				description: input.definitionDescription?.trim() ?? "",
+			},
+			settings: {},
+			links: [
+				{
+					id: nextLinkId(),
+					title: linkTitle,
+					fromComponentRef: fromAsset.id,
+					fromDockRef: "",
+					fromLabelSnapshot: fromName,
+					toComponentRef: toAsset?.id ?? null,
+					toDockRef: "",
+					toLabelSnapshot: toName,
+					direction: input.direction ?? "DUAL",
+					linkparts: [],
+					credentials: [],
+					metadata: defaultLinkMetadata(),
 				},
 			],
 		});
@@ -335,6 +523,9 @@ export const ConnectionStore = types.compose("ConnectionStore", BaseStore, types
 		const id = generateResourceID("Connection");
 		const newConnection = ConnectionModel.create({
 			id,
+			environmentId:
+				fromChain[0]?.environmentId || resolvePrimaryEnvironmentRef(root.ui.activeView),
+			kind: "link",
 			definition: { label: definitionLabel, description: definitionDescription },
 			settings: {},
 			links,
@@ -430,6 +621,9 @@ export const ConnectionStore = types.compose("ConnectionStore", BaseStore, types
 		findAllByEndpointRef,
 		createWithEndpoints,
 		createLogicalConnection,
+		createContextConnection,
+		createBridgeConnection,
+		applyDockpartValueRef,
 		createWithLinkparts,
 		createWithStackAnchors,
 		store,
@@ -449,6 +643,17 @@ export function filterConnectionsForAssetEndpoints(
 	return connections.filter((connection) =>
 		connectionTouchesAsset(connection, asset, allAssets)
 	);
+}
+
+export function filterConnectionsForElement(
+	connections: IConnection[],
+	element: IAsset | IGroup,
+	allAssets: IAsset[]
+): IConnection[] {
+	if (element.class === "Group") {
+		return connections.filter((connection) => connectionTouchesGroup(connection, element.id));
+	}
+	return filterConnectionsForAssetEndpoints(connections, element as IAsset, allAssets);
 }
 
 export { parseDockEndpointRef };

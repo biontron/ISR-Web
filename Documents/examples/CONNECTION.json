@@ -7,8 +7,8 @@
     "de": "Verbindung"
   },
   "description": {
-    "und": "Links between two assets via dock endpoints (dockId#dockpartId).",
-    "de": "Verbindungen zwischen zwei Assets über Dock-Endpunkte (dockId#dockpartId)."
+    "und": "Links point to docks; linkparts point to dockparts.",
+    "de": "Links verweisen auf Docks; Linkparts verweisen auf Dockparts."
   },
   "order": 0,
   "parent": {
@@ -19,6 +19,50 @@
     "treeIcon": ""
   },
   "items": [
+    {
+      "kind": "field",
+      "order": 0,
+      "dataStructure": { "itemName": "kind", "default": "logical" },
+      "formProperties": { "label": { "und": "Kind", "de": "Art" } },
+      "fieldType": "string",
+      "rules": "logical|link|bridge|context",
+      "itemFlags": { "readonly": false, "hidden": false, "nullable": false },
+      "minUsage": 0,
+      "maxUsage": 1
+    },
+    {
+      "kind": "field",
+      "order": 0,
+      "dataStructure": { "itemName": "bridgeId", "default": "" },
+      "formProperties": { "label": { "und": "Bridge ID", "de": "Brücken-ID" } },
+      "fieldType": "string",
+      "rules": "[\\x20-\\x7E]{0,100}",
+      "itemFlags": { "readonly": false, "hidden": false, "nullable": true },
+      "minUsage": 0,
+      "maxUsage": 1
+    },
+    {
+      "kind": "field",
+      "order": 0,
+      "dataStructure": { "itemName": "peerEnvironmentRef", "default": "" },
+      "formProperties": { "label": { "und": "Peer environment", "de": "Peer-Environment" } },
+      "fieldType": "string",
+      "rules": "[\\x20-\\x7E]{0,100}",
+      "itemFlags": { "readonly": false, "hidden": false, "nullable": true },
+      "minUsage": 0,
+      "maxUsage": 1
+    },
+    {
+      "kind": "field",
+      "order": 0,
+      "dataStructure": { "itemName": "peerConnectionRef", "default": "" },
+      "formProperties": { "label": { "und": "Peer connection", "de": "Peer-Connection" } },
+      "fieldType": "string",
+      "rules": "[\\x20-\\x7E]{0,100}",
+      "itemFlags": { "readonly": false, "hidden": false, "nullable": true },
+      "minUsage": 0,
+      "maxUsage": 1
+    },
     {
       "kind": "group",
       "order": 1,
@@ -280,6 +324,19 @@
               "maxUsage": 1
             }
           ]
+        },
+        {
+          "kind": "group",
+          "order": 12,
+          "dataStructure": { "itemName": "credentials" },
+          "formProperties": {
+            "label": { "und": "Credentials", "de": "Zugangsdaten" }
+          },
+          "itemFlags": { "readonly": false, "hidden": false },
+          "minUsage": 0,
+          "maxUsage": 20,
+          "collectionType": "array",
+          "items": []
         }
       ]
     }

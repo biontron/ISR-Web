@@ -2,7 +2,7 @@
 # Infrastructure Repository (ISR) / Infrastruktur Repository (ISR)
 # SPDX-License-Identifier: GPL-2.0 
 */
-import { Instance, applySnapshot, flow, types, getRoot } from "mobx-state-tree";
+import { Instance, applySnapshot, flow, getSnapshot, types, getRoot } from "mobx-state-tree";
 import { BaseStore } from "./Base.Store";
 import { IRootStore } from "./Root.Store";
 import { ActiveElement } from "../Interfaces/Element";
@@ -23,6 +23,7 @@ import {
 import { ISchemaModel } from "./Models/Schema.Model";
 import { resolveComponentDefinitionTypesForCreate } from "../lib/elementDefinitionTypes";
 import { isNewElementStatus } from "../lib/elementStaging";
+import { restWritePayloadForAsset } from "../lib/restWritePayload";
 
 
 /**
@@ -50,15 +51,18 @@ export const AssetStore = types.compose("Asset", BaseStore, types.model({
 			try {
 				// Replace with your save logic (e.g., sending data to a server)
 				const data = self.assets.find(asset => asset.id === assetID);
-				const env = data?.environmentId || resolvePrimaryEnvironmentRef(root.ui.activeView);
-				const isCreate = isNewElementStatus(data?.status, data?.statusBeforeInvalid);
+				if (!data) {
+					return;
+				}
+				const env = data.environmentId || resolvePrimaryEnvironmentRef(root.ui.activeView);
+				const isCreate = isNewElementStatus(data.status, data.statusBeforeInvalid);
 				const url = `/${authStore.getDomain()}/environments/${env}/assets${
 					isCreate ? "" : "/" + assetID
 				}`;
 
 				const response = yield api.request(url, {
 					method: isCreate ? "POST" : "PUT",
-					body: JSON.stringify(data),
+					body: JSON.stringify(restWritePayloadForAsset(getSnapshot(data))),
 				});
 
 				if (response.ok) {
@@ -206,9 +210,14 @@ export const AssetStore = types.compose("Asset", BaseStore, types.model({
 		}
 		const definitionTypes = resolveComponentDefinitionTypesForCreate(schema as ISchemaModel);
 
+		const parentEnvironmentId =
+			parent && "environmentId" in parent
+				? String((parent as { environmentId?: string }).environmentId ?? "").trim()
+				: "";
 		const newAsset = AssetModel.create({
 			id: id,
-			environmentId: environmentId || resolvePrimaryEnvironmentRef(root.ui.activeView),
+			environmentId:
+				environmentId || parentEnvironmentId || resolvePrimaryEnvironmentRef(root.ui.activeView),
 			definition: {
 				storeType: definitionTypes.storeType,
 				baseType: definitionTypes.baseType,

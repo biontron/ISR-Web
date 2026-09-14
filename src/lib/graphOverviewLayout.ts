@@ -1,7 +1,7 @@
 export const OVERVIEW_DEVICES_PER_ROW = 10;
-export const OVERVIEW_DEVICE_GAP_X = 12;
-export const OVERVIEW_DEVICE_GAP_Y = 12;
-export const OVERVIEW_GROUP_GAP = 24;
+export const OVERVIEW_DEVICE_GAP_X = 72;
+export const OVERVIEW_DEVICE_GAP_Y = 72;
+export const OVERVIEW_GROUP_GAP = 40;
 export const OVERVIEW_CLUSTER_PAD = 16;
 export const OVERVIEW_MARGIN = 0;
 

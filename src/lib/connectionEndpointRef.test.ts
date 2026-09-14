@@ -1,21 +1,25 @@
 import {
 	formatDockEndpointRef,
 	parseDockEndpointRef,
+	parseDockRef,
 	connectionTouchesAsset,
 	connectionTouchesEndpoint,
 	findAssetByEndpointRef,
 	resolveConnectionEndpointSide,
 	resolveEndpointLabelInfo,
+	resolveLinkSideAssetId,
 } from "./connectionEndpointRef";
 
 describe("connectionEndpointRef", () => {
-	it("formatiert und parst dockId#dockpartId", () => {
+	it("formatiert und parst dockId#dockpartId und liest Dock-IDs", () => {
 		expect(formatDockEndpointRef("dock1", "part2")).toBe("dock1#part2");
 		expect(parseDockEndpointRef("dock1#part2")).toEqual({
 			dockId: "dock1",
 			dockpartId: "part2",
 		});
 		expect(parseDockEndpointRef("invalid")).toBeUndefined();
+		expect(parseDockRef("dock1#part2")).toBe("dock1");
+		expect(parseDockRef("dock1")).toBe("dock1");
 	});
 
 	it("connectionTouchesEndpoint prüft fromDockRef/toDockRef", () => {
@@ -37,6 +41,26 @@ describe("connectionEndpointRef", () => {
 		expect(connectionTouchesEndpoint(connection, "d9#p9")).toBe(false);
 	});
 
+	it("connectionTouchesEndpoint findet Dock-ID und Dockpart-ID getrennt", () => {
+		const connection = {
+			id: "conn1",
+			links: [
+				{
+					id: "1",
+					fromDockRef: "d1",
+					toDockRef: "d2",
+					linkparts: [{ fromDockpartRef: "p1", toDockpartRef: "p2", stackOrder: 1 }],
+				},
+			],
+		} as any;
+
+		expect(connectionTouchesEndpoint(connection, "d1")).toBe(true);
+		expect(connectionTouchesEndpoint(connection, "d2")).toBe(true);
+		expect(connectionTouchesEndpoint(connection, "p1")).toBe(true);
+		expect(connectionTouchesEndpoint(connection, "p2")).toBe(true);
+		expect(connectionTouchesEndpoint(connection, "d9")).toBe(false);
+	});
+
 	it("findAssetByEndpointRef findet Asset über dock und dockpart", () => {
 		const assets = [
 			{
@@ -52,7 +76,28 @@ describe("connectionEndpointRef", () => {
 		] as any;
 
 		expect(findAssetByEndpointRef(assets, "dockA#7")?.id).toBe("asset1");
+		expect(findAssetByEndpointRef(assets, "dockA")?.id).toBe("asset1");
 		expect(findAssetByEndpointRef(assets, "missing#7")).toBeUndefined();
+	});
+
+	it("resolveLinkSideAssetId findet die Component über Dock-ID in fromComponentRef", () => {
+		const assets = [
+			{
+				id: "4b8c402c-87a4-494a-8c40-2c87a4c94a59",
+				docks: [{ id: "D-A9JN75eH2eAkArEYjr6xAD", dockparts: [{ id: "1" }] }],
+			},
+		] as any;
+		const link = {
+			fromComponentRef: "D-A9JN75eH2eAkArEYjr6xAD",
+			fromDockRef: "D-A9JN75eH2eAkArEYjr6xAD",
+			toComponentRef: null,
+			toDockRef: "",
+			linkparts: [],
+		} as any;
+
+		expect(resolveLinkSideAssetId(link, assets, "from")).toBe(
+			"4b8c402c-87a4-494a-8c40-2c87a4c94a59"
+		);
 	});
 
 	it("resolveEndpointLabelInfo liefert Dock- und Dockpart-Label", () => {

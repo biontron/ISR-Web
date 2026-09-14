@@ -17,6 +17,7 @@ import {
 	hasMultiLayerAssetStack,
 	isAssetStackChildOf,
 	isStackMemberAsset,
+	resolveAssetStackRootId,
 } from "./graphComponentStack";
 import {
 	graphStyleToSvgNodeStyle,
@@ -26,6 +27,12 @@ import {
 import { buildGraphNodeHoverHtml } from "./treeNodeDisplay";
 import { buildElementSignalBarsHtml } from "./elementSignalBars";
 import { elementStatusShowsIndicator } from "./elementStatusStyle";
+import { IAsset } from "../Stores/Models/Asset.Model";
+import { collectContextComponents } from "./connectionDevice";
+import {
+	collectGraphDockCircles,
+	renderGraphDockCirclesHtml,
+} from "./connectionGraphCircles";
 
 type DagreNodeConfig = {
 	labelType: string;
@@ -68,6 +75,12 @@ function buildNodeLabel(node: TreeElement, condensed: boolean, omitIcon = false)
 	const fontSize = isClusterLabel ? "14.3px" : "13px";
 	const fontWeight = isClusterLabel ? "700" : "400";
 	const labelClass = isClusterLabel ? "Label graph-cluster-label" : `Label ${styleType}`;
+	const assets = rootStore.assets.assets.slice();
+	const contextHosts = collectContextComponents(assets);
+	const circlesHtml =
+		node.class === "Asset" || node.class === "AssetDetails"
+			? renderGraphDockCirclesHtml(collectGraphDockCircles(node as IAsset, contextHosts))
+			: "";
 
 	return `
 		<div class="graph-node-shell">
@@ -80,6 +93,7 @@ function buildNodeLabel(node: TreeElement, condensed: boolean, omitIcon = false)
 					${name}
 				</span>
 			</div>
+			${circlesHtml}
 			${hoverHtml}
 		</div>`;
 }
@@ -230,7 +244,9 @@ export function addTreeNodesToGraph(
 				style: graphStyleToSvgNodeStyle(memberStyle),
 				id: member.id,
 			});
-			safeSetParent(g, member.id, graphParentId);
+			if (graphParentId && graphParentId !== member.id) {
+				safeSetParent(g, member.id, graphParentId);
+			}
 		}
 	}
 
@@ -251,15 +267,26 @@ export function addTreeNodesToGraph(
 
 		if (node.class === "Asset" || node.class === "AssetDetails") {
 			if (isStackMemberAsset(node, assets)) {
+				if (node.id === options.root.id) {
+					const stackRootId = resolveAssetStackRootId(node.id, assets);
+					const stackRoot = assets.find((item) => item.id === stackRootId);
+					if (stackRoot) {
+						addAssetStackMembersToGraph(
+							stackRoot as unknown as TreeElement,
+							node.id === parentId ? "" : parentId
+						);
+					}
+				}
 				return;
 			}
 			const root = assets.find((item) => item.id === node.id);
 			if (root) {
 				const layers = collectAssetStackLayersFromAssets(root, assets);
 				if (hasMultiLayerAssetStack(layers)) {
-					if (node.id !== parentId) {
-						addAssetStackMembersToGraph(node, parentId);
-					}
+					addAssetStackMembersToGraph(
+						node,
+						node.id === parentId ? "" : parentId
+					);
 					return;
 				}
 			}

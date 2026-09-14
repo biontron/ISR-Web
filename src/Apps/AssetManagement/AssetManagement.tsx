@@ -233,7 +233,7 @@ const AssetManagement = observer(() => {
 								<ElementPropertiesAssignments />
 							</TabPane>
 						)}
-						{activeElement.class === "Asset" && (
+						{(activeElement.class === "Asset" || activeElement.class === "Group") && (
 							<TabPane tab={langtext("general.details_tab_connections")} key="2">
 								<ElementPropertiesConnections />
 							</TabPane>

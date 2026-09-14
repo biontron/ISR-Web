@@ -82,6 +82,72 @@ describe("connectionSchemaPatch", () => {
 		expect(linkparts).toContain("fromDockpartRef");
 	});
 
+	it("hebt flache Link- und Linkpart-Wrapper an", () => {
+		const patched = patchConnectionSchemaSnapshot({
+			id: "CONNECTION",
+			items: [
+				{
+					kind: "group",
+					dataStructure: { itemName: "links" },
+					collectionType: "array",
+					items: [
+						{
+							kind: "group",
+							dataStructure: { itemName: "link" },
+							collectionType: "map",
+							minUsage: 1,
+							maxUsage: 1,
+							items: [
+								{ kind: "field", dataStructure: { itemName: "id" } },
+								{ kind: "field", dataStructure: { itemName: "fromAssetRef" } },
+								{
+									kind: "group",
+									dataStructure: { itemName: "linkparts" },
+									collectionType: "array",
+									items: [
+										{
+											kind: "group",
+											dataStructure: { itemName: "" },
+											collectionType: "map",
+											minUsage: 1,
+											maxUsage: 1,
+											formProperties: { label: { de: "Link-Teil" } },
+											items: [
+												{ kind: "field", dataStructure: { itemName: "fromLabel" } },
+												{ kind: "field", dataStructure: { itemName: "fromDockpartRef" } },
+												{ kind: "field", dataStructure: { itemName: "stackOrder" } },
+											],
+										},
+									],
+								},
+							],
+						},
+					],
+				},
+			],
+		});
+
+		const links = (patched.items as any[])[0];
+		const linkItemNames = links.items.map(
+			(entry: { dataStructure: { itemName: string } }) => entry.dataStructure.itemName
+		);
+		expect(linkItemNames).toContain("id");
+		expect(linkItemNames).toContain("fromComponentRef");
+		expect(linkItemNames).toContain("linkparts");
+		expect(linkItemNames).toContain("credentials");
+		expect(linkItemNames).not.toContain("link");
+
+		const linkparts = links.items.find(
+			(entry: { dataStructure: { itemName: string } }) => entry.dataStructure.itemName === "linkparts"
+		);
+		const partNames = linkparts.items.map(
+			(entry: { dataStructure: { itemName: string } }) => entry.dataStructure.itemName
+		);
+		expect(partNames).toContain("fromLabelSnapshot");
+		expect(partNames).toContain("fromDockpartRef");
+		expect(partNames).toContain("stackOrder");
+	});
+
 	it("patchConnectionSchemaRestItems patcht nur CONNECTION", () => {
 		const items = patchConnectionSchemaRestItems([
 			{ id: "OTHER", items: [] },

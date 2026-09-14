@@ -195,6 +195,7 @@ export const GroupStore = types.compose("GroupStore", BaseStore, types.model({
 			parentIdRef: parent?.id,
 			elementIdRefs: [],
 			filterRules: [],
+			docks: [],
 			attachments: [],
 			properties: {
 				responsibles: [],

@@ -18,6 +18,7 @@ import ConnectionDialog from "../../../Components/Connections/ConnectionDialog";
 import {
 	collectConnectionGraphEdges,
 	collectConnectionGraphEdgesFromTree,
+	collectRenderedGraphNodeIds,
 	collectVisibleAssetIdsFromTree,
 	mergeConnectionGraphEdges,
 } from "../../../lib/graphConnectionEdges";
@@ -63,6 +64,13 @@ const GRAPH_INLINE_STYLE = `
 	svg foreignObject { overflow: visible; }
 	svg .edgeLabel { pointer-events: all; }
 	.graph-node-shell { position: relative; display: inline-block; padding-right: 22px; }
+	g.graph-device-shell .graph-node-shell {
+		width: 100%;
+		box-sizing: border-box;
+		background: rgba(255,255,255,0.3);
+		padding: 4px 8px 4px 6px;
+	}
+	g.graph-device-shell rect.graph-device-titlebar { fill: rgba(255,255,255,0.3); }
 	.graph-node-tooltip {
 		display: none;
 		position: absolute;
@@ -104,10 +112,13 @@ type GraphRenderOptions = {
 	nodesep?: number;
 };
 
-function collectGraphEdges(root: TreeElement) {
+function collectGraphEdges(root: TreeElement, renderedNodeIds?: Set<string>) {
 	const assets = rootStore.assets.assets.slice();
 	const connections = rootStore.connections.connections.slice();
-	const visibleIds = collectVisibleAssetIdsFromTree(root, 10);
+	const visibleIds =
+		renderedNodeIds && renderedNodeIds.size > 0
+			? renderedNodeIds
+			: collectVisibleAssetIdsFromTree(root, 10);
 	return mergeConnectionGraphEdges(
 		collectConnectionGraphEdges(assets, connections, visibleIds),
 		collectConnectionGraphEdgesFromTree(root, assets, connections, 10)
@@ -307,7 +318,7 @@ export const ElementGraphOverview = observer(
 	<GraphCanvas
 		element={element}
 		zoomLevel={zoomLevel}
-		layout={{ rankdir: "TB", ranksep: 70, nodesep: 5 }}
+		layout={{ rankdir: "TB", ranksep: 80, nodesep: 48 }}
 		buildGraph={(g, root, config) => {
 			addTreeNodesToGraph(g, {
 				depth: 10,
@@ -316,7 +327,7 @@ export const ElementGraphOverview = observer(
 				activeElementId: rootStore.ui.activeElement?.id,
 				config,
 			});
-			const edges = collectGraphEdges(root);
+			const edges = collectGraphEdges(root, collectRenderedGraphNodeIds(g));
 			addConnectionEdgesToGraph(g, edges);
 			return edges;
 		}}
@@ -348,7 +359,13 @@ export const ElementGraphSwimlanes = observer(
 			}
 			const viewRoot = view as TreeElement;
 			buildSwimlaneGraph(g, viewRoot, config, rootStore.ui.activeElement?.id);
-			return [];
+			const edges = collectConnectionGraphEdges(
+				rootStore.assets.assets.slice(),
+				rootStore.connections.connections.slice(),
+				collectRenderedGraphNodeIds(g)
+			);
+			addConnectionEdgesToGraph(g, edges);
+			return edges;
 		}}
 		postRender={(svg, _root, graphConfig, viewportWidth, dagreGraph) =>
 			applySwimlaneFullWidthLayout(
@@ -395,22 +412,7 @@ export const ElementGraphMap = observer(
 				walk(root, 10);
 				flatNodesRef.current = flatNodes;
 				addMapPositionedNodes(g, flatNodes, rootStore.ui.activeElement?.id, config);
-				const visibleIds = new Set(
-					flatNodes.filter((node) => node.class === "Asset").map((node) => node.id)
-				);
-				const edges = mergeConnectionGraphEdges(
-					collectConnectionGraphEdges(
-						rootStore.assets.assets.slice(),
-						rootStore.connections.connections.slice(),
-						visibleIds
-					),
-					collectConnectionGraphEdgesFromTree(
-						root,
-						rootStore.assets.assets.slice(),
-						rootStore.connections.connections.slice(),
-						10
-					)
-				);
+				const edges = collectGraphEdges(root, collectRenderedGraphNodeIds(g));
 				addConnectionEdgesToGraph(g, edges);
 				return edges;
 			}}

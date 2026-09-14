@@ -53,17 +53,30 @@ export function readGraphNodeId(element: Element): string | undefined {
 	return undefined;
 }
 
+export type ResizeGraphNodeBoxOptions = {
+	/** Titelleiste oben; foreignObject bleibt auf dieser Höhe, Rect umschließt den ganzen Kasten. */
+	titleBarHeight?: number;
+};
+
 /** Dagre-Knoten: Rechteck/Label sind um (0,0) zentriert — translate setzt die Mitte. */
-export function resizeGraphNodeBox(node: SVGGElement, width: number, height: number): void {
+export function resizeGraphNodeBox(
+	node: SVGGElement,
+	width: number,
+	height: number,
+	options?: ResizeGraphNodeBoxOptions
+): void {
 	const w = Math.max(1, Math.ceil(width));
 	const h = Math.max(1, Math.ceil(height));
 	const halfW = w / 2;
 	const halfH = h / 2;
+	const titleBarHeight = options?.titleBarHeight
+		? Math.max(1, Math.min(Math.ceil(options.titleBarHeight), h))
+		: h;
 
 	const rects =
 		node.querySelectorAll("rect.label-container").length > 0
 			? node.querySelectorAll("rect.label-container")
-			: node.querySelectorAll(":scope > rect");
+			: node.querySelectorAll(":scope > rect:not(.graph-device-titlebar)");
 
 	rects.forEach((element) => {
 		element.setAttribute("x", String(-halfW));
@@ -77,7 +90,7 @@ export function resizeGraphNodeBox(node: SVGGElement, width: number, height: num
 		foreignObject.setAttribute("x", String(-halfW));
 		foreignObject.setAttribute("y", String(-halfH));
 		foreignObject.setAttribute("width", String(w));
-		foreignObject.setAttribute("height", String(h));
+		foreignObject.setAttribute("height", String(titleBarHeight));
 	}
 }
 

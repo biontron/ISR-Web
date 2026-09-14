@@ -99,8 +99,12 @@ describe("CONNECTION schema vs instance", () => {
 		});
 
 		expect(connection.links[0].fromComponentRef).toBe("from");
-		expect(connection.links[0].fromLabelSnapshot).toBe("From App");
-		expect(connection.links[0].toLabelSnapshot).toBe("To App");
+		expect(connection.links[0].fromDockRef).toBe("dFrom");
+		expect(connection.links[0].toDockRef).toBe("dTo");
+		expect(connection.links[0].fromLabelSnapshot).toBe("dFrom");
+		expect(connection.links[0].toLabelSnapshot).toBe("dTo");
+		expect(connection.links[0].linkparts[0].fromDockpartRef).toBe("2");
+		expect(connection.links[0].linkparts[0].toDockpartRef).toBe("20");
 		expect(connection.links[0].linkparts[0].fromLabelSnapshot).toBe("HTTP");
 		expect(connection.links[0].linkparts[0].toLabelSnapshot).toBe("HTTP-Ziel");
 	});
@@ -121,6 +125,16 @@ describe("CONNECTION schema vs instance", () => {
 			"links[0].linkparts[0]"
 		);
 		expect(extras).toEqual([]);
+	});
+
+	it("keine Extra-Daten für den flachen Link inkl. credentials", () => {
+		const linksGroup = schemaItems.find(
+			(item) => item.kind === "group" && item.dataStructure.itemName === "links"
+		);
+		if (linksGroup?.kind !== "group") {
+			throw new Error("CONNECTION schema: links group missing");
+		}
+		expect(findExtraPathsInScope(instanceFixture, linksGroup.items, "links[0]")).toEqual([]);
 	});
 
 	it("keine Validierungsfehler für CONNECTION-Instanz gegen Beispiel-Schema", () => {

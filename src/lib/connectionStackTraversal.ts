@@ -1,13 +1,8 @@
 import { IAsset } from "../Stores/Models/Asset.Model";
-import { IDock } from "../Stores/Models/Dock.Model";
-import {
-	formatDockEndpointRef,
-	formatAssetDisplayName,
-} from "./connectionEndpointRef";
+import { formatAssetDisplayName } from "./connectionEndpointRef";
 import {
 	PairedLinkpartSnapshot,
 	pairSelectedDockparts,
-	topDockpartIdFromSelection,
 } from "./connectionDockpartPairing";
 import { alignStackChains } from "./connectionStackChain";
 
@@ -114,19 +109,13 @@ export function buildLinkSnapshotFromDraft(
 		return undefined;
 	}
 
-	const topFromId = topDockpartIdFromSelection(fromDock, draft.fromDockpartIds);
-	const topToId = topDockpartIdFromSelection(toDock, draft.toDockpartIds);
-	if (!topFromId || !topToId) {
-		return undefined;
-	}
-
 	return {
 		fromComponentRef: fromAsset.id,
-		fromDockRef: formatDockEndpointRef(String(fromDock.id), topFromId),
-		fromLabelSnapshot: assetLabel(fromAsset),
+		fromDockRef: String(fromDock.id),
+		fromLabelSnapshot: fromDock.label?.trim() || assetLabel(fromAsset),
 		toComponentRef: toAsset.id,
-		toDockRef: formatDockEndpointRef(String(toDock.id), topToId),
-		toLabelSnapshot: assetLabel(toAsset),
+		toDockRef: String(toDock.id),
+		toLabelSnapshot: toDock.label?.trim() || assetLabel(toAsset),
 		linkparts,
 	};
 }

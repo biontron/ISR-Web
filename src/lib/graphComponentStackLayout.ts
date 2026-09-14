@@ -9,7 +9,10 @@ import {
 	hasMultiLayerAssetStack,
 	isGraphStackClusterId,
 	resolveAssetStackRootId,
+	DEVICE_TITLE_BAR_FILL,
 	STACK_COLUMN_GAP,
+	STACK_INNER_PAD_X,
+	STACK_INNER_PAD_Y,
 	STACK_LAYER_GAP,
 	STACK_PAD,
 	STACK_PARALLEL_GAP,
@@ -31,63 +34,112 @@ type StackNodePosition = {
 	height: number;
 };
 
-function selectRenderedGraphNodes(
-	svg: Selection<SVGSVGElement, unknown, null, undefined>
-) {
-	const scoped = svg.selectAll<SVGGElement, string>("g.output g.nodes g.node");
-	if (!scoped.empty()) {
-		return scoped;
+export type DeviceShellLayerSize = {
+	memberIds: string[];
+	widths: number[];
+	heights: number[];
+};
+
+function layerNaturalWidth(widths: number[]): number {
+	if (widths.length <= 1) {
+		return widths[0] ?? 0;
 	}
-	return svg.selectAll<SVGGElement, string>("g.node");
-}
-
-function readDagreNodeBox(graph: DagreGraph, nodeId: string): { x: number; y: number; width: number; height: number } | null {
-	const node = graph.node(nodeId) as { x?: number; y?: number; width?: number; height?: number } | undefined;
-	if (!node || node.x == null || node.y == null) {
-		return null;
-	}
-	return {
-		x: node.x,
-		y: node.y,
-		width: node.width ?? 0,
-		height: node.height ?? 0,
-	};
-}
-
-function readStackAnchorCenter(
-	graph: DagreGraph,
-	memberIds: string[]
-): { x: number; y: number } | null {
-	let minX = Infinity;
-	let minY = Infinity;
-	let maxX = -Infinity;
-	let maxY = -Infinity;
-	let found = false;
-
-	for (const memberId of memberIds) {
-		const box = readDagreNodeBox(graph, memberId);
-		if (!box) {
-			continue;
-		}
-		found = true;
-		minX = Math.min(minX, box.x - box.width / 2);
-		maxX = Math.max(maxX, box.x + box.width / 2);
-		minY = Math.min(minY, box.y - box.height / 2);
-		maxY = Math.max(maxY, box.y + box.height / 2);
-	}
-
-	if (!found) {
-		return null;
-	}
-
-	return { x: (minX + maxX) / 2, y: (minY + maxY) / 2 };
+	return (
+		widths.reduce((sum, width) => sum + width, 0) +
+		Math.max(0, widths.length - 1) * STACK_PARALLEL_GAP
+	);
 }
 
 /**
- * Stapel-Spitze (leaf) oben, Wurzel (layers[0]) unten — wie Tree/Referenzdiagramm.
- * Koordinaten: Mittelpunkt jedes Knotens (dagre-Konvention).
+ * Device-Rahmen: Titelleiste oben, Funktions-Components darunter, Pad links/rechts.
  */
-function layoutStackColumn(
+export function computeDeviceShellLayout(
+	title: { id: string; width: number; height: number },
+	innerLayers: DeviceShellLayerSize[],
+	stackLeft: number,
+	stackTop: number
+): { width: number; height: number; titleBarHeight: number; positions: Map<string, StackNodePosition> } {
+	const positions = new Map<string, StackNodePosition>();
+	const titleBarHeight = Math.max(24, title.height);
+	const innerMaxWidth = Math.max(0, ...innerLayers.map((layer) => layerNaturalWidth(layer.widths)));
+	const columnWidth = Math.max(120, title.width, innerMaxWidth + STACK_INNER_PAD_X * 2);
+	const contentWidth = Math.max(40, columnWidth - STACK_INNER_PAD_X * 2);
+
+	let cursorY = stackTop + titleBarHeight + STACK_INNER_PAD_Y;
+	for (const layer of innerLayers) {
+		const layerHeight = Math.max(0, ...layer.heights);
+		if (layer.memberIds.length === 1) {
+			const height = layer.heights[0] ?? 0;
+			positions.set(layer.memberIds[0], {
+				centerX: stackLeft + STACK_INNER_PAD_X + contentWidth / 2,
+				centerY: cursorY + height / 2,
+				width: contentWidth,
+				height,
+			});
+		} else {
+			const gapTotal = Math.max(0, layer.memberIds.length - 1) * STACK_PARALLEL_GAP;
+			const slotWidth = Math.max(40, (contentWidth - gapTotal) / layer.memberIds.length);
+			let cursorX = stackLeft + STACK_INNER_PAD_X;
+			layer.memberIds.forEach((memberId, index) => {
+				const height = layer.heights[index] ?? layerHeight;
+				positions.set(memberId, {
+					centerX: cursorX + slotWidth / 2,
+					centerY: cursorY + layerHeight / 2,
+					width: slotWidth,
+					height,
+				});
+				cursorX += slotWidth + STACK_PARALLEL_GAP;
+			});
+		}
+		cursorY += layerHeight + STACK_LAYER_GAP;
+	}
+
+	const height = Math.max(
+		titleBarHeight + STACK_INNER_PAD_Y * 2,
+		cursorY + STACK_INNER_PAD_Y - stackTop
+	);
+	positions.set(title.id, {
+		centerX: stackLeft + columnWidth / 2,
+		centerY: stackTop + height / 2,
+		width: columnWidth,
+		height,
+	});
+
+	return { width: columnWidth, height, titleBarHeight, positions };
+}
+
+function ensureDeviceTitleBar(
+	node: SVGGElement,
+	width: number,
+	height: number,
+	titleBarHeight: number
+): void {
+	const ns = "http://www.w3.org/2000/svg";
+	let bar = node.querySelector("rect.graph-device-titlebar") as SVGRectElement | null;
+	if (!bar) {
+		bar = document.createElementNS(ns, "rect");
+		bar.setAttribute("class", "graph-device-titlebar");
+		bar.setAttribute("pointer-events", "none");
+		const firstRect = node.querySelector(":scope > rect");
+		if (firstRect?.nextSibling) {
+			firstRect.after(bar);
+		} else if (firstRect) {
+			firstRect.after(bar);
+		} else {
+			node.insertBefore(bar, node.firstChild);
+		}
+	}
+	bar.setAttribute("x", String(-width / 2));
+	bar.setAttribute("y", String(-height / 2));
+	bar.setAttribute("width", String(width));
+	bar.setAttribute("height", String(titleBarHeight));
+	bar.setAttribute("fill", DEVICE_TITLE_BAR_FILL);
+}
+
+/**
+ * Stapel-Spitze (leaf) oben, Wurzel (layers[0]) unten — Fallback ohne Device-Rahmen.
+ */
+function layoutUniformStackColumn(
 	nodesById: Map<string, SVGGElement>,
 	layers: IAsset[][],
 	stackLeft: number,
@@ -101,11 +153,7 @@ function layoutStackColumn(
 			return node ? measureGraphNodeSize(node) : { width: 0, height: 0 };
 		});
 		const layerHeight = Math.max(0, ...sizes.map((size) => size.height));
-		const naturalWidth =
-			layer.length === 1
-				? sizes[0]?.width ?? 0
-				: sizes.reduce((sum, size) => sum + size.width, 0) +
-					Math.max(0, layer.length - 1) * STACK_PARALLEL_GAP;
+		const naturalWidth = layerNaturalWidth(sizes.map((size) => size.width));
 		return { layer, sizes, layerHeight, naturalWidth };
 	});
 
@@ -165,6 +213,123 @@ function layoutStackColumn(
 		height: totalHeight,
 		positions,
 	};
+}
+
+/**
+ * Device umgibt Funktions-Components: Titelleiste oben, Stapel darunter, Pad links/rechts.
+ */
+function layoutStackColumn(
+	nodesById: Map<string, SVGGElement>,
+	layers: IAsset[][],
+	stackLeft: number,
+	stackTop: number
+): { width: number; height: number; positions: Map<string, StackNodePosition> } {
+	const rootAsset = layers[0]?.[0];
+	const rootNode = rootAsset ? nodesById.get(rootAsset.id) : undefined;
+	const innerLayers = layers.slice(1);
+
+	if (!rootAsset || !rootNode || innerLayers.length === 0) {
+		return layoutUniformStackColumn(nodesById, layers, stackLeft, stackTop);
+	}
+
+	const titleSize = measureGraphNodeSize(rootNode);
+	const innerSizes: DeviceShellLayerSize[] = innerLayers.map((layer) => {
+		const sizes = layer.map((member) => {
+			const node = nodesById.get(member.id);
+			return node ? measureGraphNodeSize(node) : { width: 0, height: 0 };
+		});
+		return {
+			memberIds: layer.map((member) => member.id),
+			widths: sizes.map((size) => size.width),
+			heights: sizes.map((size) => size.height),
+		};
+	});
+
+	const layout = computeDeviceShellLayout(
+		{ id: rootAsset.id, width: titleSize.width, height: titleSize.height },
+		innerSizes,
+		stackLeft,
+		stackTop
+	);
+
+	const shell = layout.positions.get(rootAsset.id);
+	if (shell) {
+		rootNode.classList.add("graph-device-shell");
+		resizeGraphNodeBox(rootNode, shell.width, shell.height, {
+			titleBarHeight: layout.titleBarHeight,
+		});
+		ensureDeviceTitleBar(rootNode, shell.width, shell.height, layout.titleBarHeight);
+	}
+
+	for (const layer of innerLayers) {
+		for (const member of layer) {
+			const node = nodesById.get(member.id);
+			const pos = layout.positions.get(member.id);
+			if (!node || !pos) {
+				continue;
+			}
+			node.classList.remove("graph-device-shell");
+			resizeGraphNodeBox(node, pos.width, pos.height);
+		}
+	}
+
+	return {
+		width: layout.width,
+		height: layout.height,
+		positions: layout.positions,
+	};
+}
+
+function selectRenderedGraphNodes(
+	svg: Selection<SVGSVGElement, unknown, null, undefined>
+) {
+	const scoped = svg.selectAll<SVGGElement, string>("g.output g.nodes g.node");
+	if (!scoped.empty()) {
+		return scoped;
+	}
+	return svg.selectAll<SVGGElement, string>("g.node");
+}
+
+function readDagreNodeBox(graph: DagreGraph, nodeId: string): { x: number; y: number; width: number; height: number } | null {
+	const node = graph.node(nodeId) as { x?: number; y?: number; width?: number; height?: number } | undefined;
+	if (!node || node.x == null || node.y == null) {
+		return null;
+	}
+	return {
+		x: node.x,
+		y: node.y,
+		width: node.width ?? 0,
+		height: node.height ?? 0,
+	};
+}
+
+function readStackAnchorCenter(
+	graph: DagreGraph,
+	memberIds: string[]
+): { x: number; y: number } | null {
+	let minX = Infinity;
+	let minY = Infinity;
+	let maxX = -Infinity;
+	let maxY = -Infinity;
+	let found = false;
+
+	for (const memberId of memberIds) {
+		const box = readDagreNodeBox(graph, memberId);
+		if (!box) {
+			continue;
+		}
+		found = true;
+		minX = Math.min(minX, box.x - box.width / 2);
+		maxX = Math.max(maxX, box.x + box.width / 2);
+		minY = Math.min(minY, box.y - box.height / 2);
+		maxY = Math.max(maxY, box.y + box.height / 2);
+	}
+
+	if (!found) {
+		return null;
+	}
+
+	return { x: (minX + maxX) / 2, y: (minY + maxY) / 2 };
 }
 
 export function measureAssetStackColumn(
