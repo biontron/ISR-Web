@@ -532,17 +532,37 @@ svg .edgePath.graph-edge--negative path {
 .graph-canvas__svg .graph-node-shell {
 	position: relative;
 	display: inline-block;
+	text-align: left;
 }
 
-.graph-canvas__svg g.graph-device-shell .graph-node-shell {
-	width: 100%;
+.graph-canvas__svg g.cluster .graph-node-shell {
+	padding-right: 0;
+	width: max-content;
+}
+
+.graph-canvas__svg g.cluster .graph-cluster-label,
+.graph-canvas__svg g.cluster .graph-cluster-label .graph-link {
+	white-space: nowrap;
+	min-width: max-content;
+}
+
+.graph-canvas__svg g.graph-device-shell > g.label .graph-node-shell {
+	width: auto;
+	max-width: 100%;
 	box-sizing: border-box;
-	background: rgba(255, 255, 255, 0.3);
-	padding: 4px 8px 4px 6px;
+	background: transparent;
+	padding: 0;
+	text-align: left;
 }
 
-.graph-canvas__svg g.graph-device-shell rect.graph-device-titlebar {
+.graph-canvas__svg g.graph-device-shell rect.graph-device-titlebar,
+.graph-canvas__svg g.graph-nested-component rect.graph-nested-titlebar {
 	fill: rgba(255, 255, 255, 0.3);
+}
+
+.graph-canvas__svg g.graph-nested-component > g.label .graph-node-shell {
+	width: auto;
+	text-align: left;
 }
 
 .graph-canvas__svg .graph-node-tooltip {

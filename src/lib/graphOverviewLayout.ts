@@ -3,7 +3,27 @@ export const OVERVIEW_DEVICE_GAP_X = 72;
 export const OVERVIEW_DEVICE_GAP_Y = 72;
 export const OVERVIEW_GROUP_GAP = 40;
 export const OVERVIEW_CLUSTER_PAD = 16;
+export const OVERVIEW_CLUSTER_MIN_WIDTH = 160;
 export const OVERVIEW_MARGIN = 0;
+
+/** Cluster-Rahmen: Inhalt plus Titelleiste, mindestens so breit wie die Beschriftung. */
+export function overviewClusterBoxSize(options: {
+	contentWidth: number;
+	contentHeight: number;
+	labelWidth: number;
+	labelHeight: number;
+	pad?: number;
+}): { width: number; height: number } {
+	const pad = options.pad ?? OVERVIEW_CLUSTER_PAD;
+	return {
+		width: Math.max(
+			OVERVIEW_CLUSTER_MIN_WIDTH,
+			options.contentWidth + pad * 2,
+			options.labelWidth + pad * 2
+		),
+		height: Math.max(options.labelHeight + pad * 2, options.contentHeight + pad),
+	};
+}
 
 export type OverviewSizedItem = {
 	id: string;

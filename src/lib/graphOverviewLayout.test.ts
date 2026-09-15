@@ -1,5 +1,6 @@
 import {
 	OVERVIEW_DEVICES_PER_ROW,
+	overviewClusterBoxSize,
 	packItemsLeftToRightRows,
 	stackItemsTopLeft,
 } from "./graphOverviewLayout";
@@ -46,5 +47,17 @@ describe("graphOverviewLayout", () => {
 		expect(stacked.positions.get("g2")).toEqual({ left: 0, top: 50 });
 		expect(stacked.width).toBe(100);
 		expect(stacked.height).toBe(80);
+	});
+
+	it("macht den Cluster mindestens so breit wie die View-Group-Beschriftung", () => {
+		const box = overviewClusterBoxSize({
+			contentWidth: 40,
+			contentHeight: 80,
+			labelWidth: 220,
+			labelHeight: 20,
+			pad: 16,
+		});
+		expect(box.width).toBe(220 + 32);
+		expect(box.height).toBe(80 + 16);
 	});
 });

@@ -51,9 +51,10 @@ const GRAPH_INLINE_STYLE = `
 	.label svg { height:2em; max-height:2em; width:2em; max-width:2em; display:inline-block; vertical-align:top; flex:0 0 auto; }
 	.label .Label { display:flex; align-items:flex-start; gap:6px; }
 	.label .graph-icon { display:inline-flex; flex:0 0 auto; }
-	.label .graph-link { display:inline-block; min-width:0; }
-	.graph-cluster-label { font-size: 14.3px; font-weight: 700; }
-	.graph-cluster-label .graph-link { font-weight: 700; }
+	.label .graph-link { display:inline-block; min-width:max-content; white-space:nowrap; }
+	.graph-cluster-label { font-size: 14.3px; font-weight: 700; white-space:nowrap; }
+	.graph-cluster-label .graph-link { font-weight: 700; white-space:nowrap; min-width:max-content; flex:0 0 auto; }
+	g.cluster .graph-node-shell { padding-right: 0; width: max-content; }
 	.graph-link { cursor: pointer; color: #111; }
 	.graph-link:hover { text-decoration: underline; color: #0066cc; }
 	.graph-swimlane-title { font-weight: 600; padding: 0 2px 4px; color: #111; text-align: left; white-space: nowrap; }
@@ -63,14 +64,21 @@ const GRAPH_INLINE_STYLE = `
 	svg .node.graph-overview-rank-dummy { display: none; }
 	svg foreignObject { overflow: visible; }
 	svg .edgeLabel { pointer-events: all; }
-	.graph-node-shell { position: relative; display: inline-block; padding-right: 22px; }
-	g.graph-device-shell .graph-node-shell {
-		width: 100%;
+	.graph-node-shell { position: relative; display: inline-block; padding-right: 22px; text-align: left; }
+	g.graph-device-shell > g.label .graph-node-shell {
+		width: auto;
+		max-width: 100%;
 		box-sizing: border-box;
-		background: rgba(255,255,255,0.3);
-		padding: 4px 8px 4px 6px;
+		background: transparent;
+		padding: 0;
+		text-align: left;
 	}
-	g.graph-device-shell rect.graph-device-titlebar { fill: rgba(255,255,255,0.3); }
+	g.graph-device-shell rect.graph-device-titlebar,
+	g.graph-nested-component rect.graph-nested-titlebar { fill: rgba(255,255,255,0.3); }
+	g.graph-nested-component > g.label .graph-node-shell {
+		width: auto;
+		text-align: left;
+	}
 	.graph-node-tooltip {
 		display: none;
 		position: absolute;

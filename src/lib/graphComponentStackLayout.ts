@@ -20,6 +20,7 @@ import {
 import { rerouteDagreGraphEdges, syncDagreNodeBox } from "./graphDagreRender";
 import {
 	applyGraphNodeCenterTransform,
+	measureGraphNodeLabelSize,
 	measureGraphNodeSize,
 	readGraphNodeId,
 	resizeGraphNodeBox,
@@ -51,7 +52,7 @@ function layerNaturalWidth(widths: number[]): number {
 }
 
 /**
- * Device-Rahmen: Titelleiste oben, Funktions-Components darunter, Pad links/rechts.
+ * Device-Rahmen: Titelleiste oben links, Funktions-Components darunter in natürlicher Größe.
  */
 export function computeDeviceShellLayout(
 	title: { id: string; width: number; height: number },
@@ -60,37 +61,25 @@ export function computeDeviceShellLayout(
 	stackTop: number
 ): { width: number; height: number; titleBarHeight: number; positions: Map<string, StackNodePosition> } {
 	const positions = new Map<string, StackNodePosition>();
-	const titleBarHeight = Math.max(24, title.height);
+	const titleBarHeight = Math.max(1, title.height);
 	const innerMaxWidth = Math.max(0, ...innerLayers.map((layer) => layerNaturalWidth(layer.widths)));
-	const columnWidth = Math.max(120, title.width, innerMaxWidth + STACK_INNER_PAD_X * 2);
-	const contentWidth = Math.max(40, columnWidth - STACK_INNER_PAD_X * 2);
+	const columnWidth = Math.max(title.width, innerMaxWidth + STACK_INNER_PAD_X * 2);
 
 	let cursorY = stackTop + titleBarHeight + STACK_INNER_PAD_Y;
 	for (const layer of innerLayers) {
 		const layerHeight = Math.max(0, ...layer.heights);
-		if (layer.memberIds.length === 1) {
-			const height = layer.heights[0] ?? 0;
-			positions.set(layer.memberIds[0], {
-				centerX: stackLeft + STACK_INNER_PAD_X + contentWidth / 2,
+		let cursorX = stackLeft + STACK_INNER_PAD_X;
+		layer.memberIds.forEach((memberId, index) => {
+			const width = layer.widths[index] ?? 0;
+			const height = layer.heights[index] ?? layerHeight;
+			positions.set(memberId, {
+				centerX: cursorX + width / 2,
 				centerY: cursorY + height / 2,
-				width: contentWidth,
+				width,
 				height,
 			});
-		} else {
-			const gapTotal = Math.max(0, layer.memberIds.length - 1) * STACK_PARALLEL_GAP;
-			const slotWidth = Math.max(40, (contentWidth - gapTotal) / layer.memberIds.length);
-			let cursorX = stackLeft + STACK_INNER_PAD_X;
-			layer.memberIds.forEach((memberId, index) => {
-				const height = layer.heights[index] ?? layerHeight;
-				positions.set(memberId, {
-					centerX: cursorX + slotWidth / 2,
-					centerY: cursorY + layerHeight / 2,
-					width: slotWidth,
-					height,
-				});
-				cursorX += slotWidth + STACK_PARALLEL_GAP;
-			});
-		}
+			cursorX += width + STACK_PARALLEL_GAP;
+		});
 		cursorY += layerHeight + STACK_LAYER_GAP;
 	}
 
@@ -108,22 +97,38 @@ export function computeDeviceShellLayout(
 	return { width: columnWidth, height, titleBarHeight, positions };
 }
 
-function ensureDeviceTitleBar(
+export function relativeToShellCenter(
+	shell: Pick<StackNodePosition, "centerX" | "centerY">,
+	pos: Pick<StackNodePosition, "centerX" | "centerY">
+): { centerX: number; centerY: number } {
+	return {
+		centerX: pos.centerX - shell.centerX,
+		centerY: pos.centerY - shell.centerY,
+	};
+}
+
+function ensureNodeTitleBar(
 	node: SVGGElement,
 	width: number,
 	height: number,
-	titleBarHeight: number
+	titleBarHeight: number,
+	classNames: string
 ): void {
 	const ns = "http://www.w3.org/2000/svg";
-	let bar = node.querySelector("rect.graph-device-titlebar") as SVGRectElement | null;
+	const selector =
+		"rect" +
+		classNames
+			.split(/\s+/)
+			.filter(Boolean)
+			.map((name) => `.${name}`)
+			.join("");
+	let bar = node.querySelector(selector) as SVGRectElement | null;
 	if (!bar) {
 		bar = document.createElementNS(ns, "rect");
-		bar.setAttribute("class", "graph-device-titlebar");
+		bar.setAttribute("class", classNames);
 		bar.setAttribute("pointer-events", "none");
-		const firstRect = node.querySelector(":scope > rect");
-		if (firstRect?.nextSibling) {
-			firstRect.after(bar);
-		} else if (firstRect) {
+		const firstRect = node.querySelector(":scope > rect:not(.graph-component-titlebar)");
+		if (firstRect) {
 			firstRect.after(bar);
 		} else {
 			node.insertBefore(bar, node.firstChild);
@@ -232,11 +237,11 @@ function layoutStackColumn(
 		return layoutUniformStackColumn(nodesById, layers, stackLeft, stackTop);
 	}
 
-	const titleSize = measureGraphNodeSize(rootNode);
+	const titleSize = measureGraphNodeLabelSize(rootNode);
 	const innerSizes: DeviceShellLayerSize[] = innerLayers.map((layer) => {
 		const sizes = layer.map((member) => {
 			const node = nodesById.get(member.id);
-			return node ? measureGraphNodeSize(node) : { width: 0, height: 0 };
+			return node ? measureGraphNodeLabelSize(node) : { width: 0, height: 0 };
 		});
 		return {
 			memberIds: layer.map((member) => member.id),
@@ -257,8 +262,15 @@ function layoutStackColumn(
 		rootNode.classList.add("graph-device-shell");
 		resizeGraphNodeBox(rootNode, shell.width, shell.height, {
 			titleBarHeight: layout.titleBarHeight,
+			titleBarWidth: titleSize.width,
 		});
-		ensureDeviceTitleBar(rootNode, shell.width, shell.height, layout.titleBarHeight);
+		ensureNodeTitleBar(
+			rootNode,
+			shell.width,
+			shell.height,
+			layout.titleBarHeight,
+			"graph-component-titlebar graph-device-titlebar"
+		);
 	}
 
 	for (const layer of innerLayers) {
@@ -269,7 +281,18 @@ function layoutStackColumn(
 				continue;
 			}
 			node.classList.remove("graph-device-shell");
-			resizeGraphNodeBox(node, pos.width, pos.height);
+			node.classList.add("graph-nested-component");
+			resizeGraphNodeBox(node, pos.width, pos.height, {
+				titleBarHeight: pos.height,
+				titleBarWidth: pos.width,
+			});
+			ensureNodeTitleBar(
+				node,
+				pos.width,
+				pos.height,
+				pos.height,
+				"graph-component-titlebar graph-nested-titlebar"
+			);
 		}
 	}
 
@@ -347,7 +370,7 @@ export function placeAssetStackColumn(
 	top: number
 ): { width: number; height: number; positions: Map<string, StackNodePosition> } {
 	const layout = layoutStackColumn(nodesById, layers, left, top);
-	applyStackPositions(nodesById, layout.positions);
+	applyStackLayoutTransforms(layers, nodesById, layout.positions);
 	return layout;
 }
 
@@ -371,6 +394,49 @@ function applyStackPositions(
 		}
 		applyGraphNodeCenterTransform(node, pos.centerX, pos.centerY);
 	}
+}
+
+function nestStackMembersInDevice(
+	rootNode: SVGGElement,
+	layers: IAsset[][],
+	stackNodes: Map<string, SVGGElement>,
+	positions: Map<string, StackNodePosition>
+): void {
+	const rootId = layers[0]?.[0]?.id;
+	const rootPos = rootId ? positions.get(rootId) : undefined;
+	if (!rootId || !rootPos) {
+		return;
+	}
+
+	applyGraphNodeCenterTransform(rootNode, rootPos.centerX, rootPos.centerY);
+
+	for (const layer of layers.slice(1)) {
+		for (const member of layer) {
+			const node = stackNodes.get(member.id);
+			const pos = positions.get(member.id);
+			if (!node || !pos) {
+				continue;
+			}
+			rootNode.appendChild(node);
+			node.classList.add("graph-nested-component");
+			const relative = relativeToShellCenter(rootPos, pos);
+			applyGraphNodeCenterTransform(node, relative.centerX, relative.centerY);
+		}
+	}
+}
+
+function applyStackLayoutTransforms(
+	layers: IAsset[][],
+	stackNodes: Map<string, SVGGElement>,
+	positions: Map<string, StackNodePosition>
+): void {
+	const rootId = layers[0]?.[0]?.id;
+	const rootNode = rootId ? stackNodes.get(rootId) : undefined;
+	if (rootNode?.classList.contains("graph-device-shell") && layers.length > 1) {
+		nestStackMembersInDevice(rootNode, layers, stackNodes, positions);
+		return;
+	}
+	applyStackPositions(stackNodes, positions);
 }
 
 function reorderStackNodesInDom(
@@ -461,8 +527,10 @@ export function applyGraphAssetStackLayout(
 				centerY: pos.centerY + offsetY,
 			});
 		}
-		applyStackPositions(stackNodes, adjustedPositions);
-		reorderStackNodesInDom(svg, layers, stackNodes);
+		applyStackLayoutTransforms(layers, stackNodes, adjustedPositions);
+		if (!stackNodes.get(layers[0]?.[0]?.id ?? "")?.classList.contains("graph-device-shell")) {
+			reorderStackNodesInDom(svg, layers, stackNodes);
+		}
 		for (const [memberId, pos] of Array.from(adjustedPositions)) {
 			allStackPositions.set(memberId, pos);
 		}
@@ -550,7 +618,7 @@ export function layoutSwimlaneStackNodes(
 		}
 		const stackLeft = laneLeft + cursorX;
 		const layout = layoutStackColumn(columnNodes, entry.layers, stackLeft, laneTop);
-		applyStackPositions(columnNodes, layout.positions);
+		applyStackLayoutTransforms(entry.layers, columnNodes, layout.positions);
 		bodyHeight = Math.max(bodyHeight, layout.height + STACK_PAD * 2);
 		cursorX += layout.width + STACK_COLUMN_GAP;
 	}

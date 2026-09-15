@@ -1,8 +1,12 @@
 import {
 	STACK_INNER_PAD_X,
 	STACK_INNER_PAD_Y,
+	STACK_PARALLEL_GAP,
 } from "./graphComponentStack";
-import { computeDeviceShellLayout } from "./graphComponentStackLayout";
+import {
+	computeDeviceShellLayout,
+	relativeToShellCenter,
+} from "./graphComponentStackLayout";
 
 describe("computeDeviceShellLayout", () => {
 	it("umgibt Funktions-Components mit Titelleiste und Seitenabstand", () => {
@@ -17,7 +21,7 @@ describe("computeDeviceShellLayout", () => {
 		);
 
 		expect(layout.titleBarHeight).toBe(30);
-		expect(layout.width).toBe(120);
+		expect(layout.width).toBe(100 + STACK_INNER_PAD_X * 2);
 		expect(layout.height).toBe(30 + STACK_INNER_PAD_Y + 24 + 20 + STACK_INNER_PAD_Y);
 
 		const device = layout.positions.get("device");
@@ -29,11 +33,12 @@ describe("computeDeviceShellLayout", () => {
 		});
 
 		const os = layout.positions.get("os");
-		expect(os?.width).toBe(layout.width - STACK_INNER_PAD_X * 2);
-		expect(os?.centerX).toBe(10 + STACK_INNER_PAD_X + os!.width / 2);
+		expect(os?.width).toBe(100);
+		expect(os?.centerX).toBe(10 + STACK_INNER_PAD_X + 50);
 		expect(os?.centerY).toBe(20 + 30 + STACK_INNER_PAD_Y + 12);
 
 		const app = layout.positions.get("app");
+		expect(app?.width).toBe(90);
 		expect(app?.centerY).toBe(20 + 30 + STACK_INNER_PAD_Y + 24 + 10);
 	});
 
@@ -46,5 +51,32 @@ describe("computeDeviceShellLayout", () => {
 		);
 		expect(layout.width).toBe(200 + STACK_INNER_PAD_X * 2);
 		expect(layout.positions.get("os")?.width).toBe(200);
+	});
+
+	it("lässt parallele Funktions-Components auf natürlicher Breite", () => {
+		const layout = computeDeviceShellLayout(
+			{ id: "device", width: 80, height: 20 },
+			[{ memberIds: ["a", "b"], widths: [40, 50], heights: [16, 18] }],
+			0,
+			0
+		);
+		expect(layout.width).toBe(40 + STACK_PARALLEL_GAP + 50 + STACK_INNER_PAD_X * 2);
+		expect(layout.positions.get("a")?.width).toBe(40);
+		expect(layout.positions.get("b")?.width).toBe(50);
+		expect(layout.positions.get("a")?.centerX).toBe(STACK_INNER_PAD_X + 20);
+		expect(layout.positions.get("b")?.centerX).toBe(
+			STACK_INNER_PAD_X + 40 + STACK_PARALLEL_GAP + 25
+		);
+	});
+});
+
+describe("relativeToShellCenter", () => {
+	it("rechnet absolute Stapelpositionen in Device-lokale Mitten um", () => {
+		expect(
+			relativeToShellCenter(
+				{ centerX: 100, centerY: 80 },
+				{ centerX: 70, centerY: 110 }
+			)
+		).toEqual({ centerX: -30, centerY: 30 });
 	});
 });

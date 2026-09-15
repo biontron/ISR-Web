@@ -7,6 +7,7 @@ import {
 import { createEdgePaths } from "dagre-d3-es/src/dagre-js/create-edge-paths.js";
 import { arrows } from "dagre-d3-es/src/dagre-js/arrows.js";
 import { repairGraphClusterNodes } from "./graphDagreBuild";
+import { fitGraphHtmlLabelWidth } from "./graphNodeMeasure";
 
 /** Live-Export von dagre-d3-es — Referenz beim Modul-Laden festhalten. */
 const dagreBuiltinCreateClusters = (() => createClusters)();
@@ -97,6 +98,9 @@ export function finalizeGraphLabels(
 	svg.selectAll("g.node foreignObject div").style("color", "#111111").style("font-size", "13px");
 	svg.selectAll("g.cluster foreignObject div").style("color", "#111111");
 	svg.selectAll("g.cluster .graph-cluster-label").style("font-size", "14.3px").style("font-weight", "700");
+	svg.selectAll<SVGGElement, unknown>("g.cluster").each(function () {
+		fitGraphHtmlLabelWidth(this);
+	});
 	svg.selectAll("g.edgeLabel").style("opacity", 1).style("pointer-events", "all");
 	svg.selectAll("g.edgeLabel .graph-link, g.edgeLabel .graph-edge-label").style(
 		"color",

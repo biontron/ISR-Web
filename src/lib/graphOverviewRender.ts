@@ -15,6 +15,7 @@ import {
 import { rerouteDagreGraphEdges, syncDagreNodeBox } from "./graphDagreRender";
 import {
 	applyGraphNodeCenterTransform,
+	fitGraphHtmlLabelWidth,
 	measureGraphNodeSize,
 	readGraphNodeId,
 } from "./graphNodeMeasure";
@@ -25,6 +26,7 @@ import {
 	OVERVIEW_DEVICES_PER_ROW,
 	OVERVIEW_GROUP_GAP,
 	OVERVIEW_MARGIN,
+	overviewClusterBoxSize,
 	packItemsLeftToRightRows,
 } from "./graphOverviewLayout";
 
@@ -72,18 +74,23 @@ function isClusterId(graph: DagreGraph, nodeId: string): boolean {
 	return childIds(graph, nodeId).length > 0;
 }
 
-function measureClusterLabelHeight(cluster: SVGGElement | undefined): number {
+function measureClusterLabelSize(cluster: SVGGElement | undefined): { width: number; height: number } {
 	if (!cluster) {
-		return 22;
+		return { width: 0, height: 22 };
+	}
+	const fitted = fitGraphHtmlLabelWidth(cluster);
+	if (fitted.width > 0 && fitted.height > 0) {
+		return { width: fitted.width, height: Math.max(22, fitted.height) };
 	}
 	const label = cluster.querySelector("g.label");
 	if (!label) {
-		return 22;
+		return { width: 0, height: 22 };
 	}
 	try {
-		return Math.max(22, (label as SVGGElement).getBBox().height);
+		const bbox = (label as SVGGElement).getBBox();
+		return { width: bbox.width, height: Math.max(22, bbox.height) };
 	} catch {
-		return 22;
+		return { width: 0, height: 22 };
 	}
 }
 
@@ -113,6 +120,14 @@ function applyClusterBox(
 		const innerLabel = label.querySelector(":scope > g");
 		if (innerLabel) {
 			innerLabel.setAttribute("transform", "translate(0,0)");
+		}
+		const foreignObject = label.querySelector("foreignObject");
+		if (foreignObject) {
+			const available = Math.max(1, width - pad * 2);
+			const current = Number(foreignObject.getAttribute("width")) || 0;
+			foreignObject.setAttribute("x", "0");
+			foreignObject.setAttribute("y", "0");
+			foreignObject.setAttribute("width", String(Math.max(current, available)));
 		}
 	}
 	cluster.style.clipPath = "none";
@@ -218,10 +233,10 @@ export function applyOverviewClusterLayout(
 
 	function layoutCluster(clusterId: string, left: number, top: number): { width: number; height: number } {
 		const clusterEl = clustersById.get(clusterId);
-		const labelHeight = measureClusterLabelHeight(clusterEl);
+		const labelSize = measureClusterLabelSize(clusterEl);
 		const pad = OVERVIEW_CLUSTER_PAD;
 		const contentLeft = left + pad;
-		let cursorY = top + labelHeight + pad;
+		let cursorY = top + labelSize.height + pad;
 		let maxRight = contentLeft;
 		let maxBottom = cursorY;
 
@@ -268,12 +283,17 @@ export function applyOverviewClusterLayout(
 			maxBottom = Math.max(maxBottom, cursorY + packed.height);
 		}
 
-		const width = Math.max(160, maxRight - left + pad);
-		const height = Math.max(labelHeight + pad * 2, maxBottom - top + pad);
+		const box = overviewClusterBoxSize({
+			contentWidth: Math.max(0, maxRight - contentLeft),
+			contentHeight: Math.max(0, maxBottom - top),
+			labelWidth: labelSize.width,
+			labelHeight: labelSize.height,
+			pad,
+		});
 		if (clusterEl) {
-			applyClusterBox(clusterEl, graph, clusterId, left, top, width, height);
+			applyClusterBox(clusterEl, graph, clusterId, left, top, box.width, box.height);
 		}
-		return { width, height };
+		return box;
 	}
 
 	const roots = graph.nodes().filter((nodeId) => {

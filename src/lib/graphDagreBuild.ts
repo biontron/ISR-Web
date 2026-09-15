@@ -89,7 +89,7 @@ function buildNodeLabel(node: TreeElement, condensed: boolean, omitIcon = false)
 				<span class="graph-icon" style="display:inline-flex;align-items:flex-start;justify-content:center;flex:0 0 auto;">
 					${icon}
 				</span>
-				<span class="graph-link" style="display:inline-block;color:#111;text-decoration:underline;white-space:normal;font-weight:${fontWeight};">
+				<span class="graph-link" style="display:inline-block;color:#111;text-decoration:underline;white-space:nowrap;font-weight:${fontWeight};">
 					${name}
 				</span>
 			</div>
