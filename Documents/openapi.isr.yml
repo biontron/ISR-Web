@@ -53,6 +53,49 @@ paths:
         '200':
           description: Erfolgreiche Abmeldung
 
+  /users/{usernameHex}/settings:
+    parameters:
+      - name: usernameHex
+        in: path
+        required: true
+        description: UTF-8-Benutzername als Kleinbuchstaben-Hex (Mr. X → 4d722e2058)
+        schema:
+          type: string
+          example: "4d722e2058"
+      - $ref: "#/components/parameters/AuthorizationHeader"
+    get:
+      summary: User settings
+      operationId: getUserSettings
+      tags:
+        - User
+      responses:
+        '200':
+          description: User settings
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/UserSettings"
+        '404':
+          description: No settings stored yet
+    put:
+      summary: Store user settings
+      operationId: putUserSettings
+      tags:
+        - User
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/UserSettings"
+      responses:
+        '200':
+          description: Stored user settings
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/UserSettings"
+
   /views:
     get:
       summary: List all views
@@ -1395,6 +1438,27 @@ components:
           items: {}
         - type: object
       description: Any kind of data
+
+    UserSettings:
+      type: object
+      required:
+        - id
+        - name
+        - publicKey
+        - privateKey
+      properties:
+        id:
+          type: string
+          example: "1"
+        name:
+          type: string
+          example: "Mr. X"
+        publicKey:
+          type: string
+          description: PEM SPKI (BEGIN PUBLIC KEY)
+        privateKey:
+          type: string
+          description: PEM PKCS#8 (BEGIN PRIVATE KEY)
 
     AssetItem:
       required:

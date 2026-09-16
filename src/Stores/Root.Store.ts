@@ -14,6 +14,7 @@ import { IaCStore } from "./IaC.Store";
 import { EnvironmentStore } from "./Environment.Store";
 import { initialUIStore, UIStore } from "./UI.Store";
 import { I18NStoreModel } from "./i18n.Store";
+import { UserSettingsStore } from "./UserSettings.Store";
 
 /**
  * Our root store - the entry point for all data models in our application
@@ -33,6 +34,7 @@ export const RootStore = types
 			configSchemas: types.optional(ConfigSchemaStore, {}),
 			iac: types.optional(IaCStore, {}),
 			i18n: types.optional(I18NStoreModel, {}),
+			userSettings: types.optional(UserSettingsStore, {}),
 		})
 	)
 	.actions((self) => {

@@ -20,6 +20,7 @@ import {
 	iacTemplatesListUri,
 } from "./iacRestUris";
 import { serializeResponseHeaders } from "./storeFailureFormat";
+import { userSettingsUri } from "./userSettingsRestUris";
 import {
 	classifyLoginHttpFailure,
 	isLoginNetworkFailure,
@@ -297,6 +298,14 @@ class Api {
 			iacTemplateItemUri(domain, packageId, templateId, { version: version ?? undefined }),
 			{ method: "DELETE" }
 		);
+	}
+
+	public async getUserSettings(domain: string, username: string) {
+		return await this.get(userSettingsUri(domain, username));
+	}
+
+	public async putUserSettings(domain: string, username: string, body: object) {
+		return await this.put(userSettingsUri(domain, username), body);
 	}
 
 	public async runIacTemplate(

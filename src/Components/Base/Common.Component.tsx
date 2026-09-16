@@ -22,6 +22,7 @@ import {
 	buildSnapshotJsonInspectTarget,
 } from "../../lib/jsonInspectResolve";
 import CatalogAdminDialog from "./CatalogAdminDialog";
+import UserSettingsDialog from "./UserSettingsDialog";
 
 interface CommonLayoutProps {
 	children: ReactNode;
@@ -42,6 +43,7 @@ const CommonLayout: React.FC<CommonLayoutProps> = observer(({ children }) => {
 	const navigate = useNavigate();
 	const location = useLocation();
 	const [catalogKind, setCatalogKind] = useState<"view" | "environment" | null>(null);
+	const [userSettingsOpen, setUserSettingsOpen] = useState(false);
 
 	useEffect(() => {
 		const lang = new URLSearchParams(location.search).get("lang");
@@ -95,6 +97,9 @@ const CommonLayout: React.FC<CommonLayoutProps> = observer(({ children }) => {
 
 	const userMenu = (
 		<Menu>
+			<Menu.Item key="settings" onClick={() => setUserSettingsOpen(true)}>
+				{langtext("general.user_settings")}
+			</Menu.Item>
 			<Menu.Item key="1">
 				<Link to="/logout">
 					{langtext("general.account_logout")}
@@ -223,6 +228,7 @@ const CommonLayout: React.FC<CommonLayoutProps> = observer(({ children }) => {
 				</div>
 			</nav>
 			<main className="common-layout-main">{children}</main>
+			<UserSettingsDialog open={userSettingsOpen} onClose={() => setUserSettingsOpen(false)} />
 			<ActivityStatusOverviewModal />
 			<ElementSearchHitsDialog />
 			<CatalogAdminDialog
