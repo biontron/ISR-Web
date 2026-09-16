@@ -11,7 +11,11 @@ interface SchemaSvgIconProps {
 		class?: string;
 		baseType?: string;
 		type?: string;
+		subType?: string;
 		schemaType?: string;
+		elementType?: string;
+		name?: string;
+		label?: string;
 		elementIdRefs?: unknown[];
 	};
 }
@@ -23,18 +27,18 @@ function resolveElementVisualKind(element: SchemaSvgIconProps["element"]): Eleme
 	}
 
 	const baseType = element.baseType?.toUpperCase();
-	if (baseType === "GROUP") {
+	if (baseType === "GROUP" || baseType === "VIEWGROUP") {
 		return "GROUP";
 	}
 	if (baseType === "COMPONENT") {
 		return "ASSET";
 	}
 
-	const logicalType = (element.type ?? element.schemaType)?.toUpperCase();
+	const logicalType = (element.type ?? element.schemaType ?? element.elementType)?.toUpperCase();
 	if (logicalType === "VIEW") {
 		return "VIEW";
 	}
-	if (logicalType === "GROUP") {
+	if (logicalType === "GROUP" || logicalType === "VIEWGROUP") {
 		return "GROUP";
 	}
 
@@ -95,4 +99,4 @@ const SchemaSvgIcon: React.FC<SchemaSvgIconProps> = ({ svgString, element }) => 
 	);
 };
 
-export default SchemaSvgIcon;
+export default React.memo(SchemaSvgIcon);

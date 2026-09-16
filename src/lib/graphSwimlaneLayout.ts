@@ -18,24 +18,31 @@ export function isSwimlaneComponent(node: TreeElement): boolean {
 
 export function collectSwimlaneComponentsFromTree(
 	root: TreeElement,
-	maxDepth = 10
+	maxDepth = 10,
+	maxComponents = 200
 ): TreeElement[] {
 	const components: TreeElement[] = [];
 
 	const seen = new Set<string>();
 
 	function walk(node: TreeElement, depth: number) {
-		if (!node?.definition || seen.has(node.id)) {
+		if (!node?.definition || seen.has(node.id) || components.length >= maxComponents) {
 			return;
 		}
 		seen.add(node.id);
 		if (isSwimlaneComponent(node)) {
 			components.push(node);
+			if (components.length >= maxComponents) {
+				return;
+			}
 		}
 		if (depth >= maxDepth || typeof node.children !== "function") {
 			return;
 		}
 		for (const child of node.children()) {
+			if (components.length >= maxComponents) {
+				return;
+			}
 			if (child && (child as TreeElement).definition) {
 				walk(child as TreeElement, depth + 1);
 			}

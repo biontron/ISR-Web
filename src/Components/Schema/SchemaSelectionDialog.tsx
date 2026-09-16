@@ -1,7 +1,7 @@
 /*
 # SPDX-License-Identifier: GPL-2.0*/
 
-import { Modal, Select, Table, Tabs, Tag, Tooltip, message } from "antd";
+import { Modal, Select, Table, Tabs, Tag, message } from "antd";
 import React, { useEffect, useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { rootStore } from "../../Stores/Root.Store";
@@ -9,6 +9,7 @@ import authStore from "../../Stores/Auth.Store";
 import { ActiveElement, isTreeElement } from "../../Interfaces/Element";
 import { ISchemaModel } from "../../Stores/Models/Schema.Model";
 import SchemaSvgIcon from "../Schema/SchemaSvgIcon";
+import ElementDefinitionHoverTooltip from "./ElementDefinitionHoverTooltip";
 import { getLanguageText, useLangtext } from "../../lib/common";
 import {
 	ElementCreateTarget,
@@ -38,6 +39,7 @@ interface SchemaSelectionDialogProps {
 interface SchemaData {
 	schemaType: string;
 	baseType: string;
+	subType: string;
 	key: string;
 	name: string;
 	description: string;
@@ -122,6 +124,7 @@ function extractSchemaData(
 		.map((item) => ({
 			schemaType: item.type,
 			baseType: item.baseType,
+			subType: item.subType,
 			key: item.id,
 			name: getLanguageText(item.name),
 			description: getLanguageText(item.description),
@@ -195,16 +198,35 @@ const SchemaSelectionDialog: React.FC<SchemaSelectionDialogProps> = ({
 			dataIndex: "svgIcon",
 			key: "svgIcon",
 			render: (svgString: string, record: SchemaData) => (
-				<Tooltip title={record.schemaType}>
+				<ElementDefinitionHoverTooltip
+					fields={{
+						id: record.key,
+						baseType: record.baseType,
+						type: record.schemaType,
+						subType: record.subType,
+						name: record.name,
+						label: record.name,
+						description: record.description,
+						className:
+							record.createTarget === "asset"
+								? "Asset"
+								: record.createTarget === "view"
+									? "View"
+									: "Group",
+					}}
+				>
 					<SchemaSvgIcon
 						svgString={svgString}
 						element={{
 							baseType: record.baseType,
 							type: record.schemaType,
+							subType: record.subType,
 							schemaType: record.schemaType,
+							name: record.name,
+							label: record.name,
 						}}
 					/>
-				</Tooltip>
+				</ElementDefinitionHoverTooltip>
 			),
 		},
 		{

@@ -283,10 +283,16 @@ function applyXPathRule(
 	return true;
 }
 
+export type ValidationMarkOptions = {
+	applyPositive?: boolean;
+	applyNegative?: boolean;
+};
+
 export function collectViewElementMarks(
 	root: Pick<IRootStore, "assets" | "connections" | "views">,
 	view: IView | null | undefined,
-	searchText: string
+	searchText: string,
+	options?: ValidationMarkOptions
 ): Map<string, ElementMarkFlags> {
 	const marks = new Map<string, ElementMarkFlags>();
 	const elements = collectViewScopedElements(view);
@@ -302,6 +308,8 @@ export function collectViewElementMarks(
 		ensureMarks(marks, element.id, elementStatusShowsIndicator(element.status as never));
 	}
 
+	const applyPositive = options?.applyPositive === true;
+	const applyNegative = options?.applyNegative === true;
 	const rules = view?.validationRules ?? [];
 	for (const rule of rules) {
 		const xpath = rule.xpath?.trim() ?? "";
@@ -309,6 +317,12 @@ export function collectViewElementMarks(
 			continue;
 		}
 		const type = readXPathRuleType(rule);
+		if (type === "positive" && !applyPositive) {
+			continue;
+		}
+		if (type === "negative" && !applyNegative) {
+			continue;
+		}
 		if (type !== "positive" && type !== "negative") {
 			continue;
 		}
@@ -343,13 +357,14 @@ export function collectViewSearchHits(
 	root: Pick<IRootStore, "assets" | "connections" | "views">,
 	view: IView | null | undefined,
 	searchText: string,
-	marks?: Map<string, ElementMarkFlags>
+	marks?: Map<string, ElementMarkFlags>,
+	options?: ValidationMarkOptions
 ): ViewSearchHit[] {
 	const query = searchText.trim();
 	if (!query) {
 		return [];
 	}
-	const resolved = marks ?? collectViewElementMarks(root, view, searchText);
+	const resolved = marks ?? collectViewElementMarks(root, view, searchText, options);
 	const elements = collectViewScopedElements(view);
 	const visibleIds = new Set(elements.map((element) => element.id));
 	const connections = collectViewScopedConnections(root, visibleIds);

@@ -69,8 +69,35 @@ describe("elementXPathValidation", () => {
 		const view = {
 			id: "view-1",
 			validationRules: [
-				{ xpath: "definition/type='DEVICE'", description: "Geräte", polarity: "positive" },
-				{ xpath: "definition/subType='DESKTOP'", description: "Desktop", polarity: "negative" },
+				{ xpath: "definition/type='DEVICE'", comment: "Geräte", type: "positive" },
+				{ xpath: "definition/subType='DESKTOP'", comment: "Desktop", type: "negative" },
+			],
+			children: () => [asset],
+		};
+		const root = {
+			assets: { assets: [asset] },
+			connections: { connections: [connection("C-1")] },
+		};
+		const marks = collectViewElementMarks(root as never, view as never, "", {
+			applyPositive: true,
+			applyNegative: true,
+		});
+		expect(marks.get("A-1")).toMatchObject({
+			changed: true,
+			positive: true,
+			negative: true,
+			searchMatch: false,
+		});
+		expect(marks.get("A-1")?.fieldPaths).toEqual(expect.arrayContaining(["definition.type"]));
+	});
+
+	it("wendet positive und negative Marken nur bei aktivem Filter an", () => {
+		const asset = { ...device("A-1"), status: "edit" };
+		const view = {
+			id: "view-1",
+			validationRules: [
+				{ xpath: "definition/type='DEVICE'", comment: "Geräte", type: "positive" },
+				{ xpath: "definition/subType='DESKTOP'", comment: "Desktop", type: "negative" },
 			],
 			children: () => [asset],
 		};
@@ -80,12 +107,9 @@ describe("elementXPathValidation", () => {
 		};
 		const marks = collectViewElementMarks(root as never, view as never, "");
 		expect(marks.get("A-1")).toMatchObject({
-			changed: true,
-			positive: true,
-			negative: true,
-			searchMatch: false,
+			positive: false,
+			negative: false,
 		});
-		expect(marks.get("A-1")?.fieldPaths).toEqual(expect.arrayContaining(["definition.type"]));
 	});
 
 	it("findet die View selbst mit matches(definition/baseType,\"VIEW\")", () => {
@@ -170,7 +194,7 @@ describe("elementXPathValidation", () => {
 		expect(
 			addValidationRule([], "definition/type='DEVICE'", "Geräte", "positive")
 		).toEqual([
-			{ xpath: "definition/type='DEVICE'", description: "Geräte", polarity: "positive" },
+			{ xpath: "definition/type='DEVICE'", comment: "Geräte", type: "positive" },
 		]);
 	});
 });

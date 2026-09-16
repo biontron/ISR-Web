@@ -6,6 +6,7 @@ import {
 	isStaticallyUnassigned,
 	readXPathExpression,
 	removeXPathFilterRule,
+	toAssetElementIdRef,
 	unassignElementFromParent,
 	updateXPathFilterRule,
 	wouldCreateAssignmentCycle,
@@ -17,6 +18,18 @@ function group(id: string, parentIdRef?: string) {
 
 function asset(id: string, ownerIdRef?: string | null) {
 	return { id, class: "Asset" as const, ownerIdRef };
+}
+
+function elementIdRef(id: string, environmentId = "", extras: Record<string, string> = {}) {
+	return {
+		environmentId,
+		id,
+		baseType: extras.baseType ?? "",
+		type: extras.type ?? "",
+		subType: extras.subType ?? "",
+		name: extras.name ?? "",
+		label: extras.label ?? "",
+	};
 }
 
 describe("elementAssignments", () => {
@@ -65,19 +78,25 @@ describe("elementAssignments", () => {
 			id: string;
 			class: "Asset";
 			ownerIdRef: string | null;
+			environmentId: string;
 			setOwnerIdRef: (ownerId: string | null) => void;
 		} = {
 			id: "a1",
 			class: "Asset",
 			ownerIdRef: "g1",
+			environmentId: "office",
 			setOwnerIdRef(ownerId: string | null) {
 				this.ownerIdRef = ownerId;
 			},
 		};
 		const parent = {
 			id: "g1",
-			elementIdRefs: [{ id: "a1" }, { id: "a2" }],
-			setElementIdRefs(refs: Array<{ id: string }>) {
+			class: "Group",
+			elementIdRefs: [
+				elementIdRef("a1", "office"),
+				elementIdRef("a2", "office"),
+			],
+			setElementIdRefs(refs: ReturnType<typeof elementIdRef>[]) {
 				this.elementIdRefs = refs;
 			},
 		};
@@ -85,7 +104,7 @@ describe("elementAssignments", () => {
 		unassignElementFromParent(child as any, parent);
 
 		expect(child.ownerIdRef).toBeNull();
-		expect(parent.elementIdRefs).toEqual([{ id: "a2" }]);
+		expect(parent.elementIdRefs).toEqual([elementIdRef("a2", "office")]);
 	});
 
 	it("stempelt Environment-Refs an neue XPath-Regeln", () => {
@@ -96,6 +115,7 @@ describe("elementAssignments", () => {
 			xpath: "definition/type='DEVICE'",
 			description: "Geräte",
 			environments: [{ ref: "office" }],
+			activated: true,
 		});
 	});
 
@@ -105,6 +125,7 @@ describe("elementAssignments", () => {
 			xpath: "//asset[type='DEVICE']",
 			description: "Geräte",
 			environments: [],
+			activated: true,
 		});
 		expect(readXPathExpression(added[0])).toBe("//asset[type='DEVICE']");
 		expect(addXPathFilterRule(added, "//asset[type='DEVICE']")).toEqual(added);
@@ -118,6 +139,7 @@ describe("elementAssignments", () => {
 			xpath: "definition/type='DEVICE'",
 			description: "Virtuelle Maschinen",
 			environments: [],
+			activated: true,
 		});
 	});
 
@@ -128,5 +150,51 @@ describe("elementAssignments", () => {
 		expect(readXPathExpression({ filterRule: "definition/subType='DESKTOP'" })).toBe(
 			"definition/subType='DESKTOP'"
 		);
+	});
+
+	it("collectAssignedElements berücksichtigt elementIdRefs mit environmentId", () => {
+		const envRoot = {
+			groups: {
+				groups: [
+					{
+						id: "g1",
+						class: "Group",
+						parentIdRef: "view1",
+						elementIdRefs: [elementIdRef("a-ref", "office")],
+					},
+				],
+			},
+			assets: {
+				assets: [
+					{ id: "a-ref", class: "Asset", ownerIdRef: null, environmentId: "office" },
+					{ id: "a-other", class: "Asset", ownerIdRef: null, environmentId: "home" },
+				],
+			},
+		} as any;
+		expect(collectAssignedElements(envRoot, "g1").map((item) => item.id)).toEqual(["a-ref"]);
+	});
+
+	it("stempelt ElementIdRefType-Felder aus dem Asset", () => {
+		expect(
+			toAssetElementIdRef({
+				id: "a-1",
+				environmentId: "office",
+				definition: {
+					baseType: "COMPONENT",
+					type: "DEVICE",
+					subType: "DESKTOP",
+					name: "Notebook",
+					label: "NB-01",
+				},
+			})
+		).toEqual({
+			environmentId: "office",
+			id: "a-1",
+			baseType: "COMPONENT",
+			type: "DEVICE",
+			subType: "DESKTOP",
+			name: "Notebook",
+			label: "NB-01",
+		});
 	});
 });

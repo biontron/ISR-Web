@@ -3,9 +3,10 @@ export type FilterRuleEnvironmentRef = {
 };
 
 export type FilterRuleRecord = {
+	environments: FilterRuleEnvironmentRef[];
 	xpath: string;
 	description: string;
-	environments: FilterRuleEnvironmentRef[];
+	activated: boolean;
 };
 
 function readFilterRuleEnvironments(rule: unknown): FilterRuleEnvironmentRef[] {
@@ -58,11 +59,19 @@ export function filterRuleDescription(rule: unknown): string {
 	return "";
 }
 
+export function filterRuleActivated(rule: unknown): boolean {
+	if (rule && typeof rule === "object") {
+		return (rule as Record<string, unknown>).activated === true;
+	}
+	return false;
+}
+
 export function toFilterRuleRecord(rule: unknown, description?: string): FilterRuleRecord {
 	return {
+		environments: readFilterRuleEnvironments(rule),
 		xpath: typeof rule === "string" ? rule.trim() : filterRuleExpression(rule),
 		description: description !== undefined ? description : filterRuleDescription(rule),
-		environments: readFilterRuleEnvironments(rule),
+		activated: filterRuleActivated(rule),
 	};
 }
 

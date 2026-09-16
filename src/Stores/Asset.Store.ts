@@ -28,6 +28,7 @@ import { ISchemaModel } from "./Models/Schema.Model";
 import { resolveComponentDefinitionTypesForCreate } from "../lib/elementDefinitionTypes";
 import { isNewElementStatus } from "../lib/elementStaging";
 import { restWritePayloadForAsset } from "../lib/restWritePayload";
+import { indexAssetsByOwnerId, indexById } from "../lib/hierarchyIndex";
 
 
 /**
@@ -36,6 +37,13 @@ import { restWritePayloadForAsset } from "../lib/restWritePayload";
 export const AssetStore = types.compose("Asset", BaseStore, types.model({
 	assets: types.array(AssetModel),
 	assetDetails: types.optional(types.array(AssetDetailsModel), [])
+})).views((self) => ({
+	get assetById(): Map<string, IAsset> {
+		return indexById(self.assets as unknown as IAsset[]);
+	},
+	get assetsByOwnerId(): Map<string, IAsset[]> {
+		return indexAssetsByOwnerId(self.assets as unknown as IAsset[]);
+	},
 })).actions(self => {
 
 	/**
@@ -158,13 +166,7 @@ export const AssetStore = types.compose("Asset", BaseStore, types.model({
 			}
 
 			yield loadAssetsForEnvironments(environmentIds);
-
-			const viewId = root.ui.activeView?.id;
-			if (viewId) {
-				yield root.groups.load(viewId);
-			} else {
-				root.ui.rebindActiveElement();
-			}
+			root.ui.rebindActiveElement();
 		} catch (error) {
 			if (domain) {
 				publishRestLoadReport(

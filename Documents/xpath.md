@@ -37,24 +37,34 @@ Beispiele:
 - `matches(docks[1]/dockparts[2]/settings/address/ip, '192\\.168\\.40\\..*')`
 - `class='Connection'`
 
+Gemeinsame Engine: `elementToFilterXml` + `elementMatchesXPath` (`elementXPathFilter.ts`). Dieselbe Auswertung gilt für globale Suche, Zuordnungs-Filter, Automapping, View-Validierung und Schema-Editor-Feldmarken. Connection-Endpunktwahl nutzt sie noch nicht. `titleTemplate` und IaC-Templates haben eigene XPath-Kontexte (siehe unten).
+
 ## Suche
 
 Suchfeld in der Menüzeile (rechts, vor dem Benutzer).
 
 - Reiner Text: Freitext über `id`, `definition` (Name, Label, Beschreibung, Typ, Subtyp, Tags) und Connection-Label/Link-Titel. Kein XML.
 - XPath-Syntax (`/`, `[`, `=`, `match(`, `starts-with(` …): gleiche Engine wie die Filter. Ungültiger XPath fällt auf Freitext zurück.
-- Scope: sichtbarer View-Baum (static + `filterRules`) und Connections, deren Endpunkte in dieser Menge liegen.
+- Scope: sichtbarer View-Baum (statische Kinder plus `elementIdRefs`) und Connections, deren Endpunkte in dieser Menge liegen.
 - Treffer: Markierung im Tree plus Treffer-Dialog (Enter/Suche). Aus dem Dialog als `validationRules` speicherbar.
 
 ## Filterung (`filterRules`)
 
-An View und Group. Ordnet **nur unzugeordnete** Elemente (ohne `parentIdRef`/`ownerIdRef`) dynamisch als Baumkinder zu. Mehrere Regeln gelten als **ODER**. Parent-Refs werden nicht geändert.
+An View und Group. Regeln filtern Kandidaten in der Zuordnungs-UI und beim Automapping. Sie hängen **keine** Baumkinder dynamisch an — Treffer werden erst per Zuordnung oder Automapping-Knopf in `elementIdRefs` übernommen. Mehrere aktive Regeln gelten als **ODER**. Parent-Refs bleiben unverändert.
+
+REST `FilterRuleType` (JSON-Reihenfolge): `environments`, `xpath`, `description`, `activated`. Neu angelegte Regeln sind `activated: true`. Fehlt `activated` im REST-Körper, bleibt es `false` (kein stilles Auffüllen).
+
+In der Zuordnungs-UI werten die Suchkriterien die rechte Kandidatenliste erst nach **Filterregeln anwenden** aus — nicht live bei jeder Eingabe. **Filterregeln aufheben** zeigt wieder die ungefilterte Kandidatenliste. Übernehmen in `elementIdRefs` geschieht über `<` / `<<`, nicht über den Filter-Button.
 
 REST: `ViewItem.filterRules` / `GroupItem.filterRules`.
 
+## Zuordnung (`elementIdRefs`)
+
+REST/XSD `ElementIdRefType`: `environmentId`, `id`, `baseType`, `type`, `subType`, `name`, `label`. Die Typ-/Namensfelder sind ein Snapshot der Zielddefinition — Icon (`getIconByDefinition`) und Hover-Menü (Selection-Dialog, Tree) brauchen sie, ohne das Asset nachladen zu müssen. `environmentRef` gibt es nicht; nicht umbiegen.
+
 ## Validierung (`validationRules`)
 
-Nur an der View. Objekt `{ xpath, description, polarity }` mit `polarity`: `positive` | `negative`.
+Nur an der View. Objekt `{ xpath, description, type }` mit `type`: `positive` | `negative`. Toolbar-Buttons sind standardmäßig aus.
 
 - Positiv: Treffer = erwartetes Muster (grüner Signalbalken).
 - Negativ: Treffer = Anomalie (roter Signalbalken).
@@ -66,13 +76,13 @@ REST: optionales `ViewItem.validationRules`. Fehlendes Feld lädt als leere List
 
 ## Schema-Editor
 
-`titleTemplate` an Schema-Gruppen/Feldern interpoliert `{pfad}` und `#{pfad}` — JSON-Pfad (`settings.ip`, `$.id`) und XPath (`settings/ip`, `./ip`) relativ zum aktuellen Dockpart oder Gruppeneintrag (`titleTemplate.ts`).
+`titleTemplate` an Schema-Gruppen/Feldern interpoliert `{pfad}` und `#{pfad}` — JSON-Pfad (`settings.ip`, `$.id`) und XPath (`settings/ip`, `./ip`) relativ zum aktuellen Dockpart oder Gruppeneintrag (`titleTemplate.ts`). Das ist ein anderer Kontext als die Element-Suche.
 
-Validierungs-XPath, der `docks`/`settings`/`definition` trifft, markiert die entsprechenden Felder zusätzlich zur Schema-Validierung (Pflichtfeld/Regex).
+Validierungs-XPath, der `docks`/`settings`/`definition` trifft, markiert die entsprechenden Felder zusätzlich zur Schema-Validierung (Pflichtfeld/Regex) — über dieselbe Element-Engine.
 
 ## Templates (IaC)
 
-In `<texttemplate>` stehen Platzhalter als XPath in eckigen Klammern, ausgewertet gegen die Template-`xmldata`:
+In `<texttemplate>` stehen Platzhalter als XPath in eckigen Klammern, ausgewertet gegen die Template-`xmldata` (nicht gegen `elementToFilterXml`):
 
 ```text
 Dear Mr. [//name], salary: [//salary/@amount] EUR.

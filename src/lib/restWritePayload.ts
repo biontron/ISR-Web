@@ -24,6 +24,18 @@ const ASSET_KEY_ORDER = [
 	"filterRules",
 ] as const;
 
+/** Live-XSD ViewGroup: keine docks. */
+const GROUP_KEY_ORDER = [
+	"id",
+	"definition",
+	"parentIdRef",
+	"elementIdRefs",
+	"filterRules",
+	"attachments",
+	"properties",
+	"settings",
+] as const;
+
 /** Live-XSD Connection: id, definition, links, settings — keine weiteren Kinder. */
 const CONNECTION_KEY_ORDER = ["id", "definition", "links", "settings"] as const;
 
@@ -99,6 +111,16 @@ function omitDockpartVersions(docks: unknown): unknown {
 }
 
 /**
+ * ViewGroup-REST: id, definition, parentIdRef, elementIdRefs, filterRules,
+ * attachments, properties, settings — keine docks.
+ */
+export function restWritePayloadForGroup(snapshot: unknown): Record<string, unknown> {
+	const source = asRecord(snapshot) ?? {};
+	const withRules = rewriteFilterRulesInSnapshot(source) as Record<string, unknown>;
+	return orderRecord(withRules, GROUP_KEY_ORDER, false);
+}
+
+/**
  * Asset-REST: id, definition, ownerIdRef, environmentId (Live-XSD).
  * environmentId muss ein existierendes Environment sein (URL + Körper).
  */
@@ -128,7 +150,10 @@ export function restWritePayloadForRef(
 	ref: TouchedObjectRef
 ): unknown {
 	const snapshot = getSnapshot(ref.element);
-	if (ref.kind === "Group" || ref.kind === "View") {
+	if (ref.kind === "Group") {
+		return restWritePayloadForGroup(snapshot);
+	}
+	if (ref.kind === "View") {
 		return rewriteFilterRulesInSnapshot(snapshot);
 	}
 	if (ref.kind === "Asset") {

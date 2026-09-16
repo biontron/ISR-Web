@@ -3,8 +3,6 @@ import { toFilterRuleRecord } from "../../lib/filterRuleNormalize";
 
 export const FilterRuleModel = types
 	.model("FilterRule", {
-		xpath: types.optional(types.string, ""),
-		description: types.optional(types.string, ""),
 		environments: types.optional(
 			types.array(
 				types.model({
@@ -13,7 +11,16 @@ export const FilterRuleModel = types
 			),
 			[]
 		),
+		xpath: types.optional(types.string, ""),
+		description: types.optional(types.string, ""),
+		activated: types.optional(types.boolean, false),
 	})
-	.preProcessSnapshot((snapshot) => toFilterRuleRecord(snapshot));
+	.preProcessSnapshot((snapshot) => toFilterRuleRecord(snapshot))
+	.postProcessSnapshot((snapshot) => ({
+		environments: snapshot.environments,
+		xpath: snapshot.xpath,
+		description: snapshot.description,
+		activated: snapshot.activated,
+	}));
 
 export type IFilterRule = Instance<typeof FilterRuleModel>;

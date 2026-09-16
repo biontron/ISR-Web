@@ -1,4 +1,4 @@
-import { restWritePayloadForAsset, restWritePayloadForConnection } from "./restWritePayload";
+import { restWritePayloadForAsset, restWritePayloadForConnection, restWritePayloadForGroup } from "./restWritePayload";
 
 describe("restWritePayloadForConnection", () => {
 	it("schreibt nur id/definition/links/settings; UUID-ComponentRef wird zur Dock-ID", () => {
@@ -72,7 +72,17 @@ describe("restWritePayloadForAsset", () => {
 			attachments: [],
 			properties: { style: { bgColor: "", graph: { layout: null } } },
 			settings: { dns: { dn: { names: "supergut" } } },
-			elementIdRefs: [{ id: "A-other", environmentRef: "01e93fa0-1c74-44b1-bafd-6d8a988fea01" }],
+			elementIdRefs: [
+				{
+					environmentId: "01e93fa0-1c74-44b1-bafd-6d8a988fea01",
+					id: "A-other",
+					baseType: "COMPONENT",
+					type: "HARDWARE",
+					subType: "",
+					name: "Andere",
+					label: "Andere Komponente",
+				},
+			],
 			filterRules: [],
 		});
 		expect(Object.keys(payload).slice(0, 4)).toEqual([
@@ -84,7 +94,15 @@ describe("restWritePayloadForAsset", () => {
 		expect(payload.environmentId).toBe("01e93fa0-1c74-44b1-bafd-6d8a988fea01");
 		expect(payload.ownerIdRef).toBe("4b8c402c-87a4-494a-8c40-2c87a4c94a59");
 		expect(payload.elementIdRefs).toEqual([
-			{ id: "A-other", environmentRef: "01e93fa0-1c74-44b1-bafd-6d8a988fea01" },
+			{
+				environmentId: "01e93fa0-1c74-44b1-bafd-6d8a988fea01",
+				id: "A-other",
+				baseType: "COMPONENT",
+				type: "HARDWARE",
+				subType: "",
+				name: "Andere",
+				label: "Andere Komponente",
+			},
 		]);
 		expect(payload.settings).toEqual({ dns: { dn: { names: "supergut" } } });
 	});
@@ -118,5 +136,50 @@ describe("restWritePayloadForAsset", () => {
 			.dockparts[0];
 		expect(part.version).toBe("4");
 		expect(part.versions).toBeUndefined();
+	});
+});
+
+describe("restWritePayloadForGroup", () => {
+	it("schreibt keine docks und keine Store-Felder", () => {
+		const payload = restWritePayloadForGroup({
+			id: "G-test",
+			definition: {
+				storeType: "VIEWGROUP",
+				baseType: "GROUP",
+				type: "AREA",
+				name: "Ort",
+				label: "Ort",
+			},
+			parentIdRef: "view1",
+			elementIdRefs: [
+				{
+					environmentId: "env-1",
+					id: "A-1",
+					baseType: "COMPONENT",
+					type: "DEVICE",
+					subType: "",
+					name: "Device",
+					label: "Device",
+				},
+			],
+			filterRules: [{ xpath: "definition/type='DEVICE'", description: "", activated: true, environments: [{ ref: "env-1" }] }],
+			attachments: [],
+			properties: { style: { bgColor: null, graph: { layout: null } } },
+			settings: {},
+			docks: [{ id: "should-not-be-sent", dockparts: [] }],
+			status: "changed",
+		});
+		expect(Object.keys(payload)).toEqual([
+			"id",
+			"definition",
+			"parentIdRef",
+			"elementIdRefs",
+			"filterRules",
+			"attachments",
+			"properties",
+			"settings",
+		]);
+		expect(payload.docks).toBeUndefined();
+		expect(payload.status).toBeUndefined();
 	});
 });

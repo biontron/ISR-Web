@@ -14,9 +14,10 @@ describe("filterRuleNormalize", () => {
 				"Virtuelle Maschinen"
 			)
 		).toEqual({
+			environments: [],
 			xpath: "match(definition/name, 'AGLVM')",
 			description: "Virtuelle Maschinen",
-			environments: [],
+			activated: false,
 		});
 		expect(
 			normalizeFilterRules([
@@ -24,9 +25,19 @@ describe("filterRuleNormalize", () => {
 				{ filterRule: "definition/subType='DESKTOP'" },
 			])
 		).toEqual([
-			{ xpath: "definition/type='DEVICE'", description: "Geräte", environments: [] },
-			{ xpath: "definition/subType='DESKTOP'", description: "", environments: [] },
+			{ environments: [], xpath: "definition/type='DEVICE'", description: "Geräte", activated: false },
+			{ environments: [], xpath: "definition/subType='DESKTOP'", description: "", activated: false },
 		]);
+		expect(
+			Object.keys(
+				toFilterRuleRecord({
+					xpath: "definition/type='DEVICE'",
+					description: "Geräte",
+					environments: [{ ref: "office" }],
+					activated: true,
+				})
+			)
+		).toEqual(["environments", "xpath", "description", "activated"]);
 	});
 
 	it("schreibt REST/JSON mit xpath und description", () => {
@@ -41,9 +52,10 @@ describe("filterRuleNormalize", () => {
 		});
 		expect(snapshot.filterRules).toEqual([
 			{
+				environments: [],
 				xpath: "match(definition/name, 'AGLVM[A-Z0-9]{2,4}')",
 				description: "Virtuelle Maschinen",
-				environments: [],
+				activated: false,
 			},
 		]);
 		expect(JSON.stringify(snapshot)).toContain('"xpath"');
@@ -58,7 +70,20 @@ describe("filterRuleNormalize", () => {
 			filterRules: [{ filterRule: "definition/type='DEVICE'", description: "Geräte" } as never],
 		});
 		expect(getSnapshot(host)).toEqual({
-			filterRules: [{ xpath: "definition/type='DEVICE'", description: "Geräte", environments: [] }],
+			filterRules: [
+				{
+					environments: [],
+					xpath: "definition/type='DEVICE'",
+					description: "Geräte",
+					activated: false,
+				},
+			],
 		});
+		expect(Object.keys(getSnapshot(host).filterRules[0])).toEqual([
+			"environments",
+			"xpath",
+			"description",
+			"activated",
+		]);
 	});
 });

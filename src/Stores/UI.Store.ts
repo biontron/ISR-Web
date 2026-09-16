@@ -13,12 +13,9 @@ import { resolveIdentifier } from "mobx-state-tree";
 import { IRootStore, rootStore } from "./Root.Store";
 import { ActiveElement } from "../Interfaces/Element";
 import { IElement } from "./Models/Element.Model";
-import {
-	collectViewElementMarks,
-	collectViewSearchHits,
-	type ElementMarkFlags,
-	type ViewSearchHit,
-} from "../lib/elementXPathValidation";
+import { collectViewElementMarks, collectViewSearchHits, type ElementMarkFlags, type ViewSearchHit } from "../lib/elementXPathValidation";
+
+const EMPTY_ELEMENT_MARKS = new Map<string, ElementMarkFlags>();
 
 function runValidationSyncForElement(element: ActiveElement | undefined): void {
 	if (!element) {
@@ -51,6 +48,8 @@ export const UIStore = types
 		elementSearchText: types.optional(types.string, ""),
 		elementSearchDialogOpen: types.optional(types.boolean, false),
 		elementPropertiesTab: types.optional(types.string, "1"),
+		validationPositiveActive: types.optional(types.boolean, false),
+		validationNegativeActive: types.optional(types.boolean, false),
 		pendingValidationRuleViewId: types.optional(types.string, ""),
 		pendingValidationRuleXpath: types.optional(types.string, ""),
 		pendingValidationRuleComment: types.optional(types.string, ""),
@@ -223,6 +222,18 @@ export const UIStore = types
 		setElementPropertiesTab(key: string) {
 			self.elementPropertiesTab = key;
 		},
+		setValidationPositiveActive(active: boolean) {
+			self.validationPositiveActive = active;
+		},
+		setValidationNegativeActive(active: boolean) {
+			self.validationNegativeActive = active;
+		},
+		toggleValidationPositiveActive() {
+			self.validationPositiveActive = !self.validationPositiveActive;
+		},
+		toggleValidationNegativeActive() {
+			self.validationNegativeActive = !self.validationNegativeActive;
+		},
 		setPendingValidationRule(viewId: string, xpath: string, comment: string) {
 			self.pendingValidationRuleViewId = viewId;
 			self.pendingValidationRuleXpath = xpath;
@@ -246,12 +257,25 @@ export const UIStore = types
 	}))
 	.views((self) => ({
 		get elementMarks(): Map<string, ElementMarkFlags> {
+			if (
+				!self.elementSearchText.trim() &&
+				!self.validationPositiveActive &&
+				!self.validationNegativeActive
+			) {
+				return EMPTY_ELEMENT_MARKS;
+			}
 			const root = getRoot(self) as IRootStore;
-			return collectViewElementMarks(root, self.activeView, self.elementSearchText);
+			return collectViewElementMarks(root, self.activeView, self.elementSearchText, {
+				applyPositive: self.validationPositiveActive,
+				applyNegative: self.validationNegativeActive,
+			});
 		},
 		get elementSearchHits(): ViewSearchHit[] {
 			const root = getRoot(self) as IRootStore;
-			return collectViewSearchHits(root, self.activeView, self.elementSearchText);
+			return collectViewSearchHits(root, self.activeView, self.elementSearchText, undefined, {
+				applyPositive: self.validationPositiveActive,
+				applyNegative: self.validationNegativeActive,
+			});
 		},
 		canEditActiveElement(): boolean {
 			const status = self.activeElement?.status;

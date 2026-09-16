@@ -33,6 +33,10 @@ import {
 	collectGraphDockCircles,
 	renderGraphDockCirclesHtml,
 } from "./connectionGraphCircles";
+import { indexById } from "./hierarchyIndex";
+import { GRAPH_MAX_TREE_NODES, resolveGraphTreeDepth } from "./graphTreeLimits";
+
+export { GRAPH_MAX_TREE_NODES, resolveGraphTreeDepth } from "./graphTreeLimits";
 
 type DagreNodeConfig = {
 	labelType: string;
@@ -46,7 +50,16 @@ type DagreNodeConfig = {
 	height?: number;
 };
 
-function buildNodeLabel(node: TreeElement, condensed: boolean, omitIcon = false): string {
+type GraphLabelContext = {
+	contextHosts: IAsset[];
+};
+
+function buildNodeLabel(
+	node: TreeElement,
+	condensed: boolean,
+	omitIcon = false,
+	labelContext?: GraphLabelContext
+): string {
 	// Cluster HTML labels (foreignObject) must not embed schema treeIcon SVGs: dagre-d3-es
 	// styles selectAll('rect') on clusters and crashes on nested icon rects.
 	const showIcon =
@@ -75,8 +88,7 @@ function buildNodeLabel(node: TreeElement, condensed: boolean, omitIcon = false)
 	const fontSize = isClusterLabel ? "14.3px" : "13px";
 	const fontWeight = isClusterLabel ? "700" : "400";
 	const labelClass = isClusterLabel ? "Label graph-cluster-label" : `Label ${styleType}`;
-	const assets = rootStore.assets.assets.slice();
-	const contextHosts = collectContextComponents(assets);
+	const contextHosts = labelContext?.contextHosts ?? [];
 	const circlesHtml =
 		node.class === "Asset" || node.class === "AssetDetails"
 			? renderGraphDockCirclesHtml(collectGraphDockCircles(node as IAsset, contextHosts))
@@ -184,20 +196,16 @@ function ensureSwimlaneWidthSpacer(
 	safeSetParent(g, spacerId, laneNodeId);
 }
 
-function treeGraphChildCount(node: TreeElement, currentDepth: number, maxDepth: number): number {
-	if (currentDepth >= maxDepth || typeof node.children !== "function") {
-		return 0;
-	}
-	let count = 0;
-	for (const child of node.children()) {
+function treeGraphHasWalkableChild(
+	children: Array<TreeElement | null | undefined>,
+	parent: TreeElement
+): boolean {
+	for (const child of children) {
 		if (!child || !(child as TreeElement).definition) {
 			continue;
 		}
 		const treeChild = child as TreeElement;
-		if (
-			node.class === "Asset" &&
-			isAssetStackChildOf(node, treeChild)
-		) {
+		if (parent.class === "Asset" && isAssetStackChildOf(parent, treeChild)) {
 			continue;
 		}
 		if (
@@ -206,10 +214,10 @@ function treeGraphChildCount(node: TreeElement, currentDepth: number, maxDepth: 
 			treeChild.class === "Asset" ||
 			treeChild.class === "AssetDetails"
 		) {
-			count++;
+			return true;
 		}
 	}
-	return count;
+	return false;
 }
 
 export function addTreeNodesToGraph(
@@ -224,9 +232,17 @@ export function addTreeNodesToGraph(
 ) {
 	const config = options.config ?? loadGraphConfig();
 	const assets = rootStore.assets.assets;
+	const assetById = indexById(Array.from(assets));
+	const labelContext: GraphLabelContext = {
+		contextHosts: collectContextComponents(Array.from(assets)),
+	};
+	const maxDepth = resolveGraphTreeDepth(options.depth);
+	let nodeCount = 0;
+	type GraphWalkItem = { node: TreeElement; currentDepth: number; parentId: string };
+	const queue: GraphWalkItem[] = [];
 
 	function addAssetStackMembersToGraph(rootAsset: TreeElement, graphParentId: string) {
-		const root = assets.find((item) => item.id === rootAsset.id);
+		const root = assetById.get(rootAsset.id);
 		if (!root) {
 			return;
 		}
@@ -234,13 +250,17 @@ export function addTreeNodesToGraph(
 		const members = flattenAssetStackLayers(layers);
 
 		for (const member of members) {
+			if (nodeCount >= GRAPH_MAX_TREE_NODES) {
+				return;
+			}
 			const memberStyle = resolveGraphStyle(member as unknown as TreeElement, {
 				config,
 				isActive: options.activeElementId === member.id,
 			});
+			nodeCount += 1;
 			ensureGraphNode(g, member.id, {
 				labelType: "html",
-				label: buildNodeLabel(member as unknown as TreeElement, false, false),
+				label: buildNodeLabel(member as unknown as TreeElement, false, false, labelContext),
 				style: graphStyleToSvgNodeStyle(memberStyle),
 				id: member.id,
 			});
@@ -250,8 +270,24 @@ export function addTreeNodesToGraph(
 		}
 	}
 
-	function walk(node: TreeElement, currentDepth: number, parentId: string) {
-		if (!node?.definition) {
+	function enqueueChildren(node: TreeElement, children: Array<TreeElement | null | undefined>, currentDepth: number) {
+		if (currentDepth >= maxDepth || !g.hasNode(node.id)) {
+			return;
+		}
+		for (const child of children) {
+			if (!child || !(child as TreeElement).definition) {
+				continue;
+			}
+			const treeChild = child as TreeElement;
+			if (node.class === "Asset" && isAssetStackChildOf(node, treeChild)) {
+				continue;
+			}
+			queue.push({ node: treeChild, currentDepth: currentDepth + 1, parentId: node.id });
+		}
+	}
+
+	function processNode(node: TreeElement, currentDepth: number, parentId: string) {
+		if (!node?.definition || nodeCount >= GRAPH_MAX_TREE_NODES) {
 			return;
 		}
 
@@ -266,10 +302,10 @@ export function addTreeNodesToGraph(
 		}
 
 		if (node.class === "Asset" || node.class === "AssetDetails") {
-			if (isStackMemberAsset(node, assets)) {
+			if (isStackMemberAsset(node, assets, assetById)) {
 				if (node.id === options.root.id) {
-					const stackRootId = resolveAssetStackRootId(node.id, assets);
-					const stackRoot = assets.find((item) => item.id === stackRootId);
+					const stackRootId = resolveAssetStackRootId(node.id, assets, assetById);
+					const stackRoot = assetById.get(stackRootId);
 					if (stackRoot) {
 						addAssetStackMembersToGraph(
 							stackRoot as unknown as TreeElement,
@@ -279,9 +315,9 @@ export function addTreeNodesToGraph(
 				}
 				return;
 			}
-			const root = assets.find((item) => item.id === node.id);
-			if (root) {
-				const layers = collectAssetStackLayersFromAssets(root, assets);
+			const rootAsset = assetById.get(node.id);
+			if (rootAsset) {
+				const layers = collectAssetStackLayersFromAssets(rootAsset, assets);
 				if (hasMultiLayerAssetStack(layers)) {
 					addAssetStackMembersToGraph(
 						node,
@@ -292,17 +328,20 @@ export function addTreeNodesToGraph(
 			}
 		}
 
+		const children =
+			currentDepth < maxDepth && typeof node.children === "function" ? node.children() : [];
 		const isActive = options.activeElementId === node.id;
 		const style = resolveGraphStyle(node, { config, isActive });
 		const svgStyle = graphStyleToSvgNodeStyle(style);
 		const willBeCluster =
 			node.class === "View" ||
 			node.class === "Group" ||
-			treeGraphChildCount(node, currentDepth, options.depth) > 0;
+			treeGraphHasWalkableChild(children, node);
 
+		nodeCount += 1;
 		ensureGraphNode(g, node.id, {
 			labelType: "html",
-			label: buildNodeLabel(node, false, willBeCluster),
+			label: buildNodeLabel(node, false, willBeCluster, labelContext),
 			clusterLabelPos: "top",
 			style: svgStyle,
 			id: node.id,
@@ -312,25 +351,20 @@ export function addTreeNodesToGraph(
 			safeSetParent(g, node.id, parentId);
 		}
 
-		if (currentDepth >= options.depth || typeof node.children !== "function" || !g.hasNode(node.id)) {
-			return;
-		}
-		for (const child of node.children()) {
-			if (!child || !(child as TreeElement).definition) {
-				continue;
-			}
-			const treeChild = child as TreeElement;
-			if (node.class === "Asset" && isAssetStackChildOf(node, treeChild)) {
-				continue;
-			}
-			walk(treeChild, currentDepth + 1, node.id);
-		}
+		enqueueChildren(node, children, currentDepth);
 	}
 
 	if (g.hasNode(options.parentId) || options.parentId === options.root.id) {
-		walk(options.root, 0, options.parentId);
+		queue.push({ node: options.root, currentDepth: 0, parentId: options.parentId });
 	} else {
-		walk(options.root, 0, options.root.id);
+		queue.push({ node: options.root, currentDepth: 0, parentId: options.root.id });
+	}
+
+	let head = 0;
+	while (head < queue.length && nodeCount < GRAPH_MAX_TREE_NODES) {
+		const item = queue[head];
+		head += 1;
+		processNode(item.node, item.currentDepth, item.parentId);
 	}
 }
 
@@ -378,7 +412,10 @@ export function addMapPositionedNodes(
 	config?: GraphConfig
 ) {
 	const graphConfig = config ?? loadGraphConfig();
-	nodes.forEach((node, index) => {
+	const labelContext: GraphLabelContext = {
+		contextHosts: collectContextComponents(Array.from(rootStore.assets.assets)),
+	};
+	nodes.slice(0, GRAPH_MAX_TREE_NODES).forEach((node, index) => {
 		if (!node?.definition) {
 			return;
 		}
@@ -390,7 +427,7 @@ export function addMapPositionedNodes(
 		const style = resolveGraphStyle(node, { config: graphConfig, isActive });
 		ensureGraphNode(g, node.id, {
 			labelType: "html",
-			label: buildNodeLabel(node, true),
+			label: buildNodeLabel(node, true, false, labelContext),
 			style: graphStyleToSvgNodeStyle(style),
 			id: node.id,
 			x: position.x,
@@ -416,7 +453,10 @@ export function buildSwimlaneGraph(
 		return;
 	}
 
-	const components = collectSwimlaneComponentsFromTree(viewRoot);
+	const labelContext: GraphLabelContext = {
+		contextHosts: collectContextComponents(Array.from(rootStore.assets.assets)),
+	};
+	const components = collectSwimlaneComponentsFromTree(viewRoot, 10, GRAPH_MAX_TREE_NODES);
 	const componentsByLane = assignComponentsToSwimlanes(components, graphConfig);
 
 	const shellStyle = resolveGraphStyle(viewRoot, { config: graphConfig });
@@ -433,7 +473,7 @@ export function buildSwimlaneGraph(
 		const style = resolveGraphStyle(component, { config: graphConfig, isActive });
 		ensureGraphNode(g, component.id, {
 			labelType: "html",
-			label: buildNodeLabel(component, true),
+			label: buildNodeLabel(component, true, false, labelContext),
 			style: graphStyleToSvgNodeStyle(style),
 			id: component.id,
 		});

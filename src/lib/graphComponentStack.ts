@@ -1,5 +1,6 @@
 import { TreeElement } from "../Interfaces/Element";
 import { IAsset } from "../Stores/Models/Asset.Model";
+import { indexAssetsByOwnerId, indexById } from "./hierarchyIndex";
 
 export const GRAPH_STACK_CLUSTER_PREFIX = "__stack__";
 
@@ -33,17 +34,25 @@ export function isAssetStackChildOf(parent: TreeElement | IAsset, child: TreeEle
 }
 
 /** Asset ist Stapel-Root, wenn ownerIdRef leer ist oder auf kein anderes Asset zeigt. */
-export function isAssetStackRoot(asset: IAsset, assets: ReadonlyArray<IAsset>): boolean {
+export function isAssetStackRoot(
+	asset: IAsset,
+	assets: ReadonlyArray<IAsset>,
+	byId?: Map<string, IAsset>
+): boolean {
 	const ownerId = readAssetOwnerIdRef(asset);
 	if (!ownerId) {
 		return true;
+	}
+	if (byId) {
+		return !byId.has(ownerId);
 	}
 	return !assets.some((item) => item.id === ownerId);
 }
 
 export function isStackMemberAsset(
 	element: TreeElement | IAsset,
-	assets: ReadonlyArray<IAsset>
+	assets: ReadonlyArray<IAsset>,
+	byId?: Map<string, IAsset>
 ): boolean {
 	if ("class" in element && element.class !== "Asset" && element.class !== "AssetDetails") {
 		return false;
@@ -52,11 +61,19 @@ export function isStackMemberAsset(
 	if (!ownerId) {
 		return false;
 	}
+	if (byId) {
+		return byId.has(ownerId);
+	}
 	return assets.some((item) => item.id === ownerId);
 }
 
-export function resolveAssetStackRootId(assetId: string, assets: ReadonlyArray<IAsset>): string {
-	let current = assets.find((item) => item.id === assetId);
+export function resolveAssetStackRootId(
+	assetId: string,
+	assets: ReadonlyArray<IAsset>,
+	byId?: Map<string, IAsset>
+): string {
+	const lookup = byId ?? indexById(assets);
+	let current = lookup.get(assetId);
 	if (!current) {
 		return assetId;
 	}
@@ -65,7 +82,7 @@ export function resolveAssetStackRootId(assetId: string, assets: ReadonlyArray<I
 		if (!ownerId) {
 			break;
 		}
-		const owner = assets.find((item) => item.id === ownerId);
+		const owner = lookup.get(ownerId);
 		if (!owner) {
 			break;
 		}
@@ -74,7 +91,14 @@ export function resolveAssetStackRootId(assetId: string, assets: ReadonlyArray<I
 	return current.id;
 }
 
-function stackedAssetChildren(parent: IAsset, assets: ReadonlyArray<IAsset>): IAsset[] {
+function stackedAssetChildren(
+	parent: IAsset,
+	assets: ReadonlyArray<IAsset>,
+	byOwner?: Map<string, IAsset[]>
+): IAsset[] {
+	if (byOwner) {
+		return byOwner.get(parent.id) ?? [];
+	}
 	return assets.filter((asset) => asset.ownerIdRef === parent.id);
 }
 
@@ -83,13 +107,14 @@ export function collectAssetStackLayersFromAssets(
 	root: IAsset,
 	assets: ReadonlyArray<IAsset>
 ): IAsset[][] {
+	const byOwner = indexAssetsByOwnerId(assets);
 	const layers: IAsset[][] = [[root]];
 	let currentLayer = [root];
 
 	while (currentLayer.length > 0) {
 		const nextLayer: IAsset[] = [];
 		for (const parent of currentLayer) {
-			nextLayer.push(...stackedAssetChildren(parent, assets));
+			nextLayer.push(...stackedAssetChildren(parent, assets, byOwner));
 		}
 		if (nextLayer.length === 0) {
 			break;
@@ -156,5 +181,6 @@ export function hasMultiLayerAssetStack(layers: { length: number }[]): boolean {
 }
 
 export function findAssetStackRoots(assets: ReadonlyArray<IAsset>): IAsset[] {
-	return assets.filter((asset) => isAssetStackRoot(asset, assets));
+	const byId = indexById(assets);
+	return assets.filter((asset) => isAssetStackRoot(asset, assets, byId));
 }

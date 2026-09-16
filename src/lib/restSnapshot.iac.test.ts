@@ -39,16 +39,22 @@ describe("normalizeRestArray IaC list items", () => {
 });
 
 describe("loadRestArrayIntoStore IaC packages", () => {
-	it("meldet keine Fehl-Positives wenn Identifier name ist", () => {
-		const Container = types.model({ packages: types.array(IaCPackageModel) });
-		const store = Container.create({ packages: [] });
-		const pkg = { name: "test", uri: "/isr/demo/iac/packages/test" };
-		const report = loadRestArrayIntoStore(store.packages, IaCPackageModel, [pkg], "IaCPackage", {
-			getItemId: iacListItemId,
+	it("lädt gültige Items wenn ein Eintrag ungültig ist", () => {
+		const Tiny = types.model("TinyRestItem", {
+			id: types.identifier,
+			name: types.string,
 		});
+		const Container = types.model({ items: types.array(Tiny) });
+		const store = Container.create({ items: [] });
+		const report = loadRestArrayIntoStore(
+			store.items,
+			Tiny,
+			[{ id: "ok", name: "gültig" }, { id: "bad" }],
+			"Asset"
+		);
 
-		expect(report.errors).toHaveLength(0);
+		expect(store.items.map((item) => item.id)).toEqual(["ok"]);
+		expect(report.errors.length).toBeGreaterThan(0);
 		expect(report.loadedCount).toBe(1);
-		expect(store.packages[0]?.name).toBe("test");
 	});
 });

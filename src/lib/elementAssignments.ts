@@ -1,14 +1,37 @@
 import { IAsset } from "../Stores/Models/Asset.Model";
 import { IGroup } from "../Stores/Models/Group.Model";
 import { IRootStore } from "../Stores/Root.Store";
+import { readEnvironmentId } from "./environmentIdentity";
 import { filterRuleExpression, toFilterRuleRecord } from "./filterRuleNormalize";
 
 export type AssignableTreeElement = IGroup | IAsset;
 
+export type ElementIdRef = {
+	environmentId: string;
+	id: string;
+	baseType: string;
+	type: string;
+	subType: string;
+	name: string;
+	label: string;
+};
+
+export type ElementIdRefSource = Pick<IAsset, "id"> & {
+	environmentId?: string | null;
+	definition?: {
+		baseType?: string;
+		type?: string;
+		subType?: string;
+		name?: string;
+		label?: string;
+	};
+};
+
 export type XPathFilterRule = {
+	environments?: Array<{ ref: string }>;
 	xpath: string;
 	description: string;
-	environments?: Array<{ ref: string }>;
+	activated?: boolean;
 };
 
 function isNonEmptyId(value: unknown): value is string {
@@ -42,12 +65,136 @@ export function isStaticallyUnassigned(element: AssignableTreeElement): boolean 
 
 export type AssignmentParent = {
 	id: string;
-	elementIdRefs?: Array<{ id: unknown }>;
-	setElementIdRefs?: (refs: Array<{ id: string }>) => void;
+	class?: string;
+	filterRules?: unknown[];
+	elementIdRefs?: Array<Partial<ElementIdRef> & { id?: unknown }>;
+	setElementIdRefs?: (refs: ElementIdRef[]) => void;
 };
 
-function resolveElementRefId(ref: { id: unknown }): string | undefined {
-	return isNonEmptyId(ref.id) ? ref.id.trim() : undefined;
+function readRefString(value: unknown): string {
+	return typeof value === "string" ? value.trim() : "";
+}
+
+export function readElementIdRef(ref: Partial<ElementIdRef> & { id?: unknown }): ElementIdRef | undefined {
+	const id = isNonEmptyId(ref.id) ? ref.id.trim() : "";
+	if (!id) {
+		return undefined;
+	}
+	return {
+		environmentId: readRefString(ref.environmentId),
+		id,
+		baseType: readRefString(ref.baseType),
+		type: readRefString(ref.type),
+		subType: readRefString(ref.subType),
+		name: readRefString(ref.name),
+		label: readRefString(ref.label),
+	};
+}
+
+export function toAssetElementIdRef(asset: ElementIdRefSource): ElementIdRef {
+	const definition = asset.definition ?? {};
+	return {
+		environmentId: readEnvironmentId(asset),
+		id: asset.id,
+		baseType: typeof definition.baseType === "string" ? definition.baseType : "",
+		type: typeof definition.type === "string" ? definition.type : "",
+		subType: typeof definition.subType === "string" ? definition.subType : "",
+		name: typeof definition.name === "string" ? definition.name : "",
+		label: typeof definition.label === "string" ? definition.label : "",
+	};
+}
+
+export function elementIdRefsEqual(left: ElementIdRef, right: ElementIdRef): boolean {
+	return left.id === right.id && left.environmentId === right.environmentId;
+}
+
+export function snapshotElementIdRefs(
+	refs: Array<Partial<ElementIdRef> & { id?: unknown }> | undefined
+): ElementIdRef[] {
+	const next: ElementIdRef[] = [];
+	for (const ref of refs ?? []) {
+		const parsed = readElementIdRef(ref);
+		if (parsed) {
+			next.push(parsed);
+		}
+	}
+	return next;
+}
+
+export function hasAssetElementIdRef(
+	refs: Array<Partial<ElementIdRef> & { id?: unknown }> | undefined,
+	asset: ElementIdRefSource
+): boolean {
+	const target = toAssetElementIdRef(asset);
+	return snapshotElementIdRefs(refs).some((entry) => elementIdRefsEqual(entry, target));
+}
+
+export function addAssetElementIdRef(
+	refs: Array<Partial<ElementIdRef> & { id?: unknown }> | undefined,
+	asset: ElementIdRefSource
+): ElementIdRef[] {
+	const current = snapshotElementIdRefs(refs);
+	const entry = toAssetElementIdRef(asset);
+	if (current.some((item) => elementIdRefsEqual(item, entry))) {
+		return current;
+	}
+	return [...current, entry];
+}
+
+export function removeAssetElementIdRef(
+	refs: Array<Partial<ElementIdRef> & { id?: unknown }> | undefined,
+	asset: ElementIdRefSource
+): ElementIdRef[] {
+	const target = toAssetElementIdRef(asset);
+	return snapshotElementIdRefs(refs).filter((entry) => {
+		if (entry.id !== target.id) {
+			return true;
+		}
+		if (
+			target.environmentId &&
+			entry.environmentId &&
+			entry.environmentId !== target.environmentId
+		) {
+			return true;
+		}
+		return false;
+	});
+}
+
+export function assignmentKey(element: AssignableTreeElement): string {
+	if (element.class === "Asset") {
+		const environmentId = readEnvironmentId(element as IAsset);
+		return environmentId ? `${element.id}::${environmentId}` : element.id;
+	}
+	return element.id;
+}
+
+export function assignAssetToParentRefs(parent: AssignmentParent, asset: ElementIdRefSource): boolean {
+	if (typeof parent.setElementIdRefs !== "function") {
+		return false;
+	}
+	const current = snapshotElementIdRefs(parent.elementIdRefs);
+	const next = addAssetElementIdRef(current, asset);
+	if (next.length === current.length) {
+		return false;
+	}
+	parent.setElementIdRefs(next);
+	return true;
+}
+
+export function assignMappedElement(
+	child: AssignableTreeElement,
+	parent: AssignmentParent
+): void {
+	if (child.class === "Group") {
+		assignElementToParent(child, parent.id);
+		return;
+	}
+	if (parent.class === "Group" && typeof parent.setElementIdRefs === "function") {
+		assignAssetToParentRefs(parent, child as IAsset);
+		return;
+	}
+	assignElementToParent(child, parent.id);
 }
 
 export function assignElementToParent(child: AssignableTreeElement, parentId: string): void {
@@ -76,20 +223,11 @@ export function unassignElementFromParent(
 		return;
 	}
 
-	const current = Array.prototype.slice.call(refs) as Array<{
-		id: unknown;
-		environmentRef?: string;
-	}>;
-	const next = current
-		.map((ref) => {
-			const id = resolveElementRefId(ref);
-			if (!id || id === child.id) {
-				return undefined;
-			}
-			const environmentRef = String(ref.environmentRef ?? "").trim();
-			return environmentRef ? { id, environmentRef } : { id };
-		})
-		.filter((entry): entry is { id: string; environmentRef?: string } => !!entry);
+	const current = snapshotElementIdRefs(refs);
+	const next =
+		child.class === "Asset"
+			? removeAssetElementIdRef(current, child as IAsset)
+			: current.filter((entry) => entry.id !== child.id);
 
 	if (next.length === current.length) {
 		return;
@@ -146,13 +284,47 @@ export function wouldCreateAssignmentCycle(
 	return walkAssetOwnerChain(parentId, root.assets.assets).has(element.id);
 }
 
+function findGroupParent(
+	root: Pick<IRootStore, "groups">,
+	parentId: string
+): { id: string; elementIdRefs?: Array<Partial<ElementIdRef> & { id?: unknown }> } | undefined {
+	return root.groups.groups.find((group) => group.id === parentId);
+}
+
 export function collectAssignedElements(
 	root: Pick<IRootStore, "groups" | "assets">,
 	parentId: string
 ): AssignableTreeElement[] {
 	const groups = root.groups.groups.filter((group) => isAssignedToParent(group, parentId));
-	const assets = root.assets.assets.filter((asset) => isAssignedToParent(asset, parentId));
-	return [...groups, ...assets];
+	const ownedAssets = root.assets.assets.filter((asset) => isAssignedToParent(asset, parentId));
+	const seen = new Set(ownedAssets.map((asset) => assignmentKey(asset as AssignableTreeElement)));
+	const assetsById = new Map<string, IAsset[]>();
+	for (const asset of root.assets.assets) {
+		const bucket = assetsById.get(asset.id);
+		if (bucket) {
+			bucket.push(asset as IAsset);
+		} else {
+			assetsById.set(asset.id, [asset as IAsset]);
+		}
+	}
+	const referenced: IAsset[] = [];
+	const parentGroup = findGroupParent(root, parentId);
+	for (const ref of snapshotElementIdRefs(parentGroup?.elementIdRefs)) {
+		const matches = assetsById.get(ref.id);
+		if (!matches?.length) {
+			continue;
+		}
+		const asset = !ref.environmentId
+			? matches[0]
+			: matches.find((item) => readEnvironmentId(item) === ref.environmentId) ?? matches[0];
+		const key = assignmentKey(asset as AssignableTreeElement);
+		if (seen.has(key)) {
+			continue;
+		}
+		seen.add(key);
+		referenced.push(asset);
+	}
+	return [...groups, ...ownedAssets, ...referenced];
 }
 
 export function collectUnassignedElements(
@@ -166,11 +338,56 @@ export function collectUnassignedElements(
 	const blockedAssetIds = parentIsAsset
 		? walkAssetOwnerChain(parentId, root.assets.assets)
 		: null;
+	const assignedKeys = new Set(
+		collectAssignedElements(root, parentId).map((item) => assignmentKey(item))
+	);
 	const assets = root.assets.assets.filter((asset) => {
-		if (asset.id === parentId || !isStaticallyUnassigned(asset)) {
+		if (asset.id === parentId || assignedKeys.has(assignmentKey(asset))) {
+			return false;
+		}
+		if (!isStaticallyUnassigned(asset)) {
 			return false;
 		}
 		return !blockedAssetIds || !blockedAssetIds.has(asset.id);
+	});
+	return [...groups.filter((group) => !assignedKeys.has(group.id)), ...assets];
+}
+
+export function collectAvailableMappingElements(
+	root: Pick<IRootStore, "groups" | "assets">,
+	parentId: string,
+	options?: {
+		unlinkedOnly?: boolean;
+		viewLinkedAssetIds?: Set<string>;
+		viewLinkedGroupIds?: Set<string>;
+	}
+): AssignableTreeElement[] {
+	if (options?.unlinkedOnly) {
+		return collectUnassignedElements(root, parentId).filter((element) => {
+			if (element.class === "Asset" && options.viewLinkedAssetIds?.has(element.id)) {
+				return false;
+			}
+			if (element.class === "Group" && options.viewLinkedGroupIds?.has(element.id)) {
+				return false;
+			}
+			return true;
+		});
+	}
+
+	const assignedKeys = new Set(
+		collectAssignedElements(root, parentId).map((item) => assignmentKey(item))
+	);
+	const groups = root.groups.groups.filter((group) => {
+		if (group.id === parentId || assignedKeys.has(group.id)) {
+			return false;
+		}
+		return !wouldCreateAssignmentCycle(group, parentId, root);
+	});
+	const assets = root.assets.assets.filter((asset) => {
+		if (asset.id === parentId || assignedKeys.has(assignmentKey(asset))) {
+			return false;
+		}
+		return !wouldCreateAssignmentCycle(asset, parentId, root);
 	});
 	return [...groups, ...assets];
 }
@@ -187,7 +404,8 @@ export function addXPathFilterRule(
 	rules: unknown[],
 	expression: string,
 	description = "",
-	environments?: Array<{ ref: string }>
+	environments?: Array<{ ref: string }>,
+	activated = true
 ): unknown[] {
 	const xpath = expression.trim();
 	if (!xpath) {
@@ -196,17 +414,26 @@ export function addXPathFilterRule(
 	if (rules.some((rule) => readXPathExpression(rule) === xpath)) {
 		return rules;
 	}
-	const rule = toXPathFilterRule(xpath, description.trim());
 	return [
 		...rules,
-		environments && environments.length > 0 ? { ...rule, environments } : rule,
+		toFilterRuleRecord({
+			environments: environments ?? [],
+			xpath,
+			description: description.trim(),
+			activated,
+		}),
 	];
 }
 
 export function updateXPathFilterRule(
 	rules: unknown[],
 	index: number,
-	patch: { xpath?: string; description?: string }
+	patch: {
+		xpath?: string;
+		description?: string;
+		environments?: Array<{ ref: string }>;
+		activated?: boolean;
+	}
 ): unknown[] {
 	if (index < 0 || index >= rules.length) {
 		return rules;
@@ -216,11 +443,12 @@ export function updateXPathFilterRule(
 		if (ruleIndex !== index) {
 			return current;
 		}
-		return {
+		return toFilterRuleRecord({
+			environments: patch.environments !== undefined ? patch.environments : current.environments,
 			xpath: patch.xpath !== undefined ? patch.xpath.trim() : current.xpath,
 			description: patch.description !== undefined ? patch.description : current.description,
-			environments: current.environments,
-		};
+			activated: patch.activated !== undefined ? patch.activated : current.activated,
+		});
 	});
 }
 

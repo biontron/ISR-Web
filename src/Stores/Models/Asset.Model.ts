@@ -8,9 +8,11 @@ import { IRootStore } from "../Root.Store";
 import { IAssetDetails } from "./AssetDetails.Model";
 import ElementModel, { ElementDefinitionTagModel } from "./Element.Model";
 import { DockModel } from "./Dock.Model";
+import { ElementIdRefModel } from "./ElementIdRef.Model";
 import { ISchemaGroupModel } from "./SchemaGroup.Model";
 import { buildDockEntryFromSchemaItems, buildDockpartEntry } from "../../lib/assetSchemaMutations";
 import { refillEmptyBasedOn } from "../../lib/dockpartBasedOn";
+import { buildElementTreeNodes } from "../../lib/elementTreeNodes";
 
 /*
 {
@@ -63,12 +65,7 @@ export const AssetModel = types.compose(
 				}),
 			}),
 			settings: types.map(types.frozen()),
-			elementIdRefs: types.array(
-				types.model({
-					id: types.string,
-					environmentRef: types.optional(types.string, ""),
-				})
-			),
+			elementIdRefs: types.array(ElementIdRefModel),
 			filterRules: types.array(types.frozen()),
 			environmentId: types.optional(types.string, ""),
 		})
@@ -93,46 +90,19 @@ export const AssetModel = types.compose(
 			},
 
 			/**
-			 * Generates the children of the asset - if full is true, it will also generate the children of the children
-			 * Otherwise it will only generate the children of the asset itself
-			 * @param {boolean} [full=true]
-			 * @returns {*}
+			 * Direct child assets as tree nodes (one level — Graph/Tree laden tiefer nach).
 			 */
 			childrenAsTreeNodes(): ITreeNode[] {
-				const root = getRoot(self) as any;
-
-				const childrenAssets = root.assets.assets.filter(
-					(asset: IAsset) => self.id === asset.ownerIdRef
-				);
-
-				return childrenAssets.map((element: IAsset) => ({
-					key: element.id,
-					elementId: element.id,
-					class: element.class,
-					title: element.definition?.name,
-					storeType: element.definition?.storeType,
-					baseType: element.definition.baseType,
-					subType: element.definition.subType,
-					elementType: element.definition.type,
-					description: element.definition.description,
-					label: element.definition.label,
-					status: element.status,
-					children: element.childrenAsTreeNodes() as ITreeNode[],
-				}));
+				const root = getRoot(self) as IRootStore;
+				return buildElementTreeNodes(root, { id: self.id, class: "Asset" });
 			},
 
 			/**
 			 * Provides all kind of its children (as partitial data set)
 			 */
 			children(): IAsset[] {
-				const root = getRoot(self) as any;
-
-				const childrenAssets = root.assets.assets.filter(
-					(asset: IAsset) => {
-						return self.id === asset.ownerIdRef;
-					}
-				);
-				return childrenAssets;
+				const root = getRoot(self) as IRootStore;
+				return (root.assets.assetsByOwnerId.get(self.id) ?? []) as IAsset[];
 			},
 		}))
 ).actions((self) => ({
@@ -219,10 +189,26 @@ export const AssetModel = types.compose(
 		self.markTouched();
 	},
 
-	setElementIdRefs(refs: Array<{ id: string; environmentRef?: string }>) {
+	setElementIdRefs(refs: Array<{
+		environmentId?: string;
+		id: string;
+		baseType?: string;
+		type?: string;
+		subType?: string;
+		name?: string;
+		label?: string;
+	}>) {
 		self.beginEdit();
 		self.elementIdRefs = cast(
-			refs.map((ref) => ({ id: ref.id, environmentRef: ref.environmentRef ?? "" }))
+			refs.map((ref) => ({
+				environmentId: ref.environmentId ?? "",
+				id: ref.id,
+				baseType: ref.baseType ?? "",
+				type: ref.type ?? "",
+				subType: ref.subType ?? "",
+				name: ref.name ?? "",
+				label: ref.label ?? "",
+			}))
 		);
 		self.markTouched();
 	},

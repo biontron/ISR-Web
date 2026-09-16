@@ -17,10 +17,8 @@ import { useNavigate } from "react-router-dom";
 import ConnectionDialog from "../../../Components/Connections/ConnectionDialog";
 import {
 	collectConnectionGraphEdges,
-	collectConnectionGraphEdgesFromTree,
 	collectRenderedGraphNodeIds,
 	collectVisibleAssetIdsFromTree,
-	mergeConnectionGraphEdges,
 } from "../../../lib/graphConnectionEdges";
 import {
 	addConnectionEdgesToGraph,
@@ -40,6 +38,11 @@ import {
 import { applyOverviewClusterLayout } from "../../../lib/graphOverviewRender";
 import { isStackMemberAsset } from "../../../lib/graphComponentStack";
 import { appendGraphArrowDefs, applyEdgeStylesToSvg } from "../../../lib/graphSvgEdges";
+import {
+	hierarchyAssignmentEpoch,
+	hierarchyOwnerEpoch,
+	hierarchyStatusEpoch,
+} from "../../../lib/hierarchyIndex";
 
 function getNodeIdFromDatum(d: unknown): string | undefined {
 	if (typeof d === "string") return d;
@@ -121,16 +124,13 @@ type GraphRenderOptions = {
 };
 
 function collectGraphEdges(root: TreeElement, renderedNodeIds?: Set<string>) {
-	const assets = rootStore.assets.assets.slice();
-	const connections = rootStore.connections.connections.slice();
+	const assets = Array.from(rootStore.assets.assets);
+	const connections = Array.from(rootStore.connections.connections);
 	const visibleIds =
 		renderedNodeIds && renderedNodeIds.size > 0
 			? renderedNodeIds
-			: collectVisibleAssetIdsFromTree(root, 10);
-	return mergeConnectionGraphEdges(
-		collectConnectionGraphEdges(assets, connections, visibleIds),
-		collectConnectionGraphEdgesFromTree(root, assets, connections, 10)
-	);
+			: collectVisibleAssetIdsFromTree(root, 2);
+	return collectConnectionGraphEdges(assets, connections, visibleIds);
 }
 
 export function useGraphZoom() {
@@ -228,6 +228,9 @@ const GraphCanvas = observer(
 		const assetCount = rootStore.assets.assets.length;
 		const groupCount = rootStore.groups.groups.length;
 		const connectionCount = rootStore.connections.connections.length;
+		const assignmentEpoch = hierarchyAssignmentEpoch(rootStore.groups.groups);
+		const ownerEpoch = hierarchyOwnerEpoch(rootStore.assets.assets);
+		const statusEpoch = hierarchyStatusEpoch(rootStore.groups.groups, rootStore.assets.assets);
 		const renderGraph = useCallback(() => {
 			const view = rootStore.ui.activeView;
 			if (!view || !element || !isTreeElement(element) || !graphContainer.current) {
@@ -294,12 +297,15 @@ const GraphCanvas = observer(
 			assetCount,
 			groupCount,
 			connectionCount,
+			assignmentEpoch,
+			ownerEpoch,
+			statusEpoch,
 		]);
 
 		useEffect(() => {
 			const timer = window.setTimeout(() => {
 				renderGraph();
-			}, 0);
+			}, 32);
 			return () => {
 				window.clearTimeout(timer);
 				if (graphContainer.current) {
@@ -341,11 +347,12 @@ export const ElementGraphOverview = observer(
 		}}
 		postRender={(svg, _root, graphConfig, viewportWidth, dagreGraph) => {
 			const assets = rootStore.assets.assets;
+			const assetById = rootStore.assets.assetById;
 			applyOverviewClusterLayout(svg, dagreGraph, {
 				isViewGroup: (nodeId) => rootStore.groups.groups.some((group) => group.id === nodeId),
 				isDeviceUnit: (nodeId) => {
-					const asset = assets.find((item) => item.id === nodeId);
-					return !!asset && !isStackMemberAsset(asset, assets);
+					const asset = assetById.get(nodeId);
+					return !!asset && !isStackMemberAsset(asset, assets, assetById);
 				},
 			});
 			return undefined;

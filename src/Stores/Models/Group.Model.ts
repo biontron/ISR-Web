@@ -2,17 +2,16 @@
 # Infrastructure Repository (ISR) / Infrastruktur Repository (ISR)
 # SPDX-License-Identifier: GPL-2.0 
 */
-import { Instance, cast, getIdentifier, getRoot, getSnapshot, types } from "mobx-state-tree";
+import { Instance, cast, getIdentifier, getRoot, types } from "mobx-state-tree";
 import { ITreeNode } from "../../Interfaces/Tree";
 import { IRootStore } from "../Root.Store";
-import { AssetModel, IAsset } from "./Asset.Model";
+import { IAsset } from "./Asset.Model";
 import ElementModel, { ElementDefinitionTagModel } from "./Element.Model";
-import { assignableElementToTreeNode } from "../../lib/treeNodeDisplay";
-import { collectFilterMatchedElementsExcluding } from "../../lib/elementXPathFilter";
+import { ElementIdRefModel } from "./ElementIdRef.Model";
 import { FilterRuleModel } from "./FilterRule.Model";
-import { DockModel } from "./Dock.Model";
-import { normalizeFilterRules } from "../../lib/filterRuleNormalize";
+import { normalizeFilterRules, toFilterRuleRecord } from "../../lib/filterRuleNormalize";
 import { resolvePrimaryEnvironmentRef } from "../../lib/viewEnvironments";
+import { buildElementTreeNodes } from "../../lib/elementTreeNodes";
 
 function resolveAssetIdFromRef(ref: { id: unknown }): string | undefined {
 	if (typeof ref.id === "string" && ref.id !== "") {
@@ -25,7 +24,7 @@ function resolveAssetIdFromRef(ref: { id: unknown }): string | undefined {
 }
 
 function resolveAssetFromRef(
-	ref: { id: unknown; environmentRef?: string },
+	ref: { id: unknown; environmentId?: string },
 	root: IRootStore,
 	fallbackId?: string
 ): IAsset | undefined {
@@ -35,38 +34,40 @@ function resolveAssetFromRef(
 		return undefined;
 	}
 
-	const environmentRef = String(ref.environmentRef ?? "").trim();
-	if (environmentRef) {
+	const byId = root.assets.assetById.get(assetId);
+	const environmentId = String(ref.environmentId ?? "").trim();
+	if (environmentId && byId && String(byId.environmentId ?? "") !== environmentId) {
 		return (
 			root.assets.assets.find(
 				(asset: IAsset) =>
-					asset.id === assetId && String(asset.environmentId ?? "") === environmentRef
-			) ?? root.assets.assets.find((asset: IAsset) => asset.id === assetId)
+					asset.id === assetId && String(asset.environmentId ?? "") === environmentId
+			) ?? byId
 		);
 	}
 
-	return root.assets.assets.find((asset: IAsset) => asset.id === assetId);
+	return byId;
 }
 
-function collectGroupAssets(group: { id: string; elementIdRefs: Array<{ id: unknown }> }, root: IRootStore, groupSnapshot?: { elementIdRefs?: Array<{ id: string }> }): IAsset[] {
+function collectGroupAssets(group: { id: string; elementIdRefs: Array<{ id: unknown; environmentId?: string }> }, root: IRootStore, groupSnapshot?: { elementIdRefs?: Array<{ id: string }> }): IAsset[] {
 	const snapshot = groupSnapshot ?? { elementIdRefs: [] as Array<{ id: string }> };
-	const assetById = new Map<string, IAsset>();
+	const collected = new Map<string, IAsset>();
 
 	group.elementIdRefs.forEach((ref, index) => {
 		const fallbackId = snapshot.elementIdRefs?.[index]?.id;
 		const asset = resolveAssetFromRef(ref, root, fallbackId);
 		if (asset) {
-			assetById.set(asset.id, asset);
+			collected.set(asset.id, asset);
 		}
 	});
 
-	root.assets.assets.forEach((asset: IAsset) => {
-		if (asset.ownerIdRef === group.id) {
-			assetById.set(asset.id, asset);
+	const owned = root.assets.assetsByOwnerId.get(group.id);
+	if (owned) {
+		for (const asset of owned) {
+			collected.set(asset.id, asset);
 		}
-	});
+	}
 
-	return Array.from(assetById.values());
+	return Array.from(collected.values());
 }
 
 /**
@@ -88,12 +89,7 @@ export const GroupModel = types.compose(
 				tags: types.optional(types.array(ElementDefinitionTagModel), []),
 			}),
 			parentIdRef: types.maybe(types.string),
-			elementIdRefs: types.array(
-				types.model({
-					id: types.string,
-					environmentRef: types.optional(types.string, ""),
-				})
-			),
+			elementIdRefs: types.array(ElementIdRefModel),
 			filterRules: types.array(FilterRuleModel),
 			attachments: types.array(types.frozen()),
 			properties: types.model({
@@ -114,7 +110,6 @@ export const GroupModel = types.compose(
 				}),
 			}),
 			settings: types.map(types.frozen()),
-			docks: types.optional(types.array(DockModel), []),
 		})
 		// .volatile(() => ({ }))
 		// .actions((self) => ({ }))
@@ -127,51 +122,11 @@ export const GroupModel = types.compose(
 			},
 
 			/**
-			 * Generates a tree node for the group
+			 * Direct children as tree nodes (one level — Tree lädt tiefer nach).
 			 */
 			childrenAsTreeNodes(): ITreeNode[] {
 				const root = getRoot(self) as IRootStore;
-
-				const groupChildren = root.groups.groups.filter(
-					(group: IGroup) => group.parentIdRef === self.id
-				);
-
-				const groupSnapshot = getSnapshot(self) as { elementIdRefs?: Array<{ id: string }> };
-				const referencedAssets = collectGroupAssets(self, root, groupSnapshot);
-				const existingIds = [
-					...groupChildren.map((group: IGroup) => group.id),
-					...referencedAssets.map((asset: IAsset) => asset.id),
-				];
-				const filterMatched = collectFilterMatchedElementsExcluding(
-					root,
-					self.id,
-					self.filterRules,
-					existingIds
-				);
-
-				const childrenCombined: Array<IGroup | IAsset> = [
-					...groupChildren,
-					...referencedAssets,
-					...filterMatched,
-				];
-
-				return childrenCombined.map((element) => {
-					if (!element) {
-						return {
-							key: "",
-							elementId: "",
-							class: "GROUP",
-							title: "Asset-Referenz ungültig",
-							baseType: "NONE",
-							subType: "NONE",
-							description: "",
-							status: "untouched",
-							children: [],
-						};
-					}
-
-					return assignableElementToTreeNode(root, element);
-				});
+				return buildElementTreeNodes(root, self);
 			},
 
 			/**
@@ -184,19 +139,9 @@ export const GroupModel = types.compose(
 					(group: IGroup) => group.parentIdRef === self.id
 				);
 
-				const groupSnapshot = getSnapshot(self) as { elementIdRefs?: Array<{ id: string }> };
-				const referencedAssets = collectGroupAssets(self, root, groupSnapshot);
-				const filterMatched = collectFilterMatchedElementsExcluding(
-					root,
-					self.id,
-					self.filterRules,
-					[
-						...groupChildren.map((group: IGroup) => group.id),
-						...referencedAssets.map((asset: IAsset) => asset.id),
-					]
-				);
+				const referencedAssets = collectGroupAssets(self, root);
 
-				return [...groupChildren, ...referencedAssets, ...filterMatched] as IGroup[];
+				return [...groupChildren, ...referencedAssets] as IGroup[];
 			},
 
 			/**
@@ -206,7 +151,7 @@ export const GroupModel = types.compose(
 				const root = getRoot(self) as IRootStore;
 				return self.elementIdRefs
 					.map((ref) => resolveAssetIdFromRef(ref) ?? "")
-					.filter((id) => id !== "" && root.assets.assets.some((asset: IAsset) => asset.id === id));
+					.filter((id) => id !== "" && root.assets.assetById.has(id));
 			},
 		}))
 ).actions((self) => ({
@@ -215,30 +160,27 @@ export const GroupModel = types.compose(
 		self.parentIdRef = parentId;
 		self.markTouched();
 	},
-	setElementIdRefs(refs: Array<{ id: string; environmentRef?: string }>) {
+	setElementIdRefs(refs: Array<{
+		environmentId?: string;
+		id: string;
+		baseType?: string;
+		type?: string;
+		subType?: string;
+		name?: string;
+		label?: string;
+	}>) {
 		self.beginEdit();
 		self.elementIdRefs = cast(
-			refs.map((ref) => ({ id: ref.id, environmentRef: ref.environmentRef ?? "" }))
+			refs.map((ref) => ({
+				environmentId: ref.environmentId ?? "",
+				id: ref.id,
+				baseType: ref.baseType ?? "",
+				type: ref.type ?? "",
+				subType: ref.subType ?? "",
+				name: ref.name ?? "",
+				label: ref.label ?? "",
+			}))
 		);
-		self.markTouched();
-	},
-	addContextValue(input: { id: string; type: string; label: string }) {
-		self.beginEdit();
-		if (self.docks.length === 0) {
-			self.docks.push({
-				id: `dctx-${self.id.slice(0, 8)}`,
-				type: "CONTEXT",
-				label: "Context",
-				dockparts: [],
-			});
-		}
-		self.docks[0].dockparts.push({
-			id: input.id,
-			type: input.type,
-			label: input.label,
-			protocol: input.type,
-			valueRef: "",
-		} as never);
 		self.markTouched();
 	},
 	setFilterRules(rules: unknown[]) {
@@ -247,9 +189,11 @@ export const GroupModel = types.compose(
 		const primary = resolvePrimaryEnvironmentRef(root.ui?.activeView);
 		self.filterRules = cast(
 			normalizeFilterRules(rules).map((rule) =>
-				rule.environments.length > 0 || !primary
-					? rule
-					: { ...rule, environments: [{ ref: primary }] }
+				toFilterRuleRecord(
+					rule.environments.length > 0 || !primary
+						? rule
+						: { ...rule, environments: [{ ref: primary }] }
+				)
 			)
 		);
 		self.markTouched();

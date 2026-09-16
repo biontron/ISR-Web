@@ -1,4 +1,4 @@
-import { applySnapshot, getSnapshot, IAnyModelType, IStateTreeNode } from "mobx-state-tree";
+import { applySnapshot, destroy, IAnyModelType, IStateTreeNode } from "mobx-state-tree";
 import { RestRequestError } from "./api";
 import { buildRestUrl, RestUrlIds, RestUrlKind } from "./restUrlCatalog";
 import { SchemaBaseType } from "./schemaDomain";
@@ -262,8 +262,7 @@ function collectStoreIds(
 	getItemId: (item: unknown) => string = defaultRestItemId
 ): string[] {
 	try {
-		const snapshot = getSnapshot(arrayTarget) as unknown[];
-		return snapshot.map((item) => getItemId(item));
+		return Array.from(arrayTarget as unknown as Iterable<unknown>).map((item) => getItemId(item));
 	} catch {
 		return [];
 	}
@@ -324,7 +323,9 @@ export function snapshotsFromRestArray(
 	for (const item of items) {
 		const itemId = getItemId(item);
 		try {
-			validSnapshots.push(getSnapshot(modelType.create(item)));
+			const node = modelType.create(item);
+			destroy(node);
+			validSnapshots.push(item);
 		} catch (error) {
 			const message = formatLoadError(error);
 			errors.push({ objectKind, itemId, message, rawItem: item });
@@ -396,34 +397,43 @@ export function loadRestArrayIntoStore(
 		return buildReport(objectKind, options, format, restIds, collectStoreIds(arrayTarget, getItemId), errors);
 	}
 
-	const { snapshots, errors } = snapshotsFromRestArray(
-		modelType,
-		items,
-		objectKind,
-		getItemId
-	);
-
 	try {
-		applySnapshot(arrayTarget, snapshots);
+		applySnapshot(arrayTarget, items);
 		const loadedIds = collectStoreIds(arrayTarget, getItemId);
-		appendMissingStoreItems(snapshots, loadedIds, errors, objectKind, getItemId);
+		const errors: RestLoadErrorEntry[] = [];
+		appendMissingRestItems(items, items.filter((item) => loadedIds.includes(getItemId(item))), errors, objectKind, getItemId);
+		appendMissingStoreItems(items, loadedIds, errors, objectKind, getItemId);
 		return buildReport(objectKind, options, format, restIds, loadedIds, errors);
-	} catch (error) {
-		const applyError: RestLoadErrorEntry = {
+	} catch {
+		const { snapshots, errors } = snapshotsFromRestArray(
+			modelType,
+			items,
 			objectKind,
-			itemId: "-",
-			message: `applySnapshot fehlgeschlagen: ${formatLoadError(error)}`,
-		};
-		errors.push(applyError);
-		console.error(`applySnapshot für ${objectKind} fehlgeschlagen:`, error);
-		return buildReport(
-			objectKind,
-			options,
-			format,
-			restIds,
-			collectStoreIds(arrayTarget, getItemId),
-			errors
+			getItemId
 		);
+
+		try {
+			applySnapshot(arrayTarget, snapshots);
+			const loadedIds = collectStoreIds(arrayTarget, getItemId);
+			appendMissingStoreItems(snapshots, loadedIds, errors, objectKind, getItemId);
+			return buildReport(objectKind, options, format, restIds, loadedIds, errors);
+		} catch (error) {
+			const applyError: RestLoadErrorEntry = {
+				objectKind,
+				itemId: "-",
+				message: `applySnapshot fehlgeschlagen: ${formatLoadError(error)}`,
+			};
+			errors.push(applyError);
+			console.error(`applySnapshot für ${objectKind} fehlgeschlagen:`, error);
+			return buildReport(
+				objectKind,
+				options,
+				format,
+				restIds,
+				collectStoreIds(arrayTarget, getItemId),
+				errors
+			);
+		}
 	}
 }
 

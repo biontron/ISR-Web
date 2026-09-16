@@ -33,6 +33,7 @@ function asset(id: string, extras: Record<string, unknown> = {}) {
 		class: "Asset",
 		status: "untouched",
 		ownerIdRef: extras.ownerIdRef ?? null,
+		environmentId: extras.environmentId ?? "",
 		definition: {
 			storeType: "COMPONENT",
 			baseType: "COMPONENT",
@@ -82,7 +83,7 @@ describe("elementTreeNodes", () => {
 		expect(underA.map((node) => node.key)).toEqual(["g-a/device-1"]);
 	});
 
-	it("erlaubt denselben XPath-Treffer unter View und Group", () => {
+	it("hängt Assets nur über elementIdRefs, nicht über XPath", () => {
 		const device = asset("device-1");
 		const root = rootWith(
 			[
@@ -96,18 +97,18 @@ describe("elementTreeNodes", () => {
 		const tree = buildElementTreeNodes(root, {
 			id: "view1",
 			class: "View",
-			filterRules: [{ xpath: "definition/type='DEVICE'", description: "" }],
 		});
 
-		expect(collectTreeKeysForElementId(tree, "device-1")).toEqual(["device-1"]);
-		expect(tree.find((node) => treeNodeElementId(node) === "g-devices")?.isLeaf).toBe(false);
+		expect(collectTreeKeysForElementId(tree, "device-1")).toEqual([]);
+		expect(tree.map((node) => node.key)).toEqual(["g-devices"]);
+		expect(tree.find((node) => treeNodeElementId(node) === "g-devices")?.isLeaf).toBe(true);
 
 		const underGroup = buildElementTreeNodes(root, {
 			id: "g-devices",
 			class: "Group",
 			filterRules: [{ xpath: "definition/type='DEVICE'", description: "" }],
 		}, { parentKey: "g-devices", ancestorIds: new Set(["view1", "g-devices"]) });
-		expect(underGroup.map((node) => node.key)).toEqual(["g-devices/device-1"]);
+		expect(underGroup.map((node) => node.key)).toEqual([]);
 	});
 
 	it("bricht Filter-Zyklen ab und bleibt endlich", () => {
@@ -130,19 +131,19 @@ describe("elementTreeNodes", () => {
 			filterRules: [{ xpath: "class='Group'", description: "" }],
 		});
 
-		expect(tree.map((node) => node.key).sort()).toEqual(["g-a", "g-b"]);
+		expect(tree.map((node) => node.key).sort()).toEqual([]);
 		const underA = buildElementTreeNodes(root, {
 			id: "g-a",
 			class: "Group",
 			filterRules: [{ xpath: "id='g-b'", description: "" }],
 		}, { parentKey: "g-a", ancestorIds: new Set(["view1", "g-a"]) });
-		expect(underA.map((node) => node.key)).toEqual(["g-a/g-b"]);
+		expect(underA.map((node) => node.key)).toEqual([]);
 		const underBA = buildElementTreeNodes(root, {
 			id: "g-b",
 			class: "Group",
 			filterRules: [{ xpath: "id='g-a'", description: "" }],
 		}, { parentKey: "g-a/g-b", ancestorIds: new Set(["view1", "g-a", "g-b"]) });
-		expect(underBA[0]?.isLeaf).toBe(true);
+		expect(underBA).toEqual([]);
 	});
 
 	it("hängt Funktions-Components unter dem Device auf", () => {
@@ -157,6 +158,28 @@ describe("elementTreeNodes", () => {
 			class: "Asset",
 		}, { parentKey: "g-a/device-1", ancestorIds: new Set(["view1", "g-a", "device-1"]) });
 		expect(underDevice.map((node) => treeNodeElementId(node))).toEqual(["os-1"]);
+	});
+
+	it("löst elementIdRefs über environmentId", () => {
+		const office = asset("device-1", { environmentId: "office" });
+		const root = {
+			groups: {
+				groups: [
+					group("g-a", {
+						parentIdRef: "view1",
+						elementIdRefs: [{ id: "device-1", environmentId: "office" }],
+					}),
+				],
+			},
+			assets: { assets: [office] },
+			configSchemas: { schemaCompat: [] },
+		} as never;
+		const underA = buildElementTreeNodes(root, {
+			id: "g-a",
+			class: "Group",
+			elementIdRefs: [{ id: "device-1", environmentId: "office" }],
+		}, { parentKey: "g-a", ancestorIds: new Set(["view1", "g-a"]) });
+		expect(underA.map((node) => treeNodeElementId(node))).toEqual(["device-1"]);
 	});
 
 	it("fillExpandedTreeNodes lädt Device-Kinder nach einem Rebuild nach", () => {

@@ -24,8 +24,6 @@ import { resolveElementKindDisplay } from "../../../lib/elementDefinitionTypes";
 import { useLangtext } from "../../../lib/common";
 import {
 	buildTreeNodeInfoRows,
-	resolveTreeElement,
-	resolveTreeNodeDefinition,
 	resolveTreeNodeSegment,
 	treeNodeSegmentClassName,
 } from "../../../lib/treeNodeDisplay";
@@ -39,7 +37,11 @@ import {
 	setTreeNodeChildren,
 	treeNodeElementId,
 } from "../../../lib/elementTreeNodes";
-import { filterRuleExpression } from "../../../lib/filterRuleNormalize";
+import { resolveElementLiveStatus } from "../../../lib/elementLiveStatus";
+import {
+	hierarchyAssignmentEpoch,
+	hierarchyOwnerEpoch,
+} from "../../../lib/hierarchyIndex";
 import {
 	canDropAssetOnContextComponent,
 	resolveContextBind,
@@ -104,10 +106,22 @@ function elementToTreeNode(element: UnlinkedTreeElement): ITreeNode {
 	};
 }
 
-function renderTreeNodeTitle(nodeData: ITreeNode, marks?: ElementMarkFlags) {
-	const definition = resolveTreeNodeDefinition(rootStore, nodeData);
-	const treeElement = resolveTreeElement(rootStore, nodeData);
-	const iconElement = treeElement ?? nodeData;
+const TreeNodeTitle = observer(function TreeNodeTitle({
+	nodeData,
+	marks,
+}: {
+	nodeData: ITreeNode;
+	marks?: ElementMarkFlags;
+}) {
+	const [tooltipOpen, setTooltipOpen] = React.useState(false);
+	const elementId = treeNodeElementId(nodeData);
+	const status = resolveElementLiveStatus(rootStore, elementId) ?? nodeData.status;
+	const definition = {
+		baseType: nodeData.baseType,
+		type: nodeData.elementType,
+		subType: nodeData.subType,
+		storeType: nodeData.storeType,
+	};
 	const infoTitle = (
 		<>
 			{nodeData.class ?? "???"} — {nodeData.title ?? "???"}
@@ -115,93 +129,96 @@ function renderTreeNodeTitle(nodeData: ITreeNode, marks?: ElementMarkFlags) {
 			{nodeData.label ?? "—"}
 		</>
 	);
-
-	const items: DescriptionsProps["items"] = [
-		{ key: "0", label: "Umgebung", children: buildTreeNodeInfoRows(rootStore, nodeData, definition)[0]?.value ?? "—" },
-		{
-			key: "1d",
-			label: "Type",
-			children: resolveElementKindDisplay(definition, nodeData.class) || definition?.baseType || "—",
-		},
-		{
-			key: "1",
-			label: "Subtype",
-			children: definition?.type ?? "—",
-		},
-		{ key: "3", label: "Name", children: nodeData.title },
-		{ key: "4", label: "Label", children: nodeData.label ?? "—" },
-		{ key: "5", label: "Descripton", children: nodeData.description },
-		{
-			key: "6",
-			label: "ID",
-			children: <span className="element-info-id-value">{treeNodeElementId(nodeData)}</span>,
-		},
-		{ key: "7", label: "Status", children: nodeData.status },
-	];
+	const tooltipItems: DescriptionsProps["items"] = tooltipOpen
+		? [
+				{
+					key: "0",
+					label: "Umgebung",
+					children: buildTreeNodeInfoRows(rootStore, nodeData, definition)[0]?.value ?? "—",
+				},
+				{
+					key: "1d",
+					label: "Type",
+					children: resolveElementKindDisplay(definition, nodeData.class) || definition.baseType || "—",
+				},
+				{ key: "1", label: "Subtype", children: definition.type ?? "—" },
+				{ key: "3", label: "Name", children: nodeData.title },
+				{ key: "4", label: "Label", children: nodeData.label ?? "—" },
+				{ key: "5", label: "Descripton", children: nodeData.description },
+				{
+					key: "6",
+					label: "ID",
+					children: <span className="element-info-id-value">{treeNodeElementId(nodeData)}</span>,
+				},
+				{ key: "7", label: "Status", children: status },
+			]
+		: [];
 
 	const segment = resolveTreeNodeSegment(definition, nodeData.class);
-	const elementId = treeNodeElementId(nodeData);
-	const resolvedMarks = marks ?? rootStore.ui.elementMarks.get(elementId);
-	const treeNodeClasses = `${treeNodeSegmentClassName(segment)} ${nodeData?.status === "new" || nodeData?.status === "edit" || nodeData?.status === "changed" || nodeData?.status === "invalid" ? "EditMode" : ""} ${rootStore.ui.activeElement?.id === elementId ? "ActiveElement" : ""} ${resolvedMarks?.searchMatch ? "SearchMatch" : ""}`;
+	const treeNodeClasses = `${treeNodeSegmentClassName(segment)} ${status === "new" || status === "edit" || status === "changed" || status === "invalid" ? "EditMode" : ""} ${rootStore.ui.activeElement?.id === elementId ? "ActiveElement" : ""} ${marks?.searchMatch ? "SearchMatch" : ""}`;
 
 	return (
 		<span className={`element-tree-node-title ${treeNodeClasses}`}>&#160;
 			<SchemaSvgIcon
 				svgString={rootStore.configSchemas.getIconByDefinition(definition)}
-				element={iconElement}
+				element={{
+					class: nodeData.class,
+					baseType: nodeData.baseType,
+					type: nodeData.elementType,
+					subType: nodeData.subType,
+					elementType: nodeData.elementType,
+				}}
 			/>
 			<Tooltip
 				title={
-					<>
-						<div className="element-info-title">{infoTitle}</div>
-						<Descriptions className="element-info-descriptions" items={items} layout="horizontal" bordered column={1} size="small" />
-					</>
+					tooltipOpen ? (
+						<>
+							<div className="element-info-title">{infoTitle}</div>
+							<Descriptions className="element-info-descriptions" items={tooltipItems} layout="horizontal" bordered column={1} size="small" />
+						</>
+					) : ""
 				}
+				onOpenChange={setTooltipOpen}
 				getPopupContainer={() => document.body}
 			>
 				<span>&#160;{nodeData.title ?? "???"}</span>
 			</Tooltip>
 			<ElementSignalBars
 				flags={{
-					changed: elementStatusShowsIndicator(nodeData.status as never) || !!resolvedMarks?.changed,
-					positive: !!resolvedMarks?.positive,
-					negative: !!resolvedMarks?.negative,
+					changed: elementStatusShowsIndicator(status as never) || !!marks?.changed,
+					positive: !!marks?.positive,
+					negative: !!marks?.negative,
 				}}
 			/>
 		</span>
 	);
+});
+
+function renderTreeNodeTitle(nodeData: ITreeNode, marks?: ElementMarkFlags) {
+	return <TreeNodeTitle nodeData={nodeData} marks={marks} />;
 }
+
+const UNLINKED_RENDER_LIMIT = 80;
 
 const ElementHierarchyTree = observer(function ElementHierarchyTree() {
 	const view = rootStore.ui.activeView;
 	const viewId = view?.id;
-	const filterSig = view
-		? Array.from(view.filterRules ?? [])
-				.map((rule) => filterRuleExpression(rule))
-				.join("|")
-		: "";
-	const dataEpoch = `${viewId ?? ""}:${rootStore.groups.groups.length}:${rootStore.assets.assets.length}:${filterSig}`;
+	const assignmentEpoch = hierarchyAssignmentEpoch(rootStore.groups.groups);
+	const ownerEpoch = hierarchyOwnerEpoch(rootStore.assets.assets);
+	const dataEpoch = `${viewId ?? ""}:${rootStore.groups.groups.length}:${rootStore.assets.assets.length}:${assignmentEpoch}:${ownerEpoch}`;
 	const [treeData, setTreeData] = React.useState<ITreeNode[]>([]);
-	const [building, setBuilding] = React.useState(false);
 
 	React.useEffect(() => {
 		if (!view) {
 			setTreeData([]);
-			setBuilding(false);
 			return;
 		}
-		setBuilding(true);
-		const timer = window.setTimeout(() => {
-			setTreeData(buildElementTreeNodes(rootStore, view));
-			setBuilding(false);
-		}, 0);
-		return () => window.clearTimeout(timer);
+		setTreeData(buildElementTreeNodes(rootStore, view));
 	}, [dataEpoch, view]);
 
 	return (
 		<ElementHierarchyTreeView
 			treeData={treeData}
-			building={building}
 			viewId={viewId}
 			activeElementId={rootStore.ui.activeElement?.id}
 			onTreeDataChange={setTreeData}
@@ -211,13 +228,11 @@ const ElementHierarchyTree = observer(function ElementHierarchyTree() {
 
 const ElementHierarchyTreeView = observer(function ElementHierarchyTreeView({
 	treeData,
-	building,
 	viewId,
 	activeElementId,
 	onTreeDataChange,
 }: {
 	treeData: ITreeNode[];
-	building: boolean;
 	viewId?: string;
 	activeElementId?: string;
 	onTreeDataChange: React.Dispatch<React.SetStateAction<ITreeNode[]>>;
@@ -265,7 +280,7 @@ const ElementHierarchyTreeView = observer(function ElementHierarchyTreeView({
 		const dropId = treeNodeElementId(info.node);
 		const dragAsset = resolveIdentifier(AssetModel, rootStore, dragId);
 		const dropAsset = resolveIdentifier(AssetModel, rootStore, dropId);
-		const assets = rootStore.assets.assets.slice();
+		const assets = rootStore.assets.assets;
 		if (!canDropAssetOnContextComponent(dragAsset, dropAsset, assets) || !dragAsset || !dropAsset) {
 			return;
 		}
@@ -351,7 +366,7 @@ const ElementHierarchyTreeView = observer(function ElementHierarchyTreeView({
 		});
 	}
 
-	if (building) {
+	if (treeData.length === 0) {
 		return <div className="element-tree-loading">…</div>;
 	}
 
@@ -372,7 +387,7 @@ const ElementHierarchyTreeView = observer(function ElementHierarchyTreeView({
 					return canDropAssetOnContextComponent(
 						dragAsset,
 						dropAsset,
-						rootStore.assets.assets.slice()
+						rootStore.assets.assets
 					);
 				}}
 				onDrop={onDrop}
@@ -420,16 +435,19 @@ const ElementUnlinkedListView = observer(function ElementUnlinkedListView({
 	const selectedId = rootStore.ui.activeElement?.id;
 	const marks = rootStore.ui.elementMarks;
 
+	const visibleUnlinked = unlinkedElements.slice(0, UNLINKED_RENDER_LIMIT);
+
 	return (
 		<div className="element-tree-unlinked">
 			<div className="element-tree-unlinked__title">
 				{langtext("general.tree_unlinked_components")}
+				{unlinkedElements.length > 0 ? ` (${unlinkedElements.length})` : ""}
 			</div>
 			<div className="element-tree-unlinked__panel">
 				<List
 					size="small"
 					locale={{ emptyText: "—" }}
-					dataSource={unlinkedElements}
+					dataSource={visibleUnlinked}
 					renderItem={(element) => (
 						<List.Item
 							className={`element-tree-unlinked-item ${selectedId === element.id ? "element-tree-unlinked-item--selected" : ""}`}
@@ -439,6 +457,14 @@ const ElementUnlinkedListView = observer(function ElementUnlinkedListView({
 						</List.Item>
 					)}
 				/>
+				{unlinkedElements.length > UNLINKED_RENDER_LIMIT ? (
+					<div className="element-tree-unlinked__more">
+						{langtext("general.tree_unlinked_showing_limited", {
+							shown: UNLINKED_RENDER_LIMIT,
+							total: unlinkedElements.length,
+						})}
+					</div>
+				) : null}
 			</div>
 		</div>
 	);

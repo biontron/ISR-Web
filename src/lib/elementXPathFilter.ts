@@ -910,7 +910,7 @@ export function collectFilterAvailableElements(
 	return collectFilterElementPartition(root, parentId, rules).available;
 }
 
-/** XPath-Treffer, die noch nicht als statische Kinder im Tree stehen — Parent-Refs bleiben unverändert. */
+/** XPath-Treffer ohne bereits ausgeschlossene IDs — Parent-Refs bleiben unverändert. */
 export function collectFilterMatchedElementsExcluding(
 	root: Pick<IRootStore, "groups" | "assets">,
 	parentId: string,

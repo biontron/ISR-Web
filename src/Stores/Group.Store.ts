@@ -24,6 +24,7 @@ import {
 	loadRestArrayIntoStore,
 	publishRestLoadReport,
 } from "../lib/restSnapshot";
+import { restWritePayloadForGroup } from "../lib/restWritePayload";
 
 interface PendingGroupRestoreEntry {
 	snapshot: SnapshotIn<typeof GroupModel>;
@@ -146,6 +147,9 @@ export const GroupStore = types.compose("GroupStore", BaseStore, types.model({
 			try {
 				// Replace with your save logic (e.g., sending data to a server)
 				const data = self.groups.find(group => group.id === groupID);
+				if (!data) {
+					return;
+				}
 				const isCreate = isNewElementStatus(data?.status, data?.statusBeforeInvalid);
 				const url = `/${authStore.getDomain()}/views/${viewID}/groups${
 					isCreate ? "" : "/" + groupID
@@ -153,12 +157,11 @@ export const GroupStore = types.compose("GroupStore", BaseStore, types.model({
 
 				const response = yield api.request(url, {
 					method: isCreate ? "POST" : "PUT",
-					body: JSON.stringify(data),
+					body: JSON.stringify(restWritePayloadForGroup(getSnapshot(data))),
 				});
 
 				if (response.ok) {
-					// Handle success
-					data?.setStatus("untouched");
+					data.commitEdit();
 					console.log("Group saved successfully.");
 				} else {
 					const responseBody = yield response.text();
@@ -195,7 +198,6 @@ export const GroupStore = types.compose("GroupStore", BaseStore, types.model({
 			parentIdRef: parent?.id,
 			elementIdRefs: [],
 			filterRules: [],
-			docks: [],
 			attachments: [],
 			properties: {
 				responsibles: [],

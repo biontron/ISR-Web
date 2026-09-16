@@ -11,6 +11,9 @@ import {
 	UndoOutlined,
 	CodeOutlined,
 	UnorderedListOutlined,
+	NodeIndexOutlined,
+	CheckCircleOutlined,
+	CloseCircleOutlined,
 } from "@ant-design/icons";
 import { observer } from "mobx-react";
 import { rootStore } from "../../Stores/Root.Store";
@@ -28,6 +31,10 @@ import { hasJsonInspectTarget, resolveJsonInspectTarget } from "../../lib/jsonIn
 import { activityStatusOverviewUi } from "../../lib/activityStatusOverviewUi";
 import { getElementDisplayName } from "../../Interfaces/Element";
 import { buildActivityStatusBadgeCount } from "../../lib/activityStatusOverview";
+import {
+	applyAutomappingToViewGroups,
+	viewGroupsHaveActivatedFilterRules,
+} from "../../lib/elementAutomapping";
 
 const iconGroupGap: React.CSSProperties = { marginLeft: 8 };
 
@@ -85,6 +92,25 @@ const ChangeModeToolbar: React.FC = () => {
 			discardElement(rootStore, activeElement);
 		}
 	};
+
+	const handleAutomapping = () => {
+		const result = applyAutomappingToViewGroups(rootStore, rootStore.ui.activeView?.id);
+		if (result.added > 0) {
+			message.success(
+				langtext("general.assetreference_automapping_success", {
+					count: String(result.added),
+					groups: String(result.groups),
+				})
+			);
+			return;
+		}
+		message.info(langtext("general.assetreference_automapping_empty"));
+	};
+
+	const canAutomap = viewGroupsHaveActivatedFilterRules(
+		rootStore,
+		rootStore.ui.activeView?.id
+	);
 
 	const handleDelete = () => {
 		if (!activeElement) return;
@@ -214,9 +240,33 @@ const ChangeModeToolbar: React.FC = () => {
 									disabled={!elementEditable || saving || !canSaveToolbar}
 								/>
 							</Tooltip>
+							<Tooltip title={langtext("general.assetreference_automapping_tooltip")}>
+								<Button
+									icon={<NodeIndexOutlined />}
+									onClick={handleAutomapping}
+									disabled={!canAutomap}
+								/>
+							</Tooltip>
 						</Button.Group>
 					</Fragment>
 				)}
+
+				<Button.Group style={iconGroupGap}>
+					<Tooltip title={langtext("general.view_validation_positive_filter_tooltip")}>
+						<Button
+							icon={<CheckCircleOutlined />}
+							type={rootStore.ui.validationPositiveActive ? "primary" : "default"}
+							onClick={() => rootStore.ui.toggleValidationPositiveActive()}
+						/>
+					</Tooltip>
+					<Tooltip title={langtext("general.view_validation_negative_filter_tooltip")}>
+						<Button
+							icon={<CloseCircleOutlined />}
+							type={rootStore.ui.validationNegativeActive ? "primary" : "default"}
+							onClick={() => rootStore.ui.toggleValidationNegativeActive()}
+						/>
+					</Tooltip>
+				</Button.Group>
 
 				<Tooltip title={langtext("general.activity_status_overview_title")}>
 					<Badge

@@ -2,8 +2,8 @@ import { getIdentifier } from "mobx-state-tree";
 import { IAsset } from "../Stores/Models/Asset.Model";
 import { IGroup } from "../Stores/Models/Group.Model";
 import { IRootStore } from "../Stores/Root.Store";
-import { readAssetOwnerId, readGroupParentId } from "./elementAssignments";
-import { collectFilterMatchedElements } from "./elementXPathFilter";
+import { readGroupParentId } from "./elementAssignments";
+import { indexAssetsByOwnerId, indexGroupsByParentId } from "./hierarchyIndex";
 
 function resolveElementRefId(ref: { id: unknown }): string | undefined {
 	if (typeof ref.id === "string" && ref.id.trim() !== "") {
@@ -18,35 +18,38 @@ function resolveElementRefId(ref: { id: unknown }): string | undefined {
 /** Alle View-Organisationsgruppen unter einer View (rekursiv über parentIdRef). */
 export function collectViewGroupsUnderView(root: IRootStore, viewId: string): IGroup[] {
 	const groups: IGroup[] = [];
+	const childrenByParent = indexGroupsByParentId(root.groups.groups as unknown as IGroup[]);
 
-	function walk(parentId: string) {
-		for (const group of root.groups.groups) {
-			if (readGroupParentId(group) === parentId) {
-				groups.push(group);
-				walk(group.id);
-			}
+	const walk = (parentId: string) => {
+		const children = childrenByParent.get(parentId);
+		if (!children) {
+			return;
 		}
-	}
+		for (const group of children) {
+			groups.push(group);
+			walk(group.id);
+		}
+	};
 
 	walk(viewId);
 	return groups;
 }
 
 function addAssetAndOwnerDescendants(
-	root: IRootStore,
 	assetId: string,
-	linked: Set<string>
+	linked: Set<string>,
+	childrenByOwner: Map<string, IAsset[]>
 ) {
 	if (!assetId || linked.has(assetId)) {
 		return;
 	}
 	linked.add(assetId);
-	for (const asset of root.assets.assets) {
-		const ownerId =
-			typeof asset.ownerIdRef === "string" ? asset.ownerIdRef.trim() : "";
-		if (ownerId === assetId) {
-			addAssetAndOwnerDescendants(root, asset.id, linked);
-		}
+	const children = childrenByOwner.get(assetId);
+	if (!children) {
+		return;
+	}
+	for (const child of children) {
+		addAssetAndOwnerDescendants(child.id, linked, childrenByOwner);
 	}
 }
 
@@ -55,92 +58,28 @@ export function collectLinkedAssetIdsForView(root: IRootStore, viewId: string): 
 	const linked = new Set<string>();
 	const viewGroups = collectViewGroupsUnderView(root, viewId);
 	const parentIds = new Set<string>([viewId, ...viewGroups.map((group) => group.id)]);
+	const childrenByOwner = indexAssetsByOwnerId(root.assets.assets as unknown as IAsset[]);
 
 	for (const group of viewGroups) {
 		for (const ref of group.elementIdRefs) {
 			const assetId = resolveElementRefId(ref);
 			if (assetId) {
-				addAssetAndOwnerDescendants(root, assetId, linked);
+				addAssetAndOwnerDescendants(assetId, linked, childrenByOwner);
 			}
 		}
 	}
 
-	for (const asset of root.assets.assets) {
-		const ownerId =
-			typeof asset.ownerIdRef === "string" ? asset.ownerIdRef.trim() : "";
-		if (ownerId && parentIds.has(ownerId)) {
-			addAssetAndOwnerDescendants(root, asset.id, linked);
+	parentIds.forEach((parentId) => {
+		const owned = childrenByOwner.get(parentId);
+		if (!owned) {
+			return;
 		}
-	}
+		for (const asset of owned) {
+			addAssetAndOwnerDescendants(asset.id, linked, childrenByOwner);
+		}
+	});
 
 	return linked;
-}
-
-function readFilterRules(element: { filterRules?: unknown[] } | undefined): unknown[] {
-	return element?.filterRules ?? [];
-}
-
-function findView(
-	root: IRootStore,
-	viewId: string
-): { id: string; filterRules?: unknown[] } | undefined {
-	return root.views?.views?.find((view: { id: string }) => view.id === viewId);
-}
-
-/**
- * Elemente, die nur über XPath-Filter im Tree der View sichtbar sind (ohne parentIdRef/ownerIdRef).
- */
-export function collectFilterVisibleIdsForView(root: IRootStore, viewId: string): Set<string> {
-	const visible = new Set<string>();
-	const walkedParents = new Set<string>();
-
-	const addVisibleAsset = (assetId: string) => {
-		addAssetAndOwnerDescendants(root, assetId, visible);
-	};
-
-	const addVisibleGroup = (group: IGroup) => {
-		if (visible.has(group.id) && walkedParents.has(group.id)) {
-			return;
-		}
-		visible.add(group.id);
-		for (const child of root.groups.groups) {
-			if (readGroupParentId(child) === group.id) {
-				addVisibleGroup(child);
-			}
-		}
-		for (const ref of group.elementIdRefs ?? []) {
-			const assetId = resolveElementRefId(ref);
-			if (assetId) {
-				addVisibleAsset(assetId);
-			}
-		}
-		for (const asset of root.assets.assets) {
-			if (readAssetOwnerId(asset) === group.id) {
-				addVisibleAsset(asset.id);
-			}
-		}
-		walkParent(group.id, readFilterRules(group));
-	};
-
-	function walkParent(parentId: string, rules: unknown[]) {
-		if (walkedParents.has(parentId)) {
-			return;
-		}
-		walkedParents.add(parentId);
-		for (const element of collectFilterMatchedElements(root, parentId, rules)) {
-			if (element.class === "Group") {
-				addVisibleGroup(element as IGroup);
-			} else {
-				addVisibleAsset(element.id);
-			}
-		}
-	}
-
-	walkParent(viewId, readFilterRules(findView(root, viewId)));
-	for (const group of collectViewGroupsUnderView(root, viewId)) {
-		walkParent(group.id, readFilterRules(group));
-	}
-	return visible;
 }
 
 function collectKnownParentIds(root: IRootStore, viewId: string): Set<string> {
@@ -160,19 +99,17 @@ function collectKnownParentIds(root: IRootStore, viewId: string): Set<string> {
 /** Ausgehängte View-Folder (ohne gültigen Parent, nicht im Tree der aktiven View). */
 export function collectUnlinkedGroupsForView(
 	root: IRootStore,
-	viewId: string | undefined,
-	xpathVisibleIds?: Set<string>
+	viewId: string | undefined
 ): IGroup[] {
 	if (!viewId) {
 		return [];
 	}
 
 	const linkedIds = new Set(collectViewGroupsUnderView(root, viewId).map((group) => group.id));
-	const xpathVisible = xpathVisibleIds ?? collectFilterVisibleIdsForView(root, viewId);
 	const knownParents = collectKnownParentIds(root, viewId);
 
 	return root.groups.groups.filter((group) => {
-		if (linkedIds.has(group.id) || xpathVisible.has(group.id)) {
+		if (linkedIds.has(group.id)) {
 			return false;
 		}
 		const parentId = readGroupParentId(group);
@@ -186,18 +123,14 @@ export function collectUnlinkedGroupsForView(
 /** Komponenten ohne Zuordnung in der aktiven View. */
 export function collectUnlinkedAssetsForView(
 	root: IRootStore,
-	viewId: string | undefined,
-	xpathVisibleIds?: Set<string>
+	viewId: string | undefined
 ): IAsset[] {
 	if (!viewId) {
 		return [];
 	}
 
 	const linked = collectLinkedAssetIdsForView(root, viewId);
-	const xpathVisible = xpathVisibleIds ?? collectFilterVisibleIdsForView(root, viewId);
-	return root.assets.assets.filter(
-		(asset) => !linked.has(asset.id) && !xpathVisible.has(asset.id)
-	);
+	return root.assets.assets.filter((asset) => !linked.has(asset.id));
 }
 
 export type UnlinkedTreeElement = IGroup | IAsset;
@@ -207,9 +140,8 @@ export function collectUnlinkedElementsForView(
 	root: IRootStore,
 	viewId: string | undefined
 ): UnlinkedTreeElement[] {
-	const xpathVisible = viewId ? collectFilterVisibleIdsForView(root, viewId) : new Set<string>();
 	return [
-		...collectUnlinkedGroupsForView(root, viewId, xpathVisible),
-		...collectUnlinkedAssetsForView(root, viewId, xpathVisible),
+		...collectUnlinkedGroupsForView(root, viewId),
+		...collectUnlinkedAssetsForView(root, viewId),
 	];
 }

@@ -4,14 +4,12 @@
 */
 import { Instance, cast, getRoot, types } from "mobx-state-tree";
 import { IGroup } from "./Group.Model";
-import { IAsset } from "./Asset.Model";
 import ElementModel, { ElementDefinitionTagModel } from "./Element.Model";
 import { buildElementTreeNodes } from "../../lib/elementTreeNodes";
-import { collectFilterMatchedElementsExcluding } from "../../lib/elementXPathFilter";
 import { FilterRuleModel } from "./FilterRule.Model";
 import { ValidationRuleModel, ValidationRuleRecord } from "./ValidationRule.Model";
 import { xpathRuleSnapshots } from "../../lib/xpathRule";
-import { normalizeFilterRules } from "../../lib/filterRuleNormalize";
+import { normalizeFilterRules, toFilterRuleRecord } from "../../lib/filterRuleNormalize";
 import { resolvePrimaryEnvironmentRef } from "../../lib/viewEnvironments";
 
 
@@ -102,16 +100,8 @@ export const ViewModel = types.compose(
 				const groups = root.groups.groups.filter(
 					(element: IGroup) => element.parentIdRef === self.id
 				);
-				const assets = (root.assets?.assets ?? []).filter(
-					(asset: IAsset) => asset.ownerIdRef === self.id
-				);
-				const filterMatched = collectFilterMatchedElementsExcluding(
-					root,
-					self.id,
-					self.filterRules,
-					[...groups.map((element: IGroup) => element.id), ...assets.map((asset: IAsset) => asset.id)]
-				);
-				return [...groups, ...assets, ...filterMatched];
+				const assets = root.assets?.assetsByOwnerId?.get(self.id) ?? [];
+				return [...groups, ...assets];
 			},
 		}))
 ).actions((self) => ({
@@ -135,9 +125,11 @@ export const ViewModel = types.compose(
 		const primary = resolvePrimaryEnvironmentRef(root.ui?.activeView ?? self);
 		self.filterRules = cast(
 			normalizeFilterRules(rules).map((rule) =>
-				rule.environments.length > 0 || !primary
-					? rule
-					: { ...rule, environments: [{ ref: primary }] }
+				toFilterRuleRecord(
+					rule.environments.length > 0 || !primary
+						? rule
+						: { ...rule, environments: [{ ref: primary }] }
+				)
 			)
 		);
 		self.markTouched();

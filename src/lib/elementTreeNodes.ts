@@ -1,7 +1,6 @@
 import { getIdentifier } from "mobx-state-tree";
 import { ITreeNode } from "../Interfaces/Tree";
-import { collectFilterMatchedFromPool } from "./elementXPathFilter";
-import { filterRuleExpression } from "./filterRuleNormalize";
+import { indexAssetsByOwnerId, indexById, indexGroupsByParentId } from "./hierarchyIndex";
 
 type TreeDefinition = {
 	storeType?: string;
@@ -27,7 +26,7 @@ type TreeGroup = {
 	class?: string;
 	status?: string;
 	parentIdRef?: string | null;
-	elementIdRefs?: Array<{ id: unknown }>;
+	elementIdRefs?: Array<{ id: unknown; environmentId?: unknown }>;
 	filterRules?: unknown[];
 	definition?: TreeDefinition;
 };
@@ -43,18 +42,28 @@ export type TreeParentSpec = {
 	id: string;
 	class?: string;
 	filterRules?: unknown[];
-	elementIdRefs?: Array<{ id: unknown }>;
-};
-
-type FilterMatchIndex = {
-	match(parentId: string, rules: unknown[] | undefined, excludeIds: Iterable<string>): TreeAssignable[];
+	elementIdRefs?: Array<{ id: unknown; environmentId?: unknown }>;
 };
 
 type TreeBuildContext = {
 	parentKey?: string;
 	ancestorIds: ReadonlySet<string>;
-	filterIndex: FilterMatchIndex;
+	index: TreeIndex;
 };
+
+type TreeIndex = {
+	groupsByParent: Map<string, TreeGroup[]>;
+	assetsByOwner: Map<string, TreeAsset[]>;
+	assetsById: Map<string, TreeAsset>;
+};
+
+function buildTreeIndex(root: TreeRoot): TreeIndex {
+	return {
+		groupsByParent: indexGroupsByParentId(root.groups.groups),
+		assetsByOwner: indexAssetsByOwnerId(root.assets.assets),
+		assetsById: indexById(root.assets.assets),
+	};
+}
 
 export function treeNodeElementId(node: Pick<ITreeNode, "key" | "elementId">): string {
 	const elementId = node.elementId?.trim();
@@ -115,25 +124,6 @@ function uniqueKeys(keys: Iterable<string>): string[] {
 
 export { uniqueKeys as uniqueTreeKeys };
 
-function isNonEmptyId(value: unknown): value is string {
-	return typeof value === "string" && value.trim() !== "";
-}
-
-function readGroupParentId(group: Pick<TreeGroup, "parentIdRef">): string | undefined {
-	return isNonEmptyId(group.parentIdRef) ? group.parentIdRef.trim() : undefined;
-}
-
-function readAssetOwnerId(asset: Pick<TreeAsset, "ownerIdRef">): string | undefined {
-	return isNonEmptyId(asset.ownerIdRef) ? String(asset.ownerIdRef).trim() : undefined;
-}
-
-function isStaticallyUnassigned(element: TreeAssignable): boolean {
-	if (element.class === "Group") {
-		return readGroupParentId(element as TreeGroup) === undefined;
-	}
-	return readAssetOwnerId(element as TreeAsset) === undefined;
-}
-
 function resolveAssetIdFromRef(ref: { id: unknown }): string | undefined {
 	if (typeof ref.id === "string" && ref.id !== "") {
 		return ref.id;
@@ -146,73 +136,45 @@ function resolveAssetIdFromRef(ref: { id: unknown }): string | undefined {
 
 function resolveAssetFromRef(
 	ref: { id: unknown },
-	root: TreeRoot,
+	index: TreeIndex,
 	fallbackId?: string
 ): TreeAsset | undefined {
 	const assetId = resolveAssetIdFromRef(ref) || fallbackId;
 	if (!assetId) {
 		return undefined;
 	}
-	const environmentRef =
-		ref && typeof ref === "object" && "environmentRef" in ref
-			? String((ref as { environmentRef?: string }).environmentRef ?? "").trim()
+	const byId = index.assetsById.get(assetId);
+	const environmentId =
+		ref && typeof ref === "object" && "environmentId" in ref
+			? String((ref as { environmentId?: string }).environmentId ?? "").trim()
 			: "";
-	if (environmentRef) {
-		return (
-			root.assets.assets.find(
-				(asset) => asset.id === assetId && String(asset.environmentId ?? "") === environmentRef
-			) ?? root.assets.assets.find((asset) => asset.id === assetId)
-		);
+	if (environmentId && byId && String(byId.environmentId ?? "") !== environmentId) {
+		return byId;
 	}
-	return root.assets.assets.find((asset) => asset.id === assetId);
+	return byId;
 }
 
 function collectReferencedAssets(
 	parent: TreeParentSpec,
-	root: TreeRoot
+	index: TreeIndex
 ): TreeAsset[] {
 	const assetById = new Map<string, TreeAsset>();
 	const refs = parent.elementIdRefs ?? [];
-	refs.forEach((ref, index) => {
+	refs.forEach((ref, refIndex) => {
 		const fallbackId =
-			typeof refs[index]?.id === "string" ? (refs[index].id as string) : undefined;
-		const asset = resolveAssetFromRef(ref, root, fallbackId);
+			typeof refs[refIndex]?.id === "string" ? (refs[refIndex].id as string) : undefined;
+		const asset = resolveAssetFromRef(ref, index, fallbackId);
 		if (asset) {
 			assetById.set(asset.id, asset);
 		}
 	});
-	root.assets.assets.forEach((asset) => {
-		if (readAssetOwnerId(asset) === parent.id) {
+	const owned = index.assetsByOwner.get(parent.id);
+	if (owned) {
+		for (const asset of owned) {
 			assetById.set(asset.id, asset);
 		}
-	});
+	}
 	return Array.from(assetById.values());
-}
-
-function createFilterMatchIndex(root: TreeRoot): FilterMatchIndex {
-	const unassigned: TreeAssignable[] = [
-		...root.groups.groups.filter((group) => isStaticallyUnassigned(group)),
-		...root.assets.assets.filter((asset) => isStaticallyUnassigned(asset)),
-	];
-	const cache = new Map<string, TreeAssignable[]>();
-
-	return {
-		match(parentId, rules, excludeIds) {
-			const expressions = Array.from(rules ?? []).map(filterRuleExpression).filter(Boolean);
-			if (expressions.length === 0) {
-				return [];
-			}
-			const cacheKey = expressions.join("\n");
-			let matched = cache.get(cacheKey);
-			if (!matched) {
-				matched = collectFilterMatchedFromPool(unassigned as never, rules ?? []);
-				cache.set(cacheKey, matched);
-			}
-			const skip = new Set(excludeIds);
-			skip.add(parentId);
-			return matched.filter((element) => !skip.has(element.id));
-		},
-	};
 }
 
 function childTreeKey(parentKey: string | undefined, elementId: string, used: Set<string>): string {
@@ -232,68 +194,48 @@ function childTreeKey(parentKey: string | undefined, elementId: string, used: Se
 }
 
 function collectDirectChildren(
-	root: TreeRoot,
 	parent: TreeParentSpec,
-	filterIndex: FilterMatchIndex
+	index: TreeIndex
 ): Array<TreeAssignable | null> {
 	const parentClass = parent.class ?? "";
 
 	if (parentClass === "Asset") {
-		return root.assets.assets.filter((asset) => readAssetOwnerId(asset) === parent.id);
+		return index.assetsByOwner.get(parent.id) ?? [];
 	}
 
-	const groupChildren = root.groups.groups.filter(
-		(group) => readGroupParentId(group) === parent.id
-	);
+	const groupChildren = index.groupsByParent.get(parent.id) ?? [];
 	const referencedAssets =
 		parentClass === "Group" || parentClass === "View"
-			? collectReferencedAssets(parent, root)
-			: root.assets.assets.filter((asset) => readAssetOwnerId(asset) === parent.id);
+			? collectReferencedAssets(parent, index)
+			: index.assetsByOwner.get(parent.id) ?? [];
 
 	if (parentClass === "View") {
-		const staticAssets = root.assets.assets.filter(
-			(asset) => readAssetOwnerId(asset) === parent.id
-		);
-		const existingIds = [
-			...groupChildren.map((group) => group.id),
-			...staticAssets.map((asset) => asset.id),
-		];
-		const filterMatched = filterIndex.match(parent.id, parent.filterRules, existingIds);
-		return [...groupChildren, ...staticAssets, ...filterMatched];
+		const staticAssets = index.assetsByOwner.get(parent.id) ?? [];
+		return [...groupChildren, ...staticAssets];
 	}
 
-	const existingIds = [
-		...groupChildren.map((group) => group.id),
-		...referencedAssets.map((asset) => asset.id),
-	];
-	const filterMatched = filterIndex.match(parent.id, parent.filterRules, existingIds);
-	return [...groupChildren, ...referencedAssets, ...filterMatched];
+	return [...groupChildren, ...referencedAssets];
 }
 
 function elementMayHaveChildren(
-	root: TreeRoot,
 	element: TreeAssignable,
-	inCycle: boolean
+	inCycle: boolean,
+	index: TreeIndex
 ): boolean {
 	if (inCycle) {
 		return false;
 	}
 	if (element.class === "Asset") {
-		return root.assets.assets.some((asset) => readAssetOwnerId(asset) === element.id);
+		return (index.assetsByOwner.get(element.id)?.length ?? 0) > 0;
 	}
-	if (root.groups.groups.some((group) => readGroupParentId(group) === element.id)) {
+	if ((index.groupsByParent.get(element.id)?.length ?? 0) > 0) {
 		return true;
 	}
 	const refs = (element as TreeGroup).elementIdRefs ?? [];
 	if (refs.some((ref) => resolveAssetIdFromRef(ref))) {
 		return true;
 	}
-	if (root.assets.assets.some((asset) => readAssetOwnerId(asset) === element.id)) {
-		return true;
-	}
-	return Array.from((element as TreeGroup).filterRules ?? []).some(
-		(rule) => filterRuleExpression(rule) !== ""
-	);
+	return (index.assetsByOwner.get(element.id)?.length ?? 0) > 0;
 }
 
 function toTreeNode(element: TreeAssignable, key: string, isLeaf: boolean): ITreeNode {
@@ -316,12 +258,11 @@ function toTreeNode(element: TreeAssignable, key: string, isLeaf: boolean): ITre
 }
 
 function buildChildNodes(
-	root: TreeRoot,
 	parent: TreeParentSpec,
 	context: TreeBuildContext
 ): ITreeNode[] {
 	const usedKeys = new Set<string>();
-	return collectDirectChildren(root, parent, context.filterIndex).map((element, index) => {
+	return collectDirectChildren(parent, context.index).map((element, index) => {
 		if (!element) {
 			const key = childTreeKey(context.parentKey, `invalid-${index}`, usedKeys);
 			return {
@@ -340,7 +281,7 @@ function buildChildNodes(
 
 		const key = childTreeKey(context.parentKey, element.id, usedKeys);
 		const inCycle = context.ancestorIds.has(element.id);
-		return toTreeNode(element, key, !elementMayHaveChildren(root, element, inCycle));
+		return toTreeNode(element, key, !elementMayHaveChildren(element, inCycle, context.index));
 	});
 }
 
@@ -391,6 +332,7 @@ export function fillExpandedTreeNodes(
 	if (expanded.size === 0) {
 		return nodes;
 	}
+	const index = buildTreeIndex(root);
 	let tree = nodes;
 	for (let step = 0; step < 40; step += 1) {
 		const pending = findUnloadedExpandedNode(tree, expanded);
@@ -408,6 +350,7 @@ export function fillExpandedTreeNodes(
 		const children = buildElementTreeNodes(root, parent, {
 			parentKey: String(pending.key),
 			ancestorIds,
+			index,
 		});
 		tree = setTreeNodeChildren(tree, pending.key, children);
 	}
@@ -452,13 +395,13 @@ export function resolveTreeParentSpec(
 export function buildElementTreeNodes(
 	root: TreeRoot,
 	parent: TreeParentSpec,
-	context?: Partial<Omit<TreeBuildContext, "filterIndex">> & { filterIndex?: FilterMatchIndex }
+	context?: Partial<TreeBuildContext>
 ): ITreeNode[] {
 	const ancestorIds = context?.ancestorIds ?? new Set([parent.id]);
-	const filterIndex = context?.filterIndex ?? createFilterMatchIndex(root);
-	return buildChildNodes(root, parent, {
+	const index = context?.index ?? buildTreeIndex(root);
+	return buildChildNodes(parent, {
 		parentKey: context?.parentKey,
 		ancestorIds,
-		filterIndex,
+		index,
 	});
 }

@@ -78,7 +78,7 @@ describe("treeUnlinkedAssets", () => {
 		]);
 	});
 
-	it("XPath-Treffer sind im Tree sichtbar und nicht unverknüpft, ohne Parent-Ref", () => {
+	it("XPath-Treffer ohne elementIdRefs bleiben unverknüpft", () => {
 		const xpathRoot = {
 			views: {
 				views: [{ id: "view1", filterRules: [{ xpath: "definition/type='DEVICE'", description: "Geräte" }] }],
@@ -133,6 +133,8 @@ describe("treeUnlinkedAssets", () => {
 			},
 		} as any;
 		expect(collectUnlinkedElementsForView(xpathRoot, "view1").map((item) => item.id)).toEqual([
+			"g-xpath",
+			"a-xpath",
 			"a-other",
 		]);
 		expect(xpathRoot.assets.assets[0].ownerIdRef).toBe(null);
