@@ -6,7 +6,8 @@
 */
 
 import { Button } from "antd";
-import { useCallback, useEffect, useRef, useState, Fragment } from "react";
+import { useCallback, useEffect, useLayoutEffect, useRef, useState, Fragment } from "react";
+import { createPortal } from "react-dom";
 import { observer } from "mobx-react";
 import { rootStore } from "../../../Stores/Root.Store";
 import authStore from "../../../Stores/Auth.Store";
@@ -43,6 +44,8 @@ import {
 	hierarchyOwnerEpoch,
 	hierarchyStatusEpoch,
 } from "../../../lib/hierarchyIndex";
+import { placeFixedHoverOverlay, resolveGraphNodeHoverFields } from "../../../lib/graphNodeHover";
+import { ElementDefinitionHoverContent } from "../../../Components/Schema/ElementDefinitionHoverTooltip";
 
 function getNodeIdFromDatum(d: unknown): string | undefined {
 	if (typeof d === "string") return d;
@@ -67,7 +70,8 @@ const GRAPH_INLINE_STYLE = `
 	svg .node.graph-overview-rank-dummy { display: none; }
 	svg foreignObject { overflow: visible; }
 	svg .edgeLabel { pointer-events: all; }
-	.graph-node-shell { position: relative; display: inline-block; padding-right: 22px; text-align: left; }
+	.graph-node-shell { position: relative; display: inline-block; padding-right: 22px; text-align: left; overflow: visible; }
+	g.cluster, g.node { overflow: visible; }
 	g.graph-device-shell > g.label .graph-node-shell {
 		width: auto;
 		max-width: 100%;
@@ -81,37 +85,6 @@ const GRAPH_INLINE_STYLE = `
 	g.graph-nested-component > g.label .graph-node-shell {
 		width: auto;
 		text-align: left;
-	}
-	.graph-node-tooltip {
-		display: none;
-		position: absolute;
-		left: 0;
-		bottom: calc(100% + 8px);
-		z-index: 20;
-		min-width: 240px;
-		max-width: 360px;
-		padding: 8px 10px;
-		background: #fff;
-		border: 1px solid #d9d9d9;
-		border-radius: 6px;
-		box-shadow: 0 4px 12px rgba(0, 0, 0, 0.12);
-		pointer-events: none;
-		text-align: left;
-		white-space: normal;
-	}
-	.graph-node-shell:hover .graph-node-tooltip { display: block; }
-	.graph-node-tooltip__title { font-weight: 600; margin-bottom: 6px; }
-	.graph-node-tooltip__table { width: 100%; border-collapse: collapse; font-size: 12px; }
-	.graph-node-tooltip__table th,
-	.graph-node-tooltip__table td {
-		border: 1px solid #f0f0f0;
-		padding: 2px 6px;
-		vertical-align: top;
-	}
-	.graph-node-tooltip__table th {
-		width: 34%;
-		background: #fafafa;
-		font-weight: 600;
 	}
 	.graph-canvas__viewport { overflow: auto; width: 100%; min-height: 320px; min-width: 0; }
 	.graph-canvas__svg { display: block; min-width: 100%; }
@@ -196,6 +169,90 @@ function bindEdgeOpenConnection(
 	});
 }
 
+type GraphNodeHoverState = {
+	nodeId: string;
+	rect: DOMRect;
+};
+
+const GRAPH_HOVER_DELAY_MS = 200;
+const GRAPH_HOVER_ESTIMATE = { width: 320, height: 280 };
+
+function bindNodeHover(
+	svg: Selection<SVGSVGElement, unknown, null, undefined>,
+	onHover: (next: GraphNodeHoverState | null) => void
+) {
+	let hoverTimer: number | undefined;
+	const shells = svg.selectAll<HTMLElement, unknown>("g.cluster .graph-node-shell, g.node .graph-node-shell");
+	shells.on("mouseenter.hover", function (event: Event) {
+		window.clearTimeout(hoverTimer);
+		const closest = (event.currentTarget as Element).closest("g.node, g.cluster");
+		if (!closest) {
+			return;
+		}
+		const nodeId = getNodeIdFromDatum(select(closest).datum());
+		const rect = (event.currentTarget as Element).getBoundingClientRect();
+		if (!nodeId) {
+			return;
+		}
+		hoverTimer = window.setTimeout(() => {
+			onHover({ nodeId, rect });
+		}, GRAPH_HOVER_DELAY_MS);
+	});
+	shells.on("mouseleave.hover", function (event: Event) {
+		const related = event instanceof MouseEvent ? event.relatedTarget : null;
+		const relatedEl = related instanceof Element ? related : related instanceof Node ? related.parentElement : null;
+		if (relatedEl?.closest(".graph-node-shell") && svg.node()?.contains(relatedEl.closest(".graph-node-shell"))) {
+			return;
+		}
+		window.clearTimeout(hoverTimer);
+		onHover(null);
+	});
+	return () => window.clearTimeout(hoverTimer);
+}
+
+function GraphNodeHoverOverlay({ hover }: { hover: GraphNodeHoverState | null }) {
+	const overlayRef = useRef<HTMLDivElement>(null);
+	const fields = hover ? resolveGraphNodeHoverFields(rootStore, hover.nodeId) : undefined;
+	const estimate = hover
+		? placeFixedHoverOverlay({
+				anchor: hover.rect,
+				overlay: GRAPH_HOVER_ESTIMATE,
+				viewport: { width: window.innerWidth, height: window.innerHeight },
+			})
+		: { left: 0, top: 0 };
+
+	useLayoutEffect(() => {
+		const el = overlayRef.current;
+		if (!el || !hover) {
+			return;
+		}
+		const box = el.getBoundingClientRect();
+		const next = placeFixedHoverOverlay({
+			anchor: hover.rect,
+			overlay: { width: box.width, height: box.height },
+			viewport: { width: window.innerWidth, height: window.innerHeight },
+		});
+		el.style.left = `${next.left}px`;
+		el.style.top = `${next.top}px`;
+		el.style.visibility = "visible";
+	}, [hover]);
+
+	if (!hover || !fields) {
+		return null;
+	}
+
+	return createPortal(
+		<div
+			ref={overlayRef}
+			className="graph-hover-overlay"
+			style={{ left: estimate.left, top: estimate.top, visibility: "hidden" }}
+		>
+			<ElementDefinitionHoverContent fields={fields} />
+		</div>,
+		document.body
+	);
+}
+
 type GraphCanvasProps = {
 	element: ActiveElement;
 	layout: GraphRenderOptions;
@@ -225,6 +282,10 @@ const GraphCanvas = observer(
 		const graphContainer = useRef<SVGSVGElement>(null);
 		const navigate = useNavigate();
 		const [connectionDialogId, setConnectionDialogId] = useState<string | null>(null);
+		const [nodeHover, setNodeHover] = useState<GraphNodeHoverState | null>(null);
+		const setNodeHoverRef = useRef(setNodeHover);
+		setNodeHoverRef.current = setNodeHover;
+		const clearHoverTimer = useRef<() => void>(() => undefined);
 		const assetCount = rootStore.assets.assets.length;
 		const groupCount = rootStore.groups.groups.length;
 		const connectionCount = rootStore.connections.connections.length;
@@ -238,6 +299,7 @@ const GraphCanvas = observer(
 			}
 			void rootStore.ui.elementMarks;
 
+			try {
 			const graphRoot = element as TreeElement;
 			const graphConfig = resolveGraphConfigForView(view.settings);
 			const g = new dagreD3.graphlib.Graph({ compound: true, directed: true });
@@ -267,6 +329,9 @@ const GraphCanvas = observer(
 				.style("stroke-opacity", String(resolveEdgeStyle(graphConfig).lineOpacity ?? 0.7));
 			bindNodeNavigation(svg, navigate);
 			bindEdgeOpenConnection(svg, setConnectionDialogId);
+			clearHoverTimer.current();
+			clearHoverTimer.current = bindNodeHover(svg, (next) => setNodeHoverRef.current(next));
+			setNodeHoverRef.current(null);
 
 			const viewportWidth =
 				graphContainer.current.parentElement?.clientWidth ?? 0;
@@ -283,6 +348,9 @@ const GraphCanvas = observer(
 			const inner = graphContainer.current.querySelector("g");
 			if (inner) {
 				inner.setAttribute("transform", `translate(0,0) scale(${zoomLevel})`);
+			}
+			} catch (error) {
+				console.error("Graph-Render fehlgeschlagen", error);
 			}
 		}, [
 			element,
@@ -306,11 +374,21 @@ const GraphCanvas = observer(
 			const timer = window.setTimeout(() => {
 				renderGraph();
 			}, 32);
+			const viewport = graphContainer.current?.parentElement;
+			const hideHover = () => setNodeHover(null);
+			viewport?.addEventListener("scroll", hideHover);
+			window.addEventListener("resize", hideHover);
 			return () => {
 				window.clearTimeout(timer);
+				clearHoverTimer.current();
+				viewport?.removeEventListener("scroll", hideHover);
+				window.removeEventListener("resize", hideHover);
 				if (graphContainer.current) {
-					select(graphContainer.current).selectAll("g.node, g.cluster, g.edgePath").on("click", null);
+					const svg = select(graphContainer.current);
+					svg.selectAll("g.node, g.cluster, g.edgePath").on("click", null);
+					svg.selectAll(".graph-node-shell").on("mouseenter.hover", null).on("mouseleave.hover", null);
 				}
+				setNodeHover(null);
 			};
 		}, [renderGraph]);
 
@@ -321,6 +399,7 @@ const GraphCanvas = observer(
 						<style>{GRAPH_INLINE_STYLE}</style>
 					</svg>
 				</div>
+				<GraphNodeHoverOverlay hover={nodeHover} />
 				<ConnectionDialog connectionId={connectionDialogId} onClose={() => setConnectionDialogId(null)} />
 			</div>
 		);

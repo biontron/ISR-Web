@@ -24,7 +24,6 @@ import {
 	readElementGraphPosition,
 	resolveGraphStyle,
 } from "./graphElementStyle";
-import { buildGraphNodeHoverHtml } from "./treeNodeDisplay";
 import { buildElementSignalBarsHtml } from "./elementSignalBars";
 import { elementStatusShowsIndicator } from "./elementStatusStyle";
 import { IAsset } from "../Stores/Models/Asset.Model";
@@ -74,7 +73,6 @@ function buildNodeLabel(
 		: node.class === "Asset" || node.class === "AssetDetails"
 			? `${node.definition.name}<br/>${"label" in node.definition ? node.definition.label : ""}<br/><${typeLabel}>`
 			: node.definition.name;
-	const hoverHtml = buildGraphNodeHoverHtml(rootStore, node);
 	const marks = rootStore.ui.elementMarks.get(node.id);
 	const signalBars = buildElementSignalBarsHtml(
 		{
@@ -106,7 +104,6 @@ function buildNodeLabel(
 				</span>
 			</div>
 			${circlesHtml}
-			${hoverHtml}
 		</div>`;
 }
 
@@ -274,6 +271,8 @@ export function addTreeNodesToGraph(
 		if (currentDepth >= maxDepth || !g.hasNode(node.id)) {
 			return;
 		}
+		const structure: GraphWalkItem[] = [];
+		const members: GraphWalkItem[] = [];
 		for (const child of children) {
 			if (!child || !(child as TreeElement).definition) {
 				continue;
@@ -282,8 +281,14 @@ export function addTreeNodesToGraph(
 			if (node.class === "Asset" && isAssetStackChildOf(node, treeChild)) {
 				continue;
 			}
-			queue.push({ node: treeChild, currentDepth: currentDepth + 1, parentId: node.id });
+			const item = { node: treeChild, currentDepth: currentDepth + 1, parentId: node.id };
+			if (treeChild.class === "View" || treeChild.class === "Group") {
+				structure.push(item);
+			} else {
+				members.push(item);
+			}
 		}
+		queue.push(...structure, ...members);
 	}
 
 	function processNode(node: TreeElement, currentDepth: number, parentId: string) {

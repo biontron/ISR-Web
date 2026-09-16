@@ -118,6 +118,81 @@ export function collectTreeRevealKeys(nodes: ITreeNode[], elementId?: string): s
 	return Array.from(new Set(firstLevel.concat(collectAncestorKeysForElement(nodes, elementId))));
 }
 
+function expandKeysFromIdPath(path: string[]): string[] {
+	if (path.length < 2) {
+		return [];
+	}
+	const keys: string[] = [];
+	let key = path[0];
+	keys.push(key);
+	for (let index = 1; index < path.length - 1; index += 1) {
+		key = `${key}/${path[index]}`;
+		keys.push(key);
+	}
+	return keys;
+}
+
+/**
+ * Expand-Keys für den Pfad View → Element, auch wenn der Tree die Kinder noch nicht geladen hat.
+ */
+export function collectTreeExpandKeysForElement(
+	root: TreeRoot,
+	viewId: string,
+	elementId: string
+): string[] {
+	if (!viewId || !elementId || viewId === elementId) {
+		return [];
+	}
+	const groupsById = indexById(root.groups.groups);
+	const assetsById = indexById(root.assets.assets);
+	const paths: string[][] = [];
+
+	const walk = (id: string, upward: string[]) => {
+		if (upward.includes(id)) {
+			return;
+		}
+		const next = [...upward, id];
+		if (id === viewId) {
+			const fromView = next.slice(0, -1).reverse();
+			if (fromView.length > 0) {
+				paths.push(fromView);
+			}
+			return;
+		}
+		const group = groupsById.get(id);
+		if (group) {
+			const parentId = typeof group.parentIdRef === "string" ? group.parentIdRef.trim() : "";
+			if (!parentId) {
+				return;
+			}
+			walk(parentId, next);
+			return;
+		}
+		const asset = assetsById.get(id);
+		if (!asset) {
+			return;
+		}
+		const ownerId = typeof asset.ownerIdRef === "string" ? asset.ownerIdRef.trim() : "";
+		if (ownerId) {
+			walk(ownerId, next);
+			return;
+		}
+		for (const groupItem of root.groups.groups) {
+			const refs = groupItem.elementIdRefs ?? [];
+			if (refs.some((ref) => resolveAssetIdFromRef(ref) === id)) {
+				walk(groupItem.id, next);
+			}
+		}
+	};
+
+	walk(elementId, []);
+	const keys: string[] = [];
+	for (const path of paths) {
+		keys.push(...expandKeysFromIdPath(path));
+	}
+	return uniqueKeys(keys);
+}
+
 function uniqueKeys(keys: Iterable<string>): string[] {
 	return Array.from(new Set(Array.from(keys)));
 }

@@ -29,6 +29,7 @@ import {
 	assignmentKey,
 	collectAssignedElements,
 	collectUnassignedElements,
+	findElementIdRefForAsset,
 	readXPathExpression,
 	removeXPathFilterRule,
 	unassignElementFromParent,
@@ -44,6 +45,11 @@ import {
 	collectViewGroupsUnderView,
 } from "../../../../lib/treeUnlinkedAssets";
 import { readEnvironmentId } from "../../../../lib/environmentIdentity";
+import ElementDefinitionHoverTooltip from "../../ElementDefinitionHoverTooltip";
+import {
+	hoverFieldsFromElementIdRef,
+	hoverFieldsFromLiveElement,
+} from "../../../../lib/elementDefinitionHover";
 
 type MappingParent = IView | IGroup | IAsset;
 
@@ -394,22 +400,41 @@ const AssetReferenceMapping: React.FC<{ element: ActiveElement }> = observer(({ 
 		return ` · ${environment ? environmentDisplayName(environment) : environmentId}`;
 	};
 
+	const hoverFieldsForItem = (item: AssignableTreeElement, fromAssigned: boolean) => {
+		if (fromAssigned && item.class === "Asset" && "elementIdRefs" in mappingParent) {
+			const ref = findElementIdRefForAsset(mappingParent.elementIdRefs, item as IAsset);
+			if (ref) {
+				return hoverFieldsFromElementIdRef(ref);
+			}
+		}
+		const environmentId = item.class === "Asset" ? readEnvironmentId(item as IAsset) : "";
+		const environment = environmentId
+			? rootStore.environments.findById(environmentId)
+			: undefined;
+		return hoverFieldsFromLiveElement(item, {
+			environment: environment ? environmentDisplayName(environment) : undefined,
+		});
+	};
+
 	const renderElementRow = (
 		item: AssignableTreeElement,
 		selectedIds?: string[],
-		onToggle?: (id: string, checked: boolean) => void
+		onToggle?: (id: string, checked: boolean) => void,
+		fromAssigned = false
 	) => {
 		const key = assignmentKey(item);
 		const label = (
-			<>
-				<SchemaSvgIcon
-					svgString={rootStore.configSchemas.getIconByDefinition(item.definition)}
-					element={item}
-				/>
-				{item.definition.name}
-				{item.class === "Group" ? " (View-Gruppe)" : " (Asset)"}
-				{environmentLabel(item)}
-			</>
+			<ElementDefinitionHoverTooltip fields={hoverFieldsForItem(item, fromAssigned)}>
+				<>
+					<SchemaSvgIcon
+						svgString={rootStore.configSchemas.getIconByDefinition(item.definition)}
+						element={item}
+					/>
+					{item.definition.name}
+					{item.class === "Group" ? " (View-Gruppe)" : " (Asset)"}
+					{environmentLabel(item)}
+				</>
+			</ElementDefinitionHoverTooltip>
 		);
 
 		if (!onToggle || !selectedIds) {
@@ -449,7 +474,7 @@ const AssetReferenceMapping: React.FC<{ element: ActiveElement }> = observer(({ 
 					dataSource={leftItems}
 					locale={{ emptyText: <Empty description={leftTitle} /> }}
 					renderItem={(item) =>
-						renderElementRow(item, options?.leftSelectedIds, options?.onToggleLeft)
+						renderElementRow(item, options?.leftSelectedIds, options?.onToggleLeft, true)
 					}
 					style={{ maxHeight: 280, overflowY: "auto" }}
 				/>

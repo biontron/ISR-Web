@@ -2,7 +2,7 @@
 # Infrastructure Repository (ISR) / Infrastruktur Repository (ISR)
 # SPDX-License-Identifier: GPL-2.0 
 */
-import { Select, Button, Col, Row, Space, Tree, List, message } from "antd";
+import { Select, Button, Col, Row, Space, Tree, message } from "antd";
 import { observer } from "mobx-react";
 import { resolveIdentifier } from "mobx-state-tree";
 import { useNavigate } from "react-router-dom";
@@ -18,24 +18,27 @@ import ElementStatusDot from "../../../Components/ChangeMode/ElementStatusDot";
 import ElementSignalBars from "../../../Components/ChangeMode/ElementSignalBars";
 import { elementStatusShowsIndicator } from "../../../lib/elementStatusStyle";
 import type { ElementMarkFlags } from "../../../lib/elementXPathValidation";
-import { Tooltip, Descriptions, DescriptionsProps } from "antd";
 import { VerticalAlignBottomOutlined } from "@ant-design/icons";
-import { resolveElementKindDisplay } from "../../../lib/elementDefinitionTypes";
 import { useLangtext } from "../../../lib/common";
 import {
 	buildTreeNodeInfoRows,
 	resolveTreeNodeSegment,
 	treeNodeSegmentClassName,
 } from "../../../lib/treeNodeDisplay";
-import { collectUnlinkedElementsForView, UnlinkedTreeElement } from "../../../lib/treeUnlinkedAssets";
+import ElementDefinitionHoverTooltip from "../../../Components/Schema/ElementDefinitionHoverTooltip";
+import { hoverFieldsFromLiveElement } from "../../../lib/elementDefinitionHover";
+import { collectUnlinkedElementForestForView, countUnlinkedElementNodes, UnlinkedElementNode, UnlinkedTreeElement } from "../../../lib/treeUnlinkedAssets";
 import {
 	ancestorIdsFromTreeKey,
 	buildElementTreeNodes,
+	collectAncestorKeysForElement,
+	collectTreeExpandKeysForElement,
 	collectTreeKeysForElementId,
 	fillExpandedTreeNodes,
 	resolveTreeParentSpec,
 	setTreeNodeChildren,
 	treeNodeElementId,
+	uniqueTreeKeys,
 } from "../../../lib/elementTreeNodes";
 import { resolveElementLiveStatus } from "../../../lib/elementLiveStatus";
 import {
@@ -62,6 +65,12 @@ function viewIdFromSelectValue(val: unknown): string | undefined {
 
 function navigateToElement(navigate: ReturnType<typeof useNavigate>, elementId: string) {
 	navigate(`/${authStore.getDomain()}/am/${rootStore.ui.activeView?.id}/element/${elementId}`);
+}
+
+function scrollSelectedTreeNodeIntoView() {
+	document
+		.querySelector(".element-tree-hierarchy .ant-tree-node-selected")
+		?.scrollIntoView({ block: "nearest", inline: "nearest" });
 }
 
 function flattenVisibleTreeNodes(nodes: ITreeNode[], expandedKeys: React.Key[]): ITreeNode[] {
@@ -106,6 +115,43 @@ function elementToTreeNode(element: UnlinkedTreeElement): ITreeNode {
 	};
 }
 
+function unlinkedForestToTreeNodes(nodes: UnlinkedElementNode[]): ITreeNode[] {
+	return nodes.map((node) => {
+		const children = unlinkedForestToTreeNodes(node.children);
+		return {
+			...elementToTreeNode(node.element),
+			children,
+			isLeaf: children.length === 0,
+		};
+	});
+}
+
+function collectExpandableUnlinkedKeys(nodes: ITreeNode[]): React.Key[] {
+	const keys: React.Key[] = [];
+	const walk = (list: ITreeNode[]) => {
+		for (const node of list) {
+			if (node.children?.length) {
+				keys.push(node.key);
+				walk(node.children);
+			}
+		}
+	};
+	walk(nodes);
+	return keys;
+}
+
+function suppressNativeTreeTitle(node: HTMLElement | null) {
+	if (!node) {
+		return;
+	}
+	node.removeAttribute("title");
+	node.closest(".ant-tree-title")?.removeAttribute("title");
+	node.closest(".ant-tree-node-content-wrapper")?.removeAttribute("title");
+	node.querySelectorAll(".ant-tree-title[title], .ant-tree-node-content-wrapper[title]").forEach((el) => {
+		el.removeAttribute("title");
+	});
+}
+
 const TreeNodeTitle = observer(function TreeNodeTitle({
 	nodeData,
 	marks,
@@ -113,7 +159,7 @@ const TreeNodeTitle = observer(function TreeNodeTitle({
 	nodeData: ITreeNode;
 	marks?: ElementMarkFlags;
 }) {
-	const [tooltipOpen, setTooltipOpen] = React.useState(false);
+	const hoverTargetRef = React.useRef<HTMLSpanElement>(null);
 	const elementId = treeNodeElementId(nodeData);
 	const status = resolveElementLiveStatus(rootStore, elementId) ?? nodeData.status;
 	const definition = {
@@ -122,75 +168,59 @@ const TreeNodeTitle = observer(function TreeNodeTitle({
 		subType: nodeData.subType,
 		storeType: nodeData.storeType,
 	};
-	const infoTitle = (
-		<>
-			{nodeData.class ?? "???"} — {nodeData.title ?? "???"}
-			<br />
-			{nodeData.label ?? "—"}
-		</>
+	const environment = buildTreeNodeInfoRows(rootStore, nodeData, definition)[0]?.value;
+	const displayName = typeof nodeData.title === "string" ? nodeData.title : "";
+	const hoverFields = hoverFieldsFromLiveElement(
+		{
+			id: elementId,
+			class: nodeData.class,
+			status,
+			definition: {
+				baseType: nodeData.baseType,
+				type: nodeData.elementType,
+				subType: nodeData.subType,
+				name: displayName,
+				label: nodeData.label,
+				description: nodeData.description,
+			},
+		},
+		{ environment: environment && environment !== "—" ? environment : undefined }
 	);
-	const tooltipItems: DescriptionsProps["items"] = tooltipOpen
-		? [
-				{
-					key: "0",
-					label: "Umgebung",
-					children: buildTreeNodeInfoRows(rootStore, nodeData, definition)[0]?.value ?? "—",
-				},
-				{
-					key: "1d",
-					label: "Type",
-					children: resolveElementKindDisplay(definition, nodeData.class) || definition.baseType || "—",
-				},
-				{ key: "1", label: "Subtype", children: definition.type ?? "—" },
-				{ key: "3", label: "Name", children: nodeData.title },
-				{ key: "4", label: "Label", children: nodeData.label ?? "—" },
-				{ key: "5", label: "Descripton", children: nodeData.description },
-				{
-					key: "6",
-					label: "ID",
-					children: <span className="element-info-id-value">{treeNodeElementId(nodeData)}</span>,
-				},
-				{ key: "7", label: "Status", children: status },
-			]
-		: [];
+
+	React.useLayoutEffect(() => {
+		suppressNativeTreeTitle(hoverTargetRef.current);
+	});
 
 	const segment = resolveTreeNodeSegment(definition, nodeData.class);
 	const treeNodeClasses = `${treeNodeSegmentClassName(segment)} ${status === "new" || status === "edit" || status === "changed" || status === "invalid" ? "EditMode" : ""} ${rootStore.ui.activeElement?.id === elementId ? "ActiveElement" : ""} ${marks?.searchMatch ? "SearchMatch" : ""}`;
 
 	return (
-		<span className={`element-tree-node-title ${treeNodeClasses}`}>&#160;
-			<SchemaSvgIcon
-				svgString={rootStore.configSchemas.getIconByDefinition(definition)}
-				element={{
-					class: nodeData.class,
-					baseType: nodeData.baseType,
-					type: nodeData.elementType,
-					subType: nodeData.subType,
-					elementType: nodeData.elementType,
-				}}
-			/>
-			<Tooltip
-				title={
-					tooltipOpen ? (
-						<>
-							<div className="element-info-title">{infoTitle}</div>
-							<Descriptions className="element-info-descriptions" items={tooltipItems} layout="horizontal" bordered column={1} size="small" />
-						</>
-					) : ""
-				}
-				onOpenChange={setTooltipOpen}
-				getPopupContainer={() => document.body}
+		<ElementDefinitionHoverTooltip fields={hoverFields}>
+			<span
+				ref={hoverTargetRef}
+				className={`element-tree-node-title ${treeNodeClasses}`}
 			>
-				<span>&#160;{nodeData.title ?? "???"}</span>
-			</Tooltip>
-			<ElementSignalBars
-				flags={{
-					changed: elementStatusShowsIndicator(status as never) || !!marks?.changed,
-					positive: !!marks?.positive,
-					negative: !!marks?.negative,
-				}}
-			/>
-		</span>
+				&#160;
+				<SchemaSvgIcon
+					svgString={rootStore.configSchemas.getIconByDefinition(definition)}
+					element={{
+						class: nodeData.class,
+						baseType: nodeData.baseType,
+						type: nodeData.elementType,
+						subType: nodeData.subType,
+						elementType: nodeData.elementType,
+					}}
+				/>
+				<span>&#160;{displayName || "???"}</span>
+				<ElementSignalBars
+					flags={{
+						changed: elementStatusShowsIndicator(status as never) || !!marks?.changed,
+						positive: !!marks?.positive,
+						negative: !!marks?.negative,
+					}}
+				/>
+			</span>
+		</ElementDefinitionHoverTooltip>
 	);
 });
 
@@ -260,6 +290,30 @@ const ElementHierarchyTreeView = observer(function ElementHierarchyTreeView({
 			onTreeDataChange(filled);
 		}
 	}, [treeData, expandedKeys, viewId, onTreeDataChange]);
+
+	React.useEffect(() => {
+		if (!viewId || !activeElementId || treeData.length === 0 || activeElementId === viewId) {
+			return;
+		}
+		const needed = uniqueTreeKeys([
+			...collectAncestorKeysForElement(treeData, activeElementId),
+			...collectTreeExpandKeysForElement(rootStore, viewId, activeElementId),
+		]);
+		if (needed.length > 0) {
+			setExpandedKeys((current) => {
+				const have = new Set(current.map(String));
+				if (needed.every((key) => have.has(key))) {
+					return current;
+				}
+				return uniqueTreeKeys([...current.map(String), ...needed]);
+			});
+		}
+		if (collectTreeKeysForElementId(treeData, activeElementId).length === 0) {
+			return;
+		}
+		const frame = window.requestAnimationFrame(scrollSelectedTreeNodeIntoView);
+		return () => window.cancelAnimationFrame(frame);
+	}, [activeElementId, treeData, viewId]);
 
 	function activateTreeNode(node: ITreeNode) {
 		const elementId = treeNodeElementId(node);
@@ -334,10 +388,7 @@ const ElementHierarchyTreeView = observer(function ElementHierarchyTreeView({
 			}
 			event.preventDefault();
 			activateTreeNode(visible[nextIndex]);
-			window.requestAnimationFrame(() => {
-				document.querySelector(".element-tree-hierarchy .ant-tree-node-selected")
-					?.scrollIntoView({ block: "nearest" });
-			});
+			window.requestAnimationFrame(scrollSelectedTreeNodeIntoView);
 		};
 		window.addEventListener("keydown", handleTreeKeys);
 		return () => window.removeEventListener("keydown", handleTreeKeys);
@@ -398,6 +449,9 @@ const ElementHierarchyTreeView = observer(function ElementHierarchyTreeView({
 				onExpand={(keys) => setExpandedKeys(keys)}
 				loadData={loadChildren}
 				onSelect={onSelect}
+				onMouseEnter={({ event }) => {
+					suppressNativeTreeTitle(event.currentTarget as HTMLElement);
+				}}
 				titleRender={(node) =>
 					renderTreeNodeTitle(node, marks?.get(treeNodeElementId(node)))
 				}
@@ -409,59 +463,87 @@ const ElementHierarchyTreeView = observer(function ElementHierarchyTreeView({
 
 const ElementUnlinkedList = observer(function ElementUnlinkedList() {
 	const viewId = rootStore.ui.activeView?.id;
-	const [unlinkedElements, setUnlinkedElements] = React.useState<UnlinkedTreeElement[]>([]);
+	const [unlinkedForest, setUnlinkedForest] = React.useState<UnlinkedElementNode[]>([]);
 
 	React.useEffect(() => {
 		if (!viewId) {
-			setUnlinkedElements([]);
+			setUnlinkedForest([]);
 			return;
 		}
 		const timer = window.setTimeout(() => {
-			setUnlinkedElements(collectUnlinkedElementsForView(rootStore, viewId));
+			setUnlinkedForest(collectUnlinkedElementForestForView(rootStore, viewId));
 		}, 0);
 		return () => window.clearTimeout(timer);
 	}, [viewId, rootStore.groups.groups.length, rootStore.assets.assets.length]);
 
-	return <ElementUnlinkedListView unlinkedElements={unlinkedElements} />;
+	return <ElementUnlinkedListView unlinkedForest={unlinkedForest} />;
 });
 
 const ElementUnlinkedListView = observer(function ElementUnlinkedListView({
-	unlinkedElements,
+	unlinkedForest,
 }: {
-	unlinkedElements: UnlinkedTreeElement[];
+	unlinkedForest: UnlinkedElementNode[];
 }) {
 	const langtext = useLangtext();
 	const navigate = useNavigate();
 	const selectedId = rootStore.ui.activeElement?.id;
 	const marks = rootStore.ui.elementMarks;
+	const totalUnlinked = countUnlinkedElementNodes(unlinkedForest);
+	const treeData = React.useMemo(
+		() => unlinkedForestToTreeNodes(unlinkedForest.slice(0, UNLINKED_RENDER_LIMIT)),
+		[unlinkedForest]
+	);
+	const [expandedKeys, setExpandedKeys] = React.useState<React.Key[]>([]);
 
-	const visibleUnlinked = unlinkedElements.slice(0, UNLINKED_RENDER_LIMIT);
+	React.useEffect(() => {
+		setExpandedKeys(collectExpandableUnlinkedKeys(treeData));
+	}, [treeData]);
+
+	React.useEffect(() => {
+		if (!selectedId) {
+			return;
+		}
+		const frame = window.requestAnimationFrame(() => {
+			document
+				.querySelector(".element-tree-unlinked .ant-tree-node-selected")
+				?.scrollIntoView({ block: "nearest" });
+		});
+		return () => window.cancelAnimationFrame(frame);
+	}, [selectedId, treeData, expandedKeys]);
 
 	return (
 		<div className="element-tree-unlinked">
 			<div className="element-tree-unlinked__title">
 				{langtext("general.tree_unlinked_components")}
-				{unlinkedElements.length > 0 ? ` (${unlinkedElements.length})` : ""}
+				{totalUnlinked > 0 ? ` (${totalUnlinked})` : ""}
 			</div>
 			<div className="element-tree-unlinked__panel">
-				<List
-					size="small"
-					locale={{ emptyText: "—" }}
-					dataSource={visibleUnlinked}
-					renderItem={(element) => (
-						<List.Item
-							className={`element-tree-unlinked-item ${selectedId === element.id ? "element-tree-unlinked-item--selected" : ""}`}
-							onClick={() => navigateToElement(navigate, element.id)}
-						>
-							{renderTreeNodeTitle(elementToTreeNode(element), marks.get(element.id))}
-						</List.Item>
-					)}
+				<Tree
+					checkable={false}
+					selectable
+					showLine
+					treeData={treeData}
+					expandedKeys={expandedKeys}
+					onExpand={(keys) => setExpandedKeys(keys)}
+					selectedKeys={selectedId ? [selectedId] : []}
+					onSelect={(keys) => {
+						const id = keys[0] != null ? String(keys[0]) : "";
+						if (id) {
+							navigateToElement(navigate, id);
+						}
+					}}
+					onMouseEnter={({ event }) => {
+						suppressNativeTreeTitle(event.currentTarget as HTMLElement);
+					}}
+					titleRender={(node) =>
+						renderTreeNodeTitle(node, marks?.get(treeNodeElementId(node)))
+					}
 				/>
-				{unlinkedElements.length > UNLINKED_RENDER_LIMIT ? (
+				{unlinkedForest.length > UNLINKED_RENDER_LIMIT ? (
 					<div className="element-tree-unlinked__more">
 						{langtext("general.tree_unlinked_showing_limited", {
 							shown: UNLINKED_RENDER_LIMIT,
-							total: unlinkedElements.length,
+							total: unlinkedForest.length,
 						})}
 					</div>
 				) : null}

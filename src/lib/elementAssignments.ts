@@ -121,6 +121,21 @@ export function snapshotElementIdRefs(
 	return next;
 }
 
+export function findElementIdRefForAsset(
+	refs: Array<Partial<ElementIdRef> & { id?: unknown }> | undefined,
+	asset: ElementIdRefSource
+): ElementIdRef | undefined {
+	const snapshot = snapshotElementIdRefs(refs);
+	if (snapshot.length === 0) {
+		return undefined;
+	}
+	const target = toAssetElementIdRef(asset);
+	return (
+		snapshot.find((entry) => elementIdRefsEqual(entry, target)) ??
+		snapshot.find((entry) => entry.id === asset.id)
+	);
+}
+
 export function hasAssetElementIdRef(
 	refs: Array<Partial<ElementIdRef> & { id?: unknown }> | undefined,
 	asset: ElementIdRefSource

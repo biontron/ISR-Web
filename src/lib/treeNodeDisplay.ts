@@ -14,14 +14,6 @@ export type TreeNodeInfoRow = {
 	value: string;
 };
 
-function escapeHtml(value: string): string {
-	return value
-		.replace(/&/g, "&amp;")
-		.replace(/</g, "&lt;")
-		.replace(/>/g, "&gt;")
-		.replace(/"/g, "&quot;");
-}
-
 export function buildTreeNodeInfoRows(
 	root: IRootStore,
 	nodeData: Pick<
@@ -58,39 +50,6 @@ export function buildTreeNodeInfoRows(
 		{ label: "ID", value: String(nodeData.elementId ?? nodeData.key ?? "—") },
 		{ label: "Status", value: String(nodeData.status ?? "—") },
 	];
-}
-
-export function buildGraphNodeHoverHtml(root: IRootStore, element: TreeElement): string {
-	const definition = element.definition;
-	const nodeData = {
-		key: element.id,
-		class: element.class,
-		title: definition?.name,
-		label: "label" in definition ? String(definition.label ?? "") : "",
-		description: definition?.description,
-		status: element.status,
-		baseType: definition?.baseType,
-		subType: definition?.subType,
-		elementType: definition?.type,
-		storeType: definition?.storeType,
-	};
-	const rows = buildTreeNodeInfoRows(root, nodeData, definition);
-	const infoTitle = `${nodeData.class ?? "???"} — ${nodeData.title ?? "???"}`;
-
-	const rowHtml = rows
-		.map(
-			(row) =>
-				`<tr><th>${escapeHtml(row.label)}</th><td>${escapeHtml(row.value ?? "—")}</td></tr>`
-		)
-		.join("");
-
-	return `
-		<div class="graph-node-tooltip">
-			<div class="graph-node-tooltip__title element-info-title">${escapeHtml(infoTitle)}</div>
-			<table class="graph-node-tooltip__table element-info-descriptions">
-				<tbody>${rowHtml}</tbody>
-			</table>
-		</div>`;
 }
 
 export type TreeNodeSegment = "viewGroup" | "component";

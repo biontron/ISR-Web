@@ -2,6 +2,7 @@ import { TreeElement } from "../Interfaces/Element";
 import { normalizeElementKindForSchemaMatch } from "./elementDefinitionTypes";
 import { GraphConfig, resolveSwimlaneForTags } from "./graphConfig";
 import { readElementGraphTags } from "./graphElementStyle";
+import { GRAPH_MAX_TREE_NODES } from "./graphTreeLimits";
 
 export type GraphNodeLookup = {
 	hasNode(id: string): boolean;
@@ -19,7 +20,7 @@ export function isSwimlaneComponent(node: TreeElement): boolean {
 export function collectSwimlaneComponentsFromTree(
 	root: TreeElement,
 	maxDepth = 10,
-	maxComponents = 200
+	maxComponents = GRAPH_MAX_TREE_NODES
 ): TreeElement[] {
 	const components: TreeElement[] = [];
 

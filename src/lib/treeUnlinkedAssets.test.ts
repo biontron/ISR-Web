@@ -3,7 +3,7 @@ import {
 	resolveGroupDefinitionTypesForCreate,
 } from "./elementDefinitionTypes";
 import { ISchemaModel } from "../Stores/Models/Schema.Model";
-import { collectLinkedAssetIdsForView, collectUnlinkedAssetsForView, collectUnlinkedElementsForView } from "./treeUnlinkedAssets";
+import { collectLinkedAssetIdsForView, collectUnlinkedAssetsForView, collectUnlinkedElementsForView, nestUnlinkedStackedComponents } from "./treeUnlinkedAssets";
 import { resolveTreeNodeSegment } from "./treeNodeDisplay";
 
 describe("treeUnlinkedAssets", () => {
@@ -158,6 +158,21 @@ describe("treeUnlinkedAssets", () => {
 		expect(linked.has("a-parent")).toBe(true);
 		expect(linked.has("a-child")).toBe(true);
 		expect(linked.has("a-free")).toBe(false);
+	});
+
+	it("nestet gestapelte unverknüpfte Components als Sub-Baum", () => {
+		const forest = nestUnlinkedStackedComponents([
+			{ id: "g-free", class: "Group", definition: { name: "Folder" } },
+			{ id: "device", class: "Asset", ownerIdRef: null, definition: { name: "PC" } },
+			{ id: "os", class: "Asset", ownerIdRef: "device", definition: { name: "OS" } },
+			{ id: "app", class: "Asset", ownerIdRef: "os", definition: { name: "App" } },
+			{ id: "free", class: "Asset", ownerIdRef: null, definition: { name: "Free" } },
+		] as never);
+		expect(forest.map((node) => node.element.id)).toEqual(["g-free", "device", "free"]);
+		const device = forest.find((node) => node.element.id === "device");
+		expect(device?.children.map((child) => child.element.id)).toEqual(["os"]);
+		expect(device?.children[0]?.children.map((child) => child.element.id)).toEqual(["app"]);
+		expect(forest.find((node) => node.element.id === "free")?.children).toEqual([]);
 	});
 });
 

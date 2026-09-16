@@ -7,10 +7,11 @@ import {
 	type ElementDefinitionHoverFields,
 } from "../../lib/elementDefinitionHover";
 
-const ElementDefinitionHoverTooltip: React.FC<{
+export function ElementDefinitionHoverContent({
+	fields,
+}: {
 	fields: ElementDefinitionHoverFields;
-	children: React.ReactNode;
-}> = ({ fields, children }) => {
+}) {
 	const titleLines = elementDefinitionHoverTitle(fields).split("\n");
 	const items: DescriptionsProps["items"] = buildElementDefinitionHoverRows(fields).map(
 		(row, index) => ({
@@ -21,31 +22,43 @@ const ElementDefinitionHoverTooltip: React.FC<{
 	);
 
 	return (
+		<>
+			<div className="element-info-title">
+				{titleLines[0]}
+				{titleLines[1] ? (
+					<>
+						<br />
+						{titleLines[1]}
+					</>
+				) : null}
+			</div>
+			<Descriptions
+				className="element-info-descriptions"
+				items={items}
+				layout="horizontal"
+				bordered
+				column={1}
+				size="small"
+			/>
+		</>
+	);
+}
+
+const ElementDefinitionHoverTooltip: React.FC<{
+	fields: ElementDefinitionHoverFields;
+	children: React.ReactNode;
+}> = ({ fields, children }) => {
+	return (
 		<Tooltip
-			title={
-				<>
-					<div className="element-info-title">
-						{titleLines[0]}
-						{titleLines[1] ? (
-							<>
-								<br />
-								{titleLines[1]}
-							</>
-						) : null}
-					</div>
-					<Descriptions
-						className="element-info-descriptions"
-						items={items}
-						layout="horizontal"
-						bordered
-						column={1}
-						size="small"
-					/>
-				</>
-			}
+			title={<ElementDefinitionHoverContent fields={fields} />}
+			placement="right"
+			mouseEnterDelay={0.2}
+			overlayClassName="element-definition-hover-overlay"
 			getPopupContainer={() => document.body}
 		>
-			<span className="element-definition-hover-target">{children}</span>
+			<span className="element-definition-hover-target">
+				{children}
+			</span>
 		</Tooltip>
 	);
 };

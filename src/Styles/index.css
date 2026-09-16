@@ -154,6 +154,32 @@ body,
 	text-decoration: underline;
 }
 
+.element-definition-hover-target {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  min-width: 0;
+}
+
+.ant-tree-title .element-definition-hover-target {
+  width: 100%;
+}
+
+.element-definition-hover-overlay {
+  z-index: 1100;
+  max-width: none;
+}
+
+.element-definition-hover-overlay .ant-tooltip-inner {
+  color: #000;
+  background-color: #fff;
+}
+
+.element-search-hits__item .element-definition-hover-target {
+  flex: 1;
+  min-width: 0;
+}
+
 .element-tree-node-title {
 	display: inline-flex;
 	align-items: center;
@@ -533,6 +559,7 @@ svg .edgePath.graph-edge--negative path {
 	position: relative;
 	display: inline-block;
 	text-align: left;
+	overflow: visible;
 }
 
 .graph-canvas__svg g.cluster .graph-node-shell {
@@ -565,12 +592,9 @@ svg .edgePath.graph-edge--negative path {
 	text-align: left;
 }
 
-.graph-canvas__svg .graph-node-tooltip {
-	display: none;
-	position: absolute;
-	left: 0;
-	bottom: calc(100% + 8px);
-	z-index: 20;
+.graph-hover-overlay {
+	position: fixed;
+	z-index: 1200;
 	min-width: 240px;
 	max-width: 360px;
 	padding: 8px 10px;
@@ -581,10 +605,7 @@ svg .edgePath.graph-edge--negative path {
 	pointer-events: none;
 	text-align: left;
 	white-space: normal;
-}
-
-.graph-canvas__svg .graph-node-shell:hover .graph-node-tooltip {
-	display: block;
+	color: #000;
 }
 
 .graph-dock-circles {
@@ -602,29 +623,6 @@ svg .edgePath.graph-edge--negative path {
 	flex: 0 0 auto;
 }
 
-.graph-node-tooltip__title {
-	font-weight: 600;
-	margin-bottom: 6px;
-}
-
-.graph-node-tooltip__table {
-	width: 100%;
-	border-collapse: collapse;
-	font-size: 12px;
-}
-
-.graph-node-tooltip__table th,
-.graph-node-tooltip__table td {
-	border: 1px solid #f0f0f0;
-	padding: 2px 6px;
-	vertical-align: top;
-}
-
-.graph-node-tooltip__table th {
-	width: 34%;
-	background: #fafafa;
-	font-weight: 600;
-}
 
 .rest-communication-view__section,
 .rest-communication-view__response {
@@ -1348,6 +1346,18 @@ input[readonly] {
   min-height: 0;
   overflow-y: auto;
   padding: 4px 8px;
+}
+
+.element-tree-unlinked__panel .ant-tree {
+  background: transparent;
+}
+
+.element-tree-unlinked__panel .ant-tree-treenode {
+  width: 100%;
+}
+
+.element-tree-unlinked__panel .ant-tree-node-content-wrapper.ant-tree-node-selected {
+  background: #FF6611;
 }
 
 .element-tree-unlinked__more {

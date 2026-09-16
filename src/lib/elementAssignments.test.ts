@@ -2,6 +2,7 @@ import {
 	addXPathFilterRule,
 	collectAssignedElements,
 	collectUnassignedElements,
+	findElementIdRefForAsset,
 	isAssignedToParent,
 	isStaticallyUnassigned,
 	readXPathExpression,
@@ -196,5 +197,20 @@ describe("elementAssignments", () => {
 			name: "Notebook",
 			label: "NB-01",
 		});
+	});
+
+	it("findet den gespeicherten elementIdRefs-Eintrag zum Asset", () => {
+		const stamped = elementIdRef("a1", "office", {
+			baseType: "COMPONENT",
+			type: "DEVICE",
+			name: "Stamped",
+			label: "S-01",
+		});
+		expect(
+			findElementIdRefForAsset(
+				[stamped, elementIdRef("a2", "office")],
+				{ id: "a1", environmentId: "office" }
+			)
+		).toEqual(stamped);
 	});
 });

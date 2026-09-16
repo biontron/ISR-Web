@@ -1,5 +1,6 @@
 import {
 	buildElementTreeNodes,
+	collectTreeExpandKeysForElement,
 	collectTreeKeysForElementId,
 	fillExpandedTreeNodes,
 	treeNodeElementId,
@@ -198,5 +199,35 @@ describe("elementTreeNodes", () => {
 		const groupNode = filled.find((node) => treeNodeElementId(node) === "g-a");
 		const deviceNode = groupNode?.children?.find((node) => treeNodeElementId(node) === "device-1");
 		expect(deviceNode?.children?.map((node) => treeNodeElementId(node))).toEqual(["os-1"]);
+	});
+
+	it("liefert Expand-Keys für den Ast zum Element", () => {
+		const device = asset("device-1");
+		const os = asset("os-1", { ownerIdRef: "device-1", type: "OS", name: "OS" });
+		const root = rootWith(
+			[group("g-a", { parentIdRef: "view1", elementIdRefs: [{ id: "device-1" }] })],
+			[device, os]
+		);
+		expect(collectTreeExpandKeysForElement(root, "view1", "os-1")).toEqual([
+			"g-a",
+			"g-a/device-1",
+		]);
+		expect(collectTreeExpandKeysForElement(root, "view1", "g-a")).toEqual([]);
+		expect(collectTreeExpandKeysForElement(root, "view1", "missing")).toEqual([]);
+	});
+
+	it("klappt alle Äste auf, in denen dasselbe Asset hängt", () => {
+		const shared = asset("device-1");
+		const root = rootWith(
+			[
+				group("g-a", { parentIdRef: "view1", elementIdRefs: [{ id: "device-1" }] }),
+				group("g-b", { parentIdRef: "view1", elementIdRefs: [{ id: "device-1" }] }),
+			],
+			[shared]
+		);
+		expect(collectTreeExpandKeysForElement(root, "view1", "device-1").sort()).toEqual([
+			"g-a",
+			"g-b",
+		]);
 	});
 });

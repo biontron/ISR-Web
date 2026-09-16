@@ -2,13 +2,67 @@ import React from "react";
 import { Button, List, Modal, message } from "antd";
 import { observer } from "mobx-react";
 import { useNavigate } from "react-router-dom";
+import { resolveIdentifier } from "mobx-state-tree";
 import authStore from "../../Stores/Auth.Store";
 import { rootStore } from "../../Stores/Root.Store";
+import { AssetModel } from "../../Stores/Models/Asset.Model";
+import { GroupModel } from "../../Stores/Models/Group.Model";
+import { ViewModel } from "../../Stores/Models/View.Model";
+import { ConnectionModel } from "../../Stores/Models/Connection.Model";
+import { environmentDisplayName } from "../../Stores/Models/Environment.Model";
 import { useLangtext } from "../../lib/common";
 import { ELEMENT_SEARCH_EXAMPLES } from "../../lib/elementSearchExamples";
-import { searchQueryToValidationXPath } from "../../lib/elementXPathValidation";
+import { searchQueryToValidationXPath, type ViewSearchHit } from "../../lib/elementXPathValidation";
+import { hoverFieldsFromLiveElement, type ElementDefinitionHoverFields } from "../../lib/elementDefinitionHover";
+import { readEnvironmentId } from "../../lib/environmentIdentity";
 import ElementSignalBars from "../ChangeMode/ElementSignalBars";
 import { elementStatusShowsIndicator } from "../../lib/elementStatusStyle";
+import ElementDefinitionHoverTooltip from "../Schema/ElementDefinitionHoverTooltip";
+
+function hoverFieldsForSearchHit(hit: ViewSearchHit): ElementDefinitionHoverFields {
+	const element =
+		resolveIdentifier(AssetModel, rootStore, hit.id) ??
+		resolveIdentifier(GroupModel, rootStore, hit.id) ??
+		resolveIdentifier(ViewModel, rootStore, hit.id) ??
+		resolveIdentifier(ConnectionModel, rootStore, hit.id);
+	if (!element) {
+		return {
+			id: hit.id,
+			className: hit.class,
+			name: hit.title,
+			description: hit.description,
+			status: hit.status,
+		};
+	}
+	const environmentId =
+		"environmentId" in element ? readEnvironmentId(element) : "";
+	const environment = environmentId
+		? rootStore.environments.findById(environmentId)
+		: undefined;
+	const definition =
+		"definition" in element && element.definition && typeof element.definition === "object"
+			? (element.definition as {
+					baseType?: string;
+					type?: string;
+					subType?: string;
+					name?: string;
+					label?: string;
+					description?: string;
+				})
+			: undefined;
+	return hoverFieldsFromLiveElement(
+		{
+			id: element.id,
+			class: element.class,
+			status: element.status,
+			environmentId,
+			definition,
+		},
+		{
+			environment: environment ? environmentDisplayName(environment) : undefined,
+		}
+	);
+}
 
 const ElementSearchHitsDialog: React.FC = observer(() => {
 	const langtext = useLangtext();
@@ -98,9 +152,11 @@ const ElementSearchHitsDialog: React.FC = observer(() => {
 						className="element-search-hits__item"
 						onClick={() => openHit(hit.id, hit.class)}
 					>
-						<span className="element-search-hits__label">
-							{hit.class} — {hit.title}
-						</span>
+						<ElementDefinitionHoverTooltip fields={hoverFieldsForSearchHit(hit)}>
+							<span className="element-search-hits__label">
+								{hit.class} — {hit.title}
+							</span>
+						</ElementDefinitionHoverTooltip>
 						<ElementSignalBars
 							flags={{
 								changed: elementStatusShowsIndicator(hit.status as never),
