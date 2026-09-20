@@ -23,6 +23,7 @@ import ContextConnectionDialog from "../../../Connections/ContextConnectionDialo
 import BridgeConnectionDialog from "../../../Connections/BridgeConnectionDialog";
 import ConnectionEditDialog from "../../../Connections/ConnectionEditDialog";
 import ConnectionOverviewDialog from "../../../Connections/ConnectionOverviewDialog";
+import { IccmConnectionOpenButton } from "../../../Connections/IccmOpenLink";
 import { canOpenConnectionSelectionDialog } from "../../../../lib/connectionDockpartPairing";
 import { filterConnectionsForElement } from "../../../../Stores/Connection.Store";
 import { formatConnectionSideSummary } from "../../../../lib/connectionEndpointRef";
@@ -131,6 +132,7 @@ const ConnectionMapping: React.FC<ConnectionMappingProps> = observer(({ element,
 					return (
 						<List.Item
 							actions={[
+								<IccmConnectionOpenButton key="iccm" connection={item} />,
 								<Button key="open" type="link" onClick={() => setEditingConnectionId(item.id)}>
 									{langtext("general.connection_edit")}
 								</Button>,

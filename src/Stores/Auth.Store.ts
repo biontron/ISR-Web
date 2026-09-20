@@ -138,6 +138,7 @@ export class AuthStore {
 					this.setDomain(domain);
 					this.setLoginMessage(rootStore.i18n.text("general.login_success"), "success");
 					this.saveToLocalStorage();
+					void rootStore.userSettings.load();
 					return;
 				}
 
@@ -175,6 +176,7 @@ export class AuthStore {
 				this.setLoginMessage("", undefined);
 				this.username = undefined;
 				this.clearLocalStorage();
+				rootStore.userSettings.reset();
 			} else {
 				throw new Error("Abmeldung fehlgeschlagen");
 			}

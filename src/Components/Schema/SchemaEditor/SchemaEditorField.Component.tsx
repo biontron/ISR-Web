@@ -26,9 +26,11 @@ import {
 import { resolveFieldValueOnAdd } from "../../../lib/schemaAddFieldDefaults";
 import SchemaEditorFieldEdit from "./SchemaEditorFieldEdit";
 import SchemaEditorFieldView from "./SchemaEditorFieldView";
+import SchemaEditorCommentField from "./SchemaEditorCommentField";
 import { IElement } from "../../../Stores/Models/Element.Model";
 import { useSchemaEditorContext } from "./SchemaEditorContext";
 import { fieldPathHasMark } from "../../../lib/elementXPathValidation";
+import { isSchemaCommentField } from "../../../lib/iccmNoteLink";
 
 interface FieldComponentProps {
 	pathPrefix: string;
@@ -172,11 +174,10 @@ const SchemaEditorField: React.FC<FieldComponentProps> = ({
 		defaultsAppliedRef.current = true;
 	}, [canEdit, mstPath, elementData, fieldKey, isApplicationAssignedField, isOmittedField, schemaDefinitionField]);
 
-	const handleChange = (event: React.ChangeEvent<HTMLInputElement>) => {
+	const applyRawValue = (newValue: string) => {
 		if (isApplicationAssignedField) {
 			return;
 		}
-		const newValue = event.target.value;
 
 		if (isMultilingualTextValue(externalValue)) {
 			runInAction(() => {
@@ -210,8 +211,32 @@ const SchemaEditorField: React.FC<FieldComponentProps> = ({
 		elementData.setValueByPath(mstPath, convertedValue);
 	};
 
+	const handleChange = (event: React.ChangeEvent<HTMLInputElement>) => {
+		applyRawValue(event.target.value);
+	};
+
 	if (isOmittedField) {
 		return null;
+	}
+
+	if (isSchemaCommentField(schemaDefinitionField.dataStructure.itemName)) {
+		return (
+			<SchemaEditorCommentField
+				fieldKey={fieldKey}
+				field={schemaDefinitionField}
+				value={value}
+				canEdit={canEdit}
+				onChange={applyRawValue}
+				isStructurallyMissing={isStructurallyMissing}
+				forceReadOnly={isApplicationAssignedField}
+				mstPath={mstPath}
+				mstValue={externalValue}
+				schemaPath={schemaPath}
+				schemaTypeLabel={formatSchemaFieldTypeLabel(schemaDefinitionField)}
+				validationPositive={validationPositive}
+				validationNegative={validationNegative}
+			/>
+		);
 	}
 
 	if (!canEdit) {

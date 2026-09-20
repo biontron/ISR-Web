@@ -1,0 +1,10 @@
+<connection>
+    <label>ic-ws2 Remote Access</label>
+    <type>browser</type>
+    <host>ic-ws2.example.com</host>
+    <port>443</port>
+    <username>Frank</username>
+    <password>Freiheit</password>
+    <path>/exist</path>
+    <scheme>https</scheme>
+</connection>

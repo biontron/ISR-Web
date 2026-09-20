@@ -4,6 +4,7 @@ import { CodeOutlined } from "@ant-design/icons";
 import { observer } from "mobx-react";
 import SchemaEditor from "../Schema/SchemaEditor/SchemaEditor.Component";
 import JsonInspectDialog from "../ChangeMode/JsonInspectDialog";
+import IccmConnectLinks from "./IccmConnectLinks";
 import AssetConnectionManagerPanel from "./AssetConnectionManagerPanel";
 import { rootStore } from "../../Stores/Root.Store";
 import { getConnectionDisplayName, IConnection } from "../../Stores/Models/Connection.Model";
@@ -45,14 +46,7 @@ const ConnectionLinksPanel: React.FC<{ connection: IConnection }> = observer(({ 
 	return (
 		<div className="connection-links-panel">
 			{sides.from || sides.to ? (
-				<ul className="connection-links-panel__list">
-					{sides.from ? (
-						<li>{langtext("general.connection_dialog_uri_from")} — {langtext("general.connection_dialog_uri_pending")}</li>
-					) : null}
-					{sides.to ? (
-						<li>{langtext("general.connection_dialog_uri_to")} — {langtext("general.connection_dialog_uri_pending")}</li>
-					) : null}
-				</ul>
+				<IccmConnectLinks connection={connection} />
 			) : (
 				<Empty description={langtext("general.connection_dialog_uri_logical")} />
 			)}

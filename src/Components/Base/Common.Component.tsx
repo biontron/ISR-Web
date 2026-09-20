@@ -57,6 +57,12 @@ const CommonLayout: React.FC<CommonLayoutProps> = observer(({ children }) => {
 	}, [location.search]);
 
 	useEffect(() => {
+		if (authStore.isAuthenticated && authStore.username) {
+			void rootStore.userSettings.load();
+		}
+	}, [authStore.isAuthenticated, authStore.username]);
+
+	useEffect(() => {
 		const focusSearch = (event: KeyboardEvent) => {
 			if (!(event.ctrlKey || event.metaKey)) {
 				return;

@@ -1,0 +1,10 @@
+<connection>
+    <label>ic-ws2 Remote Access</label>
+    <type>scp</type>
+    <host>ic-ws2.example.com</host>
+    <port>22</port>
+    <username>Frank</username>
+    <password>Freiheit</password>
+    <path>/home/admin</path>
+    <scheme>scp</scheme>
+</connection>

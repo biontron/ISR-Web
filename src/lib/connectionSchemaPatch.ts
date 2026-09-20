@@ -61,7 +61,30 @@ const CREDENTIALS_GROUP_TEMPLATE: SchemaItemSnapshot = {
 	minUsage: 0,
 	maxUsage: 20,
 	collectionType: "array",
-	items: [],
+	items: [
+		{
+			kind: "field",
+			order: 1,
+			dataStructure: { itemName: "username", default: "" },
+			formProperties: { label: { und: "Username", de: "Benutzername" } },
+			fieldType: "string",
+			rules: "[\\x20-\\x7E]{0,100}",
+			itemFlags: { readonly: false, hidden: false, nullable: true },
+			minUsage: 0,
+			maxUsage: 1,
+		},
+		{
+			kind: "field",
+			order: 2,
+			dataStructure: { itemName: "password", default: "" },
+			formProperties: { label: { und: "Password", de: "Passwort" } },
+			fieldType: "string",
+			rules: "[\\x20-\\x7E]{0,100}",
+			itemFlags: { readonly: false, hidden: false, nullable: true },
+			minUsage: 0,
+			maxUsage: 1,
+		},
+	],
 };
 
 function renameConnectionSchemaField(item: SchemaItemSnapshot): SchemaItemSnapshot {

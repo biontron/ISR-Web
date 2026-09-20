@@ -9,6 +9,8 @@ import { useLangtext } from "../../../lib/common";
 import { interpolateTitleTemplate } from "../../../lib/titleTemplate";
 import { resolveAllowedLowerTypes } from "../../../lib/dockpartBasedOn";
 import { IConnectSchemaModel } from "../../../Stores/Models/ConnectSchema.Model";
+import { collectAssetIccmPresets } from "../../../lib/iccmNoteLink";
+import IccmCommentControl from "../../Connections/IccmCommentControl";
 
 interface SchemaEditorDockpartHeaderProps {
 	dockpart: unknown;
@@ -123,13 +125,16 @@ const SchemaEditorDockpartHeader: React.FC<SchemaEditorDockpartHeaderProps> = ({
 							{langtext("schema_editor.dockpart_notes")}
 						</label>
 						<div className="schema-editor-field__control">
-							<Input.TextArea
+							<IccmCommentControl
 								value={dockpart.notes}
+								canEdit={canEdit}
 								disabled={!canEdit}
-								autoSize={{ minRows: 2, maxRows: 6 }}
-								onChange={(event) =>
+								presets={collectAssetIccmPresets(
+									"docks" in elementData ? (elementData as IAsset) : undefined
+								)}
+								onChange={(next) =>
 									commit(elementData, () => {
-										dockpart.notes = event.target.value;
+										dockpart.notes = next;
 									})
 								}
 							/>

@@ -1,0 +1,9 @@
+<connection>
+    <label>ic-ws2 Remote Access</label>
+    <type>ssh</type>
+    <host>ic-ws2.example.com</host>
+    <port>22</port>
+    <username>Frank</username>
+    <password>Freiheit</password>
+    <scheme>ssh</scheme>
+</connection>

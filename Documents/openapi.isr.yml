@@ -96,6 +96,38 @@ paths:
               schema:
                 $ref: "#/components/schemas/UserSettings"
 
+  /connect/{handle}:
+    get:
+      summary: ICCM service XML for an encrypted fetch handle
+      operationId: getConnect
+      tags:
+        - Connect
+      parameters:
+        - name: handle
+          in: path
+          required: true
+          description: "{usernameHex}--{environmentId}--{connectionId}"
+          schema:
+            type: string
+            example: "4d722e2058--01e93fa0-1c74-44b1-bafd-6d8a988fea01--C-7Ad0yRZqg8pP9bEXyGq0sU"
+        - name: accessToken
+          in: query
+          required: false
+          schema:
+            type: string
+        - $ref: "#/components/parameters/AuthorizationHeader"
+      responses:
+        "200":
+          description: Service XML for the Connection Manager
+          content:
+            application/xml:
+              schema:
+                type: string
+        "400":
+          description: Invalid handle
+        "404":
+          description: Connection not found
+
   /views:
     get:
       summary: List all views

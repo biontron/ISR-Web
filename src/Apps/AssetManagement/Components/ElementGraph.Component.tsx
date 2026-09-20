@@ -16,6 +16,8 @@ import { select, Selection } from "d3-selection";
 import * as dagreD3 from "dagre-d3-es";
 import { useNavigate } from "react-router-dom";
 import ConnectionDialog from "../../../Components/Connections/ConnectionDialog";
+import { launchIccmConnection } from "../../../Components/Connections/IccmConnectLinks";
+import { useLangtext } from "../../../lib/common";
 import {
 	collectConnectionGraphEdges,
 	collectRenderedGraphNodeIds,
@@ -154,6 +156,20 @@ function bindNodeNavigation(
 	});
 }
 
+function bindEdgeIccmLaunch(
+	svg: Selection<SVGSVGElement, unknown, null, undefined>,
+	onLaunch: (connectionId: string) => void
+) {
+	svg.selectAll("g.edgeLabel .graph-link").on("click.iccm", function (event: Event) {
+		event.stopPropagation();
+		event.preventDefault();
+		const connectionId = (event.currentTarget as Element).getAttribute("data-connection-id");
+		if (connectionId) {
+			onLaunch(connectionId);
+		}
+	});
+}
+
 function bindEdgeOpenConnection(
 	svg: Selection<SVGSVGElement, unknown, null, undefined>,
 	onOpenConnection: (connectionId: string) => void
@@ -281,6 +297,7 @@ const GraphCanvas = observer(
 	({ element, layout, zoomLevel, canvasClassName, buildGraph, postRender, resolveCanvasSize }: GraphCanvasProps) => {
 		const graphContainer = useRef<SVGSVGElement>(null);
 		const navigate = useNavigate();
+		const langtext = useLangtext();
 		const [connectionDialogId, setConnectionDialogId] = useState<string | null>(null);
 		const [nodeHover, setNodeHover] = useState<GraphNodeHoverState | null>(null);
 		const setNodeHoverRef = useRef(setNodeHover);
@@ -329,6 +346,12 @@ const GraphCanvas = observer(
 				.style("stroke-opacity", String(resolveEdgeStyle(graphConfig).lineOpacity ?? 0.7));
 			bindNodeNavigation(svg, navigate);
 			bindEdgeOpenConnection(svg, setConnectionDialogId);
+			bindEdgeIccmLaunch(svg, (connectionId) => {
+				const connection = rootStore.connections.connections.find((item) => item.id === connectionId);
+				if (connection) {
+					void launchIccmConnection(connection, langtext);
+				}
+			});
 			clearHoverTimer.current();
 			clearHoverTimer.current = bindNodeHover(svg, (next) => setNodeHoverRef.current(next));
 			setNodeHoverRef.current(null);
@@ -359,6 +382,7 @@ const GraphCanvas = observer(
 			layout.nodesep,
 			buildGraph,
 			navigate,
+			langtext,
 			zoomLevel,
 			postRender,
 			resolveCanvasSize,

@@ -1,4 +1,4 @@
-import { arrayBufferToPem } from "./rsaPem";
+import { arrayBufferToPem, isUsablePrivateKeyPem, isUsablePublicKeyPem } from "./rsaPem";
 
 describe("rsaPem", () => {
 	it("wraps bytes as PUBLIC KEY PEM", () => {
@@ -13,5 +13,12 @@ describe("rsaPem", () => {
 		const pem = arrayBufferToPem(bytes, "PRIVATE KEY");
 		expect(pem.startsWith("-----BEGIN PRIVATE KEY-----\n")).toBe(true);
 		expect(pem.includes("-----END PRIVATE KEY-----")).toBe(true);
+	});
+
+	it("rejects empty and placeholder public keys", () => {
+		expect(isUsablePublicKeyPem("")).toBe(false);
+		expect(isUsablePublicKeyPem("geheim")).toBe(false);
+		expect(isUsablePublicKeyPem(arrayBufferToPem(new Uint8Array(200).fill(1).buffer, "PUBLIC KEY"))).toBe(true);
+		expect(isUsablePrivateKeyPem("geheim")).toBe(false);
 	});
 });
