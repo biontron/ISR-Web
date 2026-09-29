@@ -1,5 +1,9 @@
 import { types } from "mobx-state-tree";
-import { interpolateTitleTemplate } from "./titleTemplate";
+import {
+	ELEMENT_IDENTITY_TITLE_TEMPLATE,
+	interpolateTitleTemplate,
+	looksLikeElementDefinition,
+} from "./titleTemplate";
 
 describe("interpolateTitleTemplate", () => {
 	it("füllt Felder aus dem Datenobjekt", () => {
@@ -115,6 +119,31 @@ describe("interpolateTitleTemplate", () => {
 				label: "DLNA-Media",
 			}, "Definition")
 		).toBe("#7 TCP - DLNA-Media");
+	});
+
+	it("fasst Basis-Element wie ein Dockpart zusammen", () => {
+		expect(
+			interpolateTitleTemplate(
+				ELEMENT_IDENTITY_TITLE_TEMPLATE,
+				{ baseType: "COMPONENT", type: "DEVICE", subType: "ROUTER", name: "gw-1" },
+				"Element"
+			)
+		).toBe("COMPONENT / DEVICE / ROUTER - gw-1");
+		expect(
+			interpolateTitleTemplate(
+				ELEMENT_IDENTITY_TITLE_TEMPLATE,
+				{ baseType: "COMPONENT", type: "DEVICE", subType: "", name: "gw-1" },
+				"Element"
+			)
+		).toBe("COMPONENT / DEVICE - gw-1");
+		expect(
+			looksLikeElementDefinition({
+				baseType: "COMPONENT",
+				type: "DEVICE",
+				name: "gw-1",
+			})
+		).toBe(true);
+		expect(looksLikeElementDefinition({ type: "IPV4", label: "LAN" })).toBe(false);
 	});
 
 	it("fällt auf den Gruppentitel zurück", () => {

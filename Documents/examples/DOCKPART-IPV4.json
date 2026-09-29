@@ -1,0 +1,62 @@
+{
+  "id": "IPV4",
+  "baseType": "DOCKPART",
+  "type": "IPV4",
+  "name": {
+    "und": "IPv4 address",
+    "de": "IPv4-Adresse"
+  },
+  "description": {
+    "und": "Dockpart schema for an IPv4 address group. wizardType ipv4 draws the composite UI; without it the child fields stay atomic.",
+    "de": "Dockpart-Schema für eine IPv4-Adressgruppe. wizardType ipv4 zeichnet die Composite-UI; ohne Attribut bleiben die Kindfelder atomar."
+  },
+  "order": 0,
+  "items": [
+    {
+      "kind": "group",
+      "order": 1,
+      "dataStructure": {
+        "itemName": "address",
+        "xpath": "address"
+      },
+      "formProperties": {
+        "label": {
+          "und": "IP address",
+          "de": "IP-Adresse"
+        }
+      },
+      "wizardType": "ipv4",
+      "itemFlags": {
+        "readonly": false,
+        "hidden": false
+      },
+      "minUsage": 0,
+      "maxUsage": 1,
+      "collectionType": "map",
+      "items": [
+        {
+          "kind": "field",
+          "order": 1,
+          "dataStructure": { "itemName": "ip", "default": "" },
+          "formProperties": { "label": { "und": "IP", "de": "IP" } },
+          "fieldType": "string",
+          "rules": "[0-9.]+",
+          "itemFlags": { "readonly": false, "hidden": false, "nullable": false },
+          "minUsage": 1,
+          "maxUsage": 1
+        },
+        {
+          "kind": "field",
+          "order": 2,
+          "dataStructure": { "itemName": "prefix", "default": "24" },
+          "formProperties": { "label": { "und": "Prefix", "de": "Präfix" } },
+          "fieldType": "number",
+          "rules": "",
+          "itemFlags": { "readonly": false, "hidden": false, "nullable": false },
+          "minUsage": 0,
+          "maxUsage": 1
+        }
+      ]
+    }
+  ]
+}

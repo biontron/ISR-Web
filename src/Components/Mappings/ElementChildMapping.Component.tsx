@@ -5,12 +5,12 @@ import React, { useState, useEffect } from "react";
 import { observer } from "mobx-react";
 import { Transfer, Card } from "antd";
 import type { TransferProps } from "antd";
-import { rootStore } from "../../../../Stores/Root.Store";
-import { ActiveElement } from "../../../../Interfaces/Element";
-import { IGroup } from "../../../../Stores/Models/Group.Model";
-import { IAsset } from "../../../../Stores/Models/Asset.Model";
-import SchemaSvgIcon from "../../SchemaSvgIcon";
-import { useLangtext } from "../../../../lib/common";
+import { rootStore } from "../../Stores/Root.Store";
+import { ActiveElement } from "../../Interfaces/Element";
+import { IGroup } from "../../Stores/Models/Group.Model";
+import { IAsset } from "../../Stores/Models/Asset.Model";
+import SchemaSvgIcon from "../Schema/SchemaSvgIcon";
+import { useLangtext } from "../../lib/common";
 
 /**
  * Interface for transfer objects

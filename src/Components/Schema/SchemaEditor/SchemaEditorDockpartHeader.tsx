@@ -11,6 +11,7 @@ import { resolveAllowedLowerTypes } from "../../../lib/dockpartBasedOn";
 import { IConnectSchemaModel } from "../../../Stores/Models/ConnectSchema.Model";
 import { collectAssetIccmPresets } from "../../../lib/iccmNoteLink";
 import IccmCommentControl from "../../Connections/IccmCommentControl";
+import SchemaEditorPathTitle from "./SchemaEditorPathTitle";
 
 interface SchemaEditorDockpartHeaderProps {
 	dockpart: unknown;
@@ -69,13 +70,17 @@ const SchemaEditorDockpartHeader: React.FC<SchemaEditorDockpartHeaderProps> = ({
 
 	return (
 		<CardCollapse
-			title={title}
+			title={
+				<SchemaEditorPathTitle
+					title={title}
+					mstPath={canEdit ? entryPath : undefined}
+					mstValue={dockpart}
+					schemaPath={canEdit ? entryPath : undefined}
+					schemaTypeLabel={canEdit ? `dockpart · ${dockpart.type || dockpart.protocol}` : undefined}
+				/>
+			}
 			defaultCollapsed
 			depth={1}
-			mstPath={canEdit ? entryPath : undefined}
-			mstValue={dockpart}
-			schemaPath={canEdit ? entryPath : undefined}
-			schemaTypeLabel={canEdit ? `dockpart · ${dockpart.type || dockpart.protocol}` : undefined}
 			actionElement={actionElement}
 		>
 			{() => (

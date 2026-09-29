@@ -48,6 +48,7 @@
           "dataStructure": {
             "itemName": "dockparts"
           },
+          "wizardType": "dockparts",
           "formProperties": {
             "label": {
               "und": "Dock Parts",

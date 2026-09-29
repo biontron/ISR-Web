@@ -1,9 +1,12 @@
 import type { ElementIdRef } from "./elementAssignments";
+import { operationalStatusLabel } from "./operationalStatus";
 
 /** Hover-Menü aus XSD `ElementIdRefType` plus optionale Anzeige-Felder. */
 export type ElementDefinitionHoverFields = Partial<ElementIdRef> & {
 	description?: string;
 	status?: string;
+	/** Betriebsstatus aus der Resource component-status, zugeordnet über die Component-ID. */
+	operationalStatus?: string;
 	className?: string;
 	environment?: string;
 };
@@ -16,7 +19,7 @@ export type ElementDefinitionHoverRow = {
 export function buildElementDefinitionHoverRows(
 	fields: ElementDefinitionHoverFields
 ): ElementDefinitionHoverRow[] {
-	return [
+	const rows: ElementDefinitionHoverRow[] = [
 		{ label: "Umgebung", value: fields.environment || fields.environmentId || "—" },
 		{ label: "Type", value: fields.baseType || fields.className || "—" },
 		{ label: "Subtype", value: fields.type || "—" },
@@ -26,6 +29,13 @@ export function buildElementDefinitionHoverRows(
 		{ label: "ID", value: fields.id || "—" },
 		{ label: "Status", value: fields.status || "—" },
 	];
+	if (fields.operationalStatus) {
+		rows.push({
+			label: "Betrieb",
+			value: operationalStatusLabel(fields.operationalStatus),
+		});
+	}
+	return rows;
 }
 
 export function elementDefinitionHoverTitle(fields: ElementDefinitionHoverFields): string {

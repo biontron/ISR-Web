@@ -227,6 +227,10 @@ class Api {
 		return await this.get(`/${domain}/environments/${environment}/assets`);
 	}
 
+	public async getComponentStatuses(domain: string, environment: string) {
+		return await this.get(`/${domain}/environments/${environment}/component-status`);
+	}
+
 	public async getConnections(domain: string, environment: string) {
 		return await this.get(`/${domain}/environments/${environment}/connections`);
 	}

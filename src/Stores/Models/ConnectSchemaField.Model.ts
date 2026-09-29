@@ -16,6 +16,7 @@ export const ConnectSchemaFieldModel = types.model("ConnectSchemaField", {
 	order: types.number,
 	dataStructure: types.model({
 		itemName: types.string,
+		xpath: types.optional(types.string, ""),
 		default: types.maybe(types.string),
 		nullable: types.optional(types.boolean, false),
 	}),
@@ -24,6 +25,7 @@ export const ConnectSchemaFieldModel = types.model("ConnectSchemaField", {
 		collapsed: types.optional(types.boolean, false),
 		titleTemplate: types.optional(types.string, ""),
 	}),
+	wizardType: types.optional(types.string, ""),
 	fieldType: types.enumeration("DataType", [
 		"string", "number", "boolean", "null", "object", "array"
 	]),

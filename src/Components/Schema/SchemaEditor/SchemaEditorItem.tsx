@@ -5,6 +5,9 @@ import { ISchemaGroupModel } from "../../../Stores/Models/SchemaGroup.Model";
 import { ISchemaFieldModel } from "../../../Stores/Models/SchemaField.Model";
 import { IElement } from "../../../Stores/Models/Element.Model";
 import { ISchemaItem } from "../../../Stores/Types/SchemaItem";
+import { resolveSchemaWizard } from "../../../lib/schemaWizards";
+import { resolveSchemaItemLocation } from "../../../lib/schemaEditorLocation";
+import { useSchemaEditorContext } from "./SchemaEditorContext";
 
 interface SchemaEditorItemProps {
 	key: string;
@@ -22,8 +25,30 @@ const SchemaEditorItem: React.FC<SchemaEditorItemProps> = ({
 	canEdit,
 	depth = 0,
 }) => {
+	const { wizardExtras } = useSchemaEditorContext();
 	if (!schemaDefinitionItem) {
 		return <div>No schema definiton item</div>;
+	}
+
+	const location = resolveSchemaItemLocation(elementData, schemaDefinitionItem, pathPrefix);
+	if (!location.visible) {
+		return null;
+	}
+
+	const wizard = resolveSchemaWizard(schemaDefinitionItem);
+	if (wizard) {
+		const Wizard = wizard.component;
+		return (
+			<Wizard
+				element={elementData}
+				schemaItem={schemaDefinitionItem}
+				pathPrefix={pathPrefix}
+				canEdit={canEdit}
+				depth={depth}
+				mstPath={location.mstPath}
+				extras={wizardExtras}
+			/>
+		);
 	}
 
 	const isField = schemaDefinitionItem.kind === "field";

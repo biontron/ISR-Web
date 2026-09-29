@@ -90,4 +90,16 @@ describe("resolveGraphNodeHoverFields", () => {
 	it("ignoriert Layout-Knoten ohne Element", () => {
 		expect(resolveGraphNodeHoverFields(root, "swimlane-spacer")).toBeUndefined();
 	});
+
+	it("ordnet den Betriebsstatus über die Component-ID zu", () => {
+		const withStatus = {
+			...root,
+			componentStatus: {
+				statusFor: (id: string) => (id === "a-1" ? "online" : undefined),
+			},
+		};
+		expect(resolveGraphNodeHoverFields(withStatus, "a-1")?.operationalStatus).toBe("online");
+		expect(resolveGraphNodeHoverFields(withStatus, "a-1")?.status).toBe("untouched");
+		expect(withStatus.assets.assets[0].status).toBe("untouched");
+	});
 });

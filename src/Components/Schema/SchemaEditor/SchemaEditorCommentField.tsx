@@ -2,7 +2,7 @@ import React, { useMemo } from "react";
 import { observer } from "mobx-react";
 import { ISchemaFieldModel } from "../../../Stores/Models/SchemaField.Model";
 import { IAsset } from "../../../Stores/Models/Asset.Model";
-import { rootStore } from "../../../Stores/Root.Store";
+import { IElement } from "../../../Stores/Models/Element.Model";
 import { isFieldRuleViolated, isMandatoryFieldUnfilledFromDisplay } from "../../../lib/schemaDeviation";
 import { collectAssetIccmPresets } from "../../../lib/iccmNoteLink";
 import IccmCommentControl from "../../Connections/IccmCommentControl";
@@ -22,6 +22,7 @@ type SchemaEditorCommentFieldProps = {
 	schemaTypeLabel?: string;
 	validationPositive?: boolean;
 	validationNegative?: boolean;
+	element?: IElement | null;
 };
 
 const SchemaEditorCommentField: React.FC<SchemaEditorCommentFieldProps> = ({
@@ -37,6 +38,7 @@ const SchemaEditorCommentField: React.FC<SchemaEditorCommentFieldProps> = ({
 	schemaTypeLabel,
 	validationPositive = false,
 	validationNegative = false,
+	element = null,
 }) => {
 	const isReadOnly = forceReadOnly || field.itemFlags?.readonly || !canEdit;
 	const liveRuleViolation = isFieldRuleViolated(field, value);
@@ -47,7 +49,6 @@ const SchemaEditorCommentField: React.FC<SchemaEditorCommentFieldProps> = ({
 		isMandatoryFieldUnfilledFromDisplay(field, value);
 	const hasContentError = liveMandatoryUnfilled || liveRuleViolation || isStructurallyMissing;
 	const state: SchemaEditorFieldState = hasContentError ? "error" : "normal";
-	const element = rootStore.ui.activeElement;
 	const presets = useMemo(() => {
 		if (!element || element.class !== "Asset") {
 			return [];

@@ -383,6 +383,8 @@
 		"dockpart_version": "Version",
 		"dockpart_label": "Bezeichner",
 		"dockpart_notes": "Anmerkungen",
-		"dockpart_state": "Zustand"
+		"dockpart_state": "Zustand",
+		"wizard_type": "Wizard-Typ",
+		"wizard_fallback": "Fehlender oder unbekannter Wizard-Typ nutzt atomare Felder"
 	}
 }

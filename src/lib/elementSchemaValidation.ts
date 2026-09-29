@@ -4,6 +4,7 @@ import { IElement } from "../Stores/Models/Element.Model";
 export {
 	hasActiveElementSchemaValidationErrors,
 	hasElementValidationOrStoreErrors,
+	collectElementValidation,
 } from "./elementValidationChecks";
 
 /** Setzt element.status auf invalid bzw. stellt den vorherigen Status wieder her. */

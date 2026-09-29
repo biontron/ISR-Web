@@ -91,6 +91,7 @@
           "order": 2,
           "dataStructure": { "itemName": "description", "default": "" },
           "formProperties": { "label": { "und": "Description", "de": "Beschreibung" } },
+          "wizardType": "markdown",
           "fieldType": "string",
           "rules": "[\\x20-\\x7E]{0,500}",
           "itemFlags": { "readonly": false, "hidden": false, "nullable": true },

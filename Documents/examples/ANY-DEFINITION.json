@@ -1,0 +1,82 @@
+{
+  "id": "ANY-DEFINITION",
+  "baseType": "INTERNAL",
+  "type": "ANY",
+  "name": {
+    "und": "Element definition",
+    "de": "Element-Definition"
+  },
+  "description": {
+    "und": "Identity group uses wizardType elementIdentity (icon plus type/name fields). Without the attribute the children stay atomic.",
+    "de": "Die Identitätsgruppe nutzt wizardType elementIdentity (Icon plus Typ-/Namensfelder). Ohne Attribut bleiben die Kinder atomar."
+  },
+  "items": [
+    {
+      "kind": "group",
+      "order": 1,
+      "dataStructure": { "itemName": "definition" },
+      "formProperties": {
+        "label": { "und": "Definition", "de": "Definition" },
+        "collapsed": true,
+        "titleTemplate": "{baseType} / {type} / {subType} - {name}"
+      },
+      "wizardType": "elementIdentity",
+      "itemFlags": { "readonly": false, "hidden": false },
+      "minUsage": 1,
+      "maxUsage": 1,
+      "collectionType": "map",
+      "items": [
+        {
+          "kind": "field",
+          "order": 1,
+          "dataStructure": { "itemName": "baseType", "default": "" },
+          "formProperties": { "label": { "und": "Main type", "de": "Haupttyp" } },
+          "fieldType": "string",
+          "itemFlags": { "readonly": true, "hidden": false, "nullable": false },
+          "minUsage": 1,
+          "maxUsage": 1
+        },
+        {
+          "kind": "field",
+          "order": 2,
+          "dataStructure": { "itemName": "type", "default": "" },
+          "formProperties": { "label": { "und": "Type", "de": "Typ" } },
+          "fieldType": "string",
+          "itemFlags": { "readonly": true, "hidden": false, "nullable": false },
+          "minUsage": 1,
+          "maxUsage": 1
+        },
+        {
+          "kind": "field",
+          "order": 3,
+          "dataStructure": { "itemName": "subType", "default": "" },
+          "formProperties": { "label": { "und": "Subtype", "de": "Subtyp" } },
+          "fieldType": "string",
+          "itemFlags": { "readonly": true, "hidden": false, "nullable": true },
+          "minUsage": 0,
+          "maxUsage": 1
+        },
+        {
+          "kind": "field",
+          "order": 4,
+          "dataStructure": { "itemName": "name", "default": "" },
+          "formProperties": { "label": { "und": "Name", "de": "Name" } },
+          "fieldType": "string",
+          "itemFlags": { "readonly": false, "hidden": false, "nullable": false },
+          "minUsage": 1,
+          "maxUsage": 1
+        },
+        {
+          "kind": "field",
+          "order": 5,
+          "dataStructure": { "itemName": "label", "default": "" },
+          "formProperties": { "label": { "und": "Label", "de": "Bezeichner" } },
+          "fieldType": "string",
+          "itemFlags": { "readonly": false, "hidden": false, "nullable": true },
+          "minUsage": 0,
+          "maxUsage": 1
+        }
+      ]
+    }
+  ]
+}

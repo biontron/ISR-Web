@@ -14,14 +14,14 @@ import {
 	DeleteOutlined,
 	PlusOutlined,
 } from "@ant-design/icons";
-import { rootStore } from "../../../../Stores/Root.Store";
-import { ActiveElement } from "../../../../Interfaces/Element";
-import { IAsset } from "../../../../Stores/Models/Asset.Model";
-import { IGroup } from "../../../../Stores/Models/Group.Model";
-import { IView } from "../../../../Stores/Models/View.Model";
-import { environmentDisplayName } from "../../../../Stores/Models/Environment.Model";
-import SchemaSvgIcon from "../../../Schema/SchemaSvgIcon";
-import { useLangtext } from "../../../../lib/common";
+import { rootStore } from "../../Stores/Root.Store";
+import { ActiveElement } from "../../Interfaces/Element";
+import { IAsset } from "../../Stores/Models/Asset.Model";
+import { IGroup } from "../../Stores/Models/Group.Model";
+import { IView } from "../../Stores/Models/View.Model";
+import { environmentDisplayName } from "../../Stores/Models/Environment.Model";
+import SchemaSvgIcon from "../Schema/SchemaSvgIcon";
+import { useLangtext } from "../../lib/common";
 import {
 	addXPathFilterRule,
 	AssignableTreeElement,
@@ -34,22 +34,22 @@ import {
 	removeXPathFilterRule,
 	unassignElementFromParent,
 	updateXPathFilterRule,
-} from "../../../../lib/elementAssignments";
-import { toFilterRuleRecord } from "../../../../lib/filterRuleNormalize";
+} from "../../lib/elementAssignments";
+import { toFilterRuleRecord } from "../../lib/filterRuleNormalize";
 import {
 	collectFilteredMappingCandidates,
-} from "../../../../lib/elementAutomapping";
-import { resolvePrimaryEnvironmentRef, readViewEnvironmentBindings } from "../../../../lib/viewEnvironments";
+} from "../../lib/elementAutomapping";
+import { resolvePrimaryEnvironmentRef, readViewEnvironmentBindings } from "../../lib/viewEnvironments";
 import {
 	collectLinkedAssetIdsForView,
 	collectViewGroupsUnderView,
-} from "../../../../lib/treeUnlinkedAssets";
-import { readEnvironmentId } from "../../../../lib/environmentIdentity";
-import ElementDefinitionHoverTooltip from "../../ElementDefinitionHoverTooltip";
+} from "../../lib/treeUnlinkedAssets";
+import { readEnvironmentId } from "../../lib/environmentIdentity";
+import ElementDefinitionHoverTooltip from "../Schema/ElementDefinitionHoverTooltip";
 import {
 	hoverFieldsFromElementIdRef,
 	hoverFieldsFromLiveElement,
-} from "../../../../lib/elementDefinitionHover";
+} from "../../lib/elementDefinitionHover";
 
 type MappingParent = IView | IGroup | IAsset;
 

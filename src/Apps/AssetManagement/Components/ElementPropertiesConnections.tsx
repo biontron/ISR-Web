@@ -11,11 +11,10 @@ import { Empty } from "antd";
 import { observer } from "mobx-react";
 import { rootStore } from "../../../Stores/Root.Store";
 import { IAsset } from "../../../Stores/Models/Asset.Model";
-import { IGroup } from "../../../Stores/Models/Group.Model";
-import CardCollapse from "./CardCollapse.Component";
-import ConnectionMapping from "../../../Components/Schema/SchemaEditor/Mappings/ConnectionMapping.Component";
+import SchemaEditor from "../../../Components/Schema/SchemaEditor";
 import AssetDocksSection from "./AssetDocksSection";
 import { useLangtext } from "../../../lib/common";
+import { CONNECTIONS_HOST_SCHEMA } from "../../../lib/schemaEditorHostSchemas";
 
 interface ElementPropertiesConnectionsProps {}
 
@@ -33,18 +32,6 @@ export const ElementPropertiesConnections: React.FC<ElementPropertiesConnections
 			);
 		}
 
-		if (activeElement.class === "Group") {
-			const group = activeElement as IGroup;
-			return (
-				<div style={{ padding: "16px 24px" }}>
-					<CardCollapse title={langtext("general.connection_overview")}>
-						<ConnectionMapping element={group} />
-					</CardCollapse>
-				</div>
-			);
-		}
-
-		const asset = activeElement as IAsset;
 		const contextPrefill = rootStore.ui.pendingContextBindContextId
 			? {
 					contextId: rootStore.ui.pendingContextBindContextId,
@@ -55,11 +42,16 @@ export const ElementPropertiesConnections: React.FC<ElementPropertiesConnections
 		return (
 			<Fragment>
 				<div style={{ padding: "16px 24px" }}>
-					<AssetDocksSection asset={asset} canEdit={canEdit} />
-
-					<CardCollapse title={langtext("general.connection_overview")}>
-						<ConnectionMapping element={asset} contextPrefill={contextPrefill} />
-					</CardCollapse>
+					{activeElement.class === "Asset" ? (
+						<AssetDocksSection asset={activeElement as IAsset} canEdit={canEdit} />
+					) : null}
+					<SchemaEditor
+						schema={CONNECTIONS_HOST_SCHEMA}
+						pathPrefix=""
+						data={activeElement}
+						canEdit={canEdit}
+						wizardExtras={{ connectionContextPrefill: contextPrefill }}
+					/>
 				</div>
 			</Fragment>
 		);

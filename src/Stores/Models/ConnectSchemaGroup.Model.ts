@@ -16,12 +16,14 @@ export const ConnectSchemaGroupModel = types.model("ConnectSchemaGroup", {
 	order: types.number,
 	dataStructure: types.model({
 		itemName: types.string,
+		xpath: types.optional(types.string, ""),
 	}),
 	formProperties: types.model({
 		label: MultilingualText,
 		collapsed: types.optional(types.boolean, false),
 		titleTemplate: types.optional(types.string, ""),
 	}),
+	wizardType: types.optional(types.string, ""),
 	itemFlags: types.optional(ConnectSchemaGroupFlags, () => ({
 		readonly: false,
 		hidden: false,

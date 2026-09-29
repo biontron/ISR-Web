@@ -8,17 +8,33 @@ import { rootStore } from "../../../Stores/Root.Store";
 import SchemaEditorItem from "./SchemaEditorItem";
 import SchemaEditorEmptyState from "./SchemaEditorEmptyState";
 import { SchemaEditorContextProvider, useSchemaEditorContext } from "./SchemaEditorContext";
+import type {
+	SchemaChooseOnAddRequest,
+	SchemaEditorWizardExtras,
+} from "./SchemaEditorContext";
 import { IElement } from "../../../Stores/Models/Element.Model";
 import { ISchemaModel } from "../../../Stores/Models/Schema.Model";
 import { ISchemaDefinition } from "../../../Interfaces/SchemaDefinition";
 import { ISchemaItem } from "../../../Stores/Types/SchemaItem";
+import type { ElementMarkFlags } from "../../../lib/elementXPathValidation";
+import type { ValidationRuleRecord } from "../../../Stores/Models/ValidationRule.Model";
+import { collectElementValidation } from "../../../lib/elementValidationChecks";
+import { registerBuiltinSchemaWizards } from "./Wizards/registerBuiltinWizards";
 
-interface SchemaEditorProps {
+registerBuiltinSchemaWizards();
+
+export interface SchemaEditorProps {
 	pathPrefix: string;
 	schemaName?: string;
+	schema?: ISchemaModel | ISchemaDefinition;
 	schemaDefinition?: ISchemaModel | ISchemaDefinition;
+	data?: IElement | null;
 	elementData?: IElement | null;
 	canEdit: boolean;
+	fieldMarks?: ElementMarkFlags;
+	validationRules?: readonly ValidationRuleRecord[];
+	wizardExtras?: SchemaEditorWizardExtras;
+	onChooseAdd?: (request: SchemaChooseOnAddRequest) => void;
 	depth?: number;
 }
 
@@ -31,17 +47,21 @@ function resolveFormItems(
 
 const SchemaEditorInner: React.FC<SchemaEditorProps> = ({
 	schemaName,
+	schema,
 	schemaDefinition: passedSchemaDefinition,
 	pathPrefix,
-	elementData,
+	data,
+	elementData: passedElementData,
 	canEdit,
 	depth = 0,
 }) => {
+	const elementData = data ?? passedElementData ?? null;
 	if (!elementData) {
 		return <SchemaEditorEmptyState reason="no_element" />;
 	}
 
-	let schemaDefinition: ISchemaModel | ISchemaDefinition | undefined = passedSchemaDefinition;
+	let schemaDefinition: ISchemaModel | ISchemaDefinition | undefined =
+		schema ?? passedSchemaDefinition;
 
 	if (!schemaDefinition && schemaName) {
 		schemaDefinition =
@@ -61,13 +81,6 @@ const SchemaEditorInner: React.FC<SchemaEditorProps> = ({
 	const formItems = resolveFormItems(schemaDefinition);
 
 	if (formItems.length === 0) {
-		if (
-			elementData.class === "View" &&
-			schemaName !== "ANY-DEFINITION" &&
-			schemaName !== "ANY-PROPERTIES"
-		) {
-			return <SchemaEditorEmptyState reason="no_view_settings" />;
-		}
 		return (
 			<SchemaEditorEmptyState
 				reason="no_fields"
@@ -87,7 +100,7 @@ const SchemaEditorInner: React.FC<SchemaEditorProps> = ({
 								key={key}
 								pathPrefix={pathPrefix}
 								elementData={elementData}
-								schemaDefinitionItem={schemaDefinitionItem as any}
+								schemaDefinitionItem={schemaDefinitionItem as ISchemaItem}
 								canEdit={canEdit}
 								depth={depth}
 							/>
@@ -101,13 +114,25 @@ const SchemaEditorInner: React.FC<SchemaEditorProps> = ({
 
 const SchemaEditor: React.FC<SchemaEditorProps> = (props) => {
 	const parentContext = useSchemaEditorContext();
+	const elementData = props.data ?? props.elementData ?? null;
+	const validation = collectElementValidation(
+		rootStore,
+		elementData ?? undefined,
+		props.validationRules
+	);
 
 	return (
 		<SchemaEditorContextProvider
 			value={{
 				...parentContext,
 				schemaName: props.schemaName ?? parentContext.schemaName,
-				dataEntryPath: props.pathPrefix,
+				fieldMarks:
+					props.fieldMarks ??
+					parentContext.fieldMarks ??
+					rootStore.ui.elementMarks.get(elementData?.id ?? "") ??
+					validation.marks,
+				wizardExtras: props.wizardExtras ?? parentContext.wizardExtras,
+				requestChooseOnAdd: props.onChooseAdd ?? parentContext.requestChooseOnAdd,
 			}}
 		>
 			<SchemaEditorInner {...props} />

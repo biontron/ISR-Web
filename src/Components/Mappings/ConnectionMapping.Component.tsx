@@ -3,31 +3,31 @@
     ...
     ========================================================================
 */
-// File: src/Components/Schema/SchemaEditor/Mappings/ConnectionMapping.Component.tsx
+// File: src/Components/Mappings/ConnectionMapping.Component.tsx
 
 import React, { useState, Fragment } from "react";
 import { Alert, List, Button, Space } from "antd";
 import { PlusOutlined, UnorderedListOutlined, LinkOutlined } from "@ant-design/icons";
 import { observer } from "mobx-react";
-import { rootStore } from "../../../../Stores/Root.Store";
+import { rootStore } from "../../Stores/Root.Store";
 import {
 	getConnectionDisplayName,
 	IConnection,
-} from "../../../../Stores/Models/Connection.Model";
-import { IAsset } from "../../../../Stores/Models/Asset.Model";
-import { IGroup } from "../../../../Stores/Models/Group.Model";
-import { useLangtext } from "../../../../lib/common";
-import ConnectionSelectionDialog from "../../../Connections/ConnectionSelectionDialog";
-import LogicalConnectionDialog from "../../../Connections/LogicalConnectionDialog";
-import ContextConnectionDialog from "../../../Connections/ContextConnectionDialog";
-import BridgeConnectionDialog from "../../../Connections/BridgeConnectionDialog";
-import ConnectionEditDialog from "../../../Connections/ConnectionEditDialog";
-import ConnectionOverviewDialog from "../../../Connections/ConnectionOverviewDialog";
-import { IccmConnectionOpenButton } from "../../../Connections/IccmOpenLink";
-import { canOpenConnectionSelectionDialog } from "../../../../lib/connectionDockpartPairing";
-import { filterConnectionsForElement } from "../../../../Stores/Connection.Store";
-import { formatConnectionSideSummary } from "../../../../lib/connectionEndpointRef";
-import { resolveConnectionMode, connectionModeLabel } from "../../../../lib/connectionMode";
+} from "../../Stores/Models/Connection.Model";
+import { IAsset } from "../../Stores/Models/Asset.Model";
+import { IGroup } from "../../Stores/Models/Group.Model";
+import { useLangtext } from "../../lib/common";
+import ConnectionSelectionDialog from "../Connections/ConnectionSelectionDialog";
+import LogicalConnectionDialog from "../Connections/LogicalConnectionDialog";
+import ContextConnectionDialog from "../Connections/ContextConnectionDialog";
+import BridgeConnectionDialog from "../Connections/BridgeConnectionDialog";
+import ConnectionEditDialog from "../Connections/ConnectionEditDialog";
+import ConnectionOverviewDialog from "../Connections/ConnectionOverviewDialog";
+import { IccmConnectionOpenButton } from "../Connections/IccmOpenLink";
+import { canOpenConnectionSelectionDialog } from "../../lib/connectionDockpartPairing";
+import { filterConnectionsForElement } from "../../Stores/Connection.Store";
+import { formatConnectionSideSummary } from "../../lib/connectionEndpointRef";
+import { resolveConnectionMode, connectionModeLabel } from "../../lib/connectionMode";
 
 interface ConnectionMappingProps {
 	element: IAsset | IGroup;

@@ -26,11 +26,10 @@ import {
 import { resolveFieldValueOnAdd } from "../../../lib/schemaAddFieldDefaults";
 import SchemaEditorFieldEdit from "./SchemaEditorFieldEdit";
 import SchemaEditorFieldView from "./SchemaEditorFieldView";
-import SchemaEditorCommentField from "./SchemaEditorCommentField";
 import { IElement } from "../../../Stores/Models/Element.Model";
 import { useSchemaEditorContext } from "./SchemaEditorContext";
 import { fieldPathHasMark } from "../../../lib/elementXPathValidation";
-import { isSchemaCommentField } from "../../../lib/iccmNoteLink";
+import { resolveSchemaItemLocation } from "../../../lib/schemaEditorLocation";
 
 interface FieldComponentProps {
 	pathPrefix: string;
@@ -59,29 +58,27 @@ const SchemaEditorField: React.FC<FieldComponentProps> = ({
 	schemaDefinitionField,
 	canEdit,
 }) => {
-	const { schemaName, dataEntryPath } = useSchemaEditorContext();
+	const { schemaName, fieldMarks } = useSchemaEditorContext();
+	const location = resolveSchemaItemLocation(elementData, schemaDefinitionField, pathPrefix);
 	const resolvedPath = resolveSchemaDocumentFieldPath(
 		elementData,
 		schemaDefinitionField,
 		pathPrefix
 	);
-	const isOmittedField = resolvedPath === null;
-	const mstPath = resolvedPath ?? "";
+	const isOmittedField = resolvedPath === null || !location.visible;
+	const mstPath = location.mstPath || resolvedPath || "";
 	const schemaPath = buildSchemaEditorSchemaPath(
-		dataEntryPath,
 		pathPrefix,
 		schemaDefinitionField.dataStructure.itemName
 	);
 	const fieldKey = `${elementData.id}:${mstPath}`;
 	const defaultsAppliedRef = useRef(false);
 	const isApplicationAssignedField =
-		((schemaName === "ANY-DEFINITION" ||
-			schemaDefinitionField.dataStructure.itemName === "environmentId") &&
-			isApplicationAssignedDefinitionField(
-				elementData,
-				schemaDefinitionField.dataStructure.itemName,
-				mstPath
-			)) ||
+		isApplicationAssignedDefinitionField(
+			elementData,
+			schemaDefinitionField.dataStructure.itemName,
+			mstPath
+		) ||
 		isSchemaAssignedIdField(
 			schemaName,
 			schemaDefinitionField.dataStructure.itemName,
@@ -103,7 +100,7 @@ const SchemaEditorField: React.FC<FieldComponentProps> = ({
 	const hasRuleViolation = isOmittedField
 		? false
 		: isFieldRuleViolated(schemaDefinitionField, value);
-	const elementMarks = rootStore.ui.elementMarks.get(elementData.id);
+	const elementMarks = fieldMarks ?? rootStore.ui.elementMarks.get(elementData.id);
 	const validationPositive =
 		!isOmittedField && fieldPathHasMark(mstPath, elementMarks?.fieldPaths ?? []) && !!elementMarks?.positive;
 	const validationNegative =
@@ -217,26 +214,6 @@ const SchemaEditorField: React.FC<FieldComponentProps> = ({
 
 	if (isOmittedField) {
 		return null;
-	}
-
-	if (isSchemaCommentField(schemaDefinitionField.dataStructure.itemName)) {
-		return (
-			<SchemaEditorCommentField
-				fieldKey={fieldKey}
-				field={schemaDefinitionField}
-				value={value}
-				canEdit={canEdit}
-				onChange={applyRawValue}
-				isStructurallyMissing={isStructurallyMissing}
-				forceReadOnly={isApplicationAssignedField}
-				mstPath={mstPath}
-				mstValue={externalValue}
-				schemaPath={schemaPath}
-				schemaTypeLabel={formatSchemaFieldTypeLabel(schemaDefinitionField)}
-				validationPositive={validationPositive}
-				validationNegative={validationNegative}
-			/>
-		);
 	}
 
 	if (!canEdit) {

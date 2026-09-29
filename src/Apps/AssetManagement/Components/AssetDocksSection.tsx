@@ -1,11 +1,10 @@
 import React, { useCallback, useState } from "react";
 import { observer } from "mobx-react";
 import { Divider, Tooltip } from "antd";
-import SchemaEditor from "../../../Components/Schema/SchemaEditor/SchemaEditor.Component";
-import { SchemaEditorContextProvider } from "../../../Components/Schema/SchemaEditor/SchemaEditorContext";
+import SchemaEditor from "../../../Components/Schema/SchemaEditor";
+import type { SchemaChooseOnAddRequest } from "../../../Components/Schema/SchemaEditor";
 import DockpartSchemaSelectionDialog from "../../../Components/Schema/DockpartSchemaSelectionDialog";
 import { IAsset } from "../../../Stores/Models/Asset.Model";
-import { SchemaChooseOnAddRequest } from "../../../Components/Schema/SchemaEditor/SchemaEditorContext";
 import { rootStore } from "../../../Stores/Root.Store";
 import { useLangtext } from "../../../lib/common";
 import { buildElementStatusClass } from "../../../lib/elementStatusStyle";
@@ -65,20 +64,13 @@ const AssetDocksSection: React.FC<AssetDocksSectionProps> = ({ asset, canEdit })
 				<Divider>{langtext("general.connection_points")}</Divider>
 			</Tooltip>
 			<div className={bodyClass}>
-				<SchemaEditorContextProvider
-					value={{
-						schemaName: "COMPONENT-DOCKS",
-						dataEntryPath: "",
-						requestChooseOnAdd,
-					}}
-				>
-					<SchemaEditor
-						schemaName="COMPONENT-DOCKS"
-						pathPrefix=""
-						elementData={asset}
-						canEdit={canEdit}
-					/>
-				</SchemaEditorContextProvider>
+				<SchemaEditor
+					schemaName="COMPONENT-DOCKS"
+					pathPrefix=""
+					data={asset}
+					canEdit={canEdit}
+					onChooseAdd={requestChooseOnAdd}
+				/>
 			</div>
 			<DockpartSchemaSelectionDialog
 				visible={dockpartChooseRequest != null}

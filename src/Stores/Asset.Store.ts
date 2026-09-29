@@ -107,11 +107,18 @@ export const AssetStore = types.compose("Asset", BaseStore, types.model({
 		environmentIds: string[]
 	) {
 		const domain = authStore.getDomain();
+		const root = getRoot(self) as {
+			componentStatus: {
+				clear: () => void;
+				loadForEnvironments: (domain: string, environmentIds: string[]) => Promise<void>;
+			};
+		};
 		if (!domain) {
 			return;
 		}
 		if (environmentIds.length === 0) {
 			self.assets.clear();
+			root.componentStatus.clear();
 			return;
 		}
 
@@ -145,6 +152,7 @@ export const AssetStore = types.compose("Asset", BaseStore, types.model({
 			restUrlIds
 		);
 		publishRestLoadReport(report);
+		yield root.componentStatus.loadForEnvironments(domain, environmentIds);
 	});
 
 	const loadAssets = flow(function* loadContent() {

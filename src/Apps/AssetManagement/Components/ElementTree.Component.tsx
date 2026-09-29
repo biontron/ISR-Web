@@ -170,22 +170,26 @@ const TreeNodeTitle = observer(function TreeNodeTitle({
 	};
 	const environment = buildTreeNodeInfoRows(rootStore, nodeData, definition)[0]?.value;
 	const displayName = typeof nodeData.title === "string" ? nodeData.title : "";
-	const hoverFields = hoverFieldsFromLiveElement(
-		{
-			id: elementId,
-			class: nodeData.class,
-			status,
-			definition: {
-				baseType: nodeData.baseType,
-				type: nodeData.elementType,
-				subType: nodeData.subType,
-				name: displayName,
-				label: nodeData.label,
-				description: nodeData.description,
+	const operationalStatus = rootStore.componentStatus.statusFor(elementId);
+	const hoverFields = {
+		...hoverFieldsFromLiveElement(
+			{
+				id: elementId,
+				class: nodeData.class,
+				status,
+				definition: {
+					baseType: nodeData.baseType,
+					type: nodeData.elementType,
+					subType: nodeData.subType,
+					name: displayName,
+					label: nodeData.label,
+					description: nodeData.description,
+				},
 			},
-		},
-		{ environment: environment && environment !== "—" ? environment : undefined }
-	);
+			{ environment: environment && environment !== "—" ? environment : undefined }
+		),
+		...(operationalStatus ? { operationalStatus } : {}),
+	};
 
 	React.useLayoutEffect(() => {
 		suppressNativeTreeTitle(hoverTargetRef.current);

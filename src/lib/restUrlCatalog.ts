@@ -11,7 +11,8 @@ export type RestUrlKind =
 	| "Group"
 	| "Asset"
 	| "Connection"
-	| "Environment";
+	| "Environment"
+	| "ComponentStatus";
 
 export type RestUrlOperation = "list" | "get" | "create" | "update" | "delete";
 
@@ -152,6 +153,19 @@ export function buildRestUrl(
 			} else if (operation === "delete") {
 				path = `/${domain}/environments/${ids.env ?? ""}/assets/${ids.itemId ?? ""}`;
 				method = "DELETE";
+			}
+			break;
+		case "ComponentStatus":
+			if (operation === "list") {
+				path = `/${domain}/environments/${ids.env ?? ""}/component-status`;
+			} else if (operation === "update") {
+				path = `/${domain}/environments/${ids.env ?? ""}/component-status/${ids.itemId ?? ""}`;
+				method = "PUT";
+			} else if (operation === "delete") {
+				path = `/${domain}/environments/${ids.env ?? ""}/component-status/${ids.itemId ?? ""}`;
+				method = "DELETE";
+			} else {
+				path = `/${domain}/environments/${ids.env ?? ""}/component-status/${ids.itemId ?? ""}`;
 			}
 			break;
 		case "Connection":

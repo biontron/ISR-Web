@@ -7,8 +7,8 @@
     "de": "SchemaEditor Schema"
   },
   "description": {
-    "und": "The data structure of the SchemaEditor (self-describing).",
-    "de": "Die Datenstruktur des SchemaEditors (selbst-beschreibend)."
+    "und": "The data structure of the SchemaEditor (self-describing). Schema items may set optional wizardType and dataStructure.xpath; missing or unknown wizardType falls back to atomic fields.",
+    "de": "Die Datenstruktur des SchemaEditors (selbst-beschreibend). Schema-Items können optionales wizardType und dataStructure.xpath setzen; fehlt der Typ oder ist er unbekannt, gelten atomare Felder."
   },
   "order": 0,
   "parent": {

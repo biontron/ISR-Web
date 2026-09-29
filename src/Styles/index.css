@@ -1025,6 +1025,47 @@ input[readonly] {
   gap: 12px;
 }
 
+.schema-wizard-address,
+.schema-wizard-identity {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.schema-wizard-address--error,
+.schema-wizard-identity--error {
+  outline: 1px solid #cf1322;
+  outline-offset: 4px;
+}
+
+.schema-wizard-identity__summary {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+}
+
+.schema-wizard-identity__summary .SchemaSvgIcon {
+  width: 22px;
+  height: 22px;
+  flex: 0 0 auto;
+}
+
+.schema-wizard-identity__header {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+}
+
+.schema-wizard-identity__types,
+.schema-wizard-identity__names,
+.schema-wizard-identity__rest {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  flex: 1;
+}
+
 .schema-editor-field {
   display: flex;
   flex-direction: column;

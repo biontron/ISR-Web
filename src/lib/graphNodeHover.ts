@@ -81,6 +81,7 @@ type GraphHoverRoot = {
 	groups: { groups: readonly GraphHoverElement[] };
 	views: { views: readonly GraphHoverElement[] };
 	environments: { findById: (id: string) => { id?: string; definition?: { name?: string } } | null | undefined };
+	componentStatus?: { statusFor: (componentId: string) => string | undefined };
 };
 
 export function resolveGraphNodeHoverFields(
@@ -100,14 +101,18 @@ export function resolveGraphNodeHoverFields(
 	}
 	const environmentId = readEnvironmentId(element);
 	const environment = environmentId ? root.environments.findById(environmentId) : undefined;
-	return hoverFieldsFromLiveElement(
-		{
-			id: element.id,
-			class: element.class,
-			status: element.status,
-			environmentId,
-			definition: element.definition,
-		},
-		{ environment: environmentName(environment) }
-	);
+	const operationalStatus = root.componentStatus?.statusFor(trimmed);
+	return {
+		...hoverFieldsFromLiveElement(
+			{
+				id: element.id,
+				class: element.class,
+				status: element.status,
+				environmentId,
+				definition: element.definition,
+			},
+			{ environment: environmentName(environment) }
+		),
+		...(operationalStatus ? { operationalStatus } : {}),
+	};
 }

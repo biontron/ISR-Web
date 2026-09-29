@@ -2,7 +2,7 @@ import React, { useEffect, useMemo, useState } from "react";
 import { Button, Empty, Modal, Tabs, Tag, Tooltip, message } from "antd";
 import { CodeOutlined } from "@ant-design/icons";
 import { observer } from "mobx-react";
-import SchemaEditor from "../Schema/SchemaEditor/SchemaEditor.Component";
+import SchemaEditor from "../Schema/SchemaEditor";
 import JsonInspectDialog from "../ChangeMode/JsonInspectDialog";
 import IccmConnectLinks from "./IccmConnectLinks";
 import AssetConnectionManagerPanel from "./AssetConnectionManagerPanel";
@@ -196,7 +196,7 @@ const ConnectionDialog: React.FC<ConnectionDialogProps> = ({ connectionId, onClo
 										<SchemaEditor
 											schemaName="CONNECTION"
 											pathPrefix=""
-											elementData={connection}
+											data={connection}
 											canEdit={canEdit}
 										/>
 									),

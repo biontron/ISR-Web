@@ -9,7 +9,7 @@ import { observer } from "mobx-react";
 import { Alert, Button, Descriptions, Empty, Space, Table, Tabs, Tooltip } from "antd";
 import { CodeOutlined } from "@ant-design/icons";
 import { rootStore } from "../../../Stores/Root.Store";
-import SchemaEditor from "../../../Components/Schema/SchemaEditor/SchemaEditor.Component";
+import SchemaEditor from "../../../Components/Schema/SchemaEditor";
 import SchemaDetailsActions from "../../../Components/Schema/SchemaDetailsActions";
 import JsonInspectDialog from "../../../Components/ChangeMode/JsonInspectDialog";
 import { getLanguageText, useLangtext } from "../../../lib/common";
@@ -211,10 +211,10 @@ const ConfigSchemaDetails: React.FC<ConfigSchemaDetailsProps> = observer(
 							{metaSchemaForm ? (
 								<div className="editor-schema-form-shell">
 									<SchemaEditor
-										schemaDefinition={metaSchemaForm}
+										schema={metaSchemaForm}
 										schemaName="SCHEMA"
 										pathPrefix=""
-										elementData={schema}
+										data={schema}
 										canEdit={canEditSchema}
 									/>
 								</div>
@@ -233,10 +233,10 @@ const ConfigSchemaDetails: React.FC<ConfigSchemaDetailsProps> = observer(
 							{resolvedSchema && previewInstance ? (
 								<div className="editor-schema-form-shell">
 									<SchemaEditor
-										schemaDefinition={resolvedSchema}
+										schema={resolvedSchema}
 										schemaName={schema.type}
 										pathPrefix={previewPathPrefix}
-										elementData={previewInstance as any}
+										data={previewInstance as any}
 										canEdit={false}
 									/>
 								</div>

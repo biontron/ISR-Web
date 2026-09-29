@@ -5,26 +5,26 @@ import React, { useEffect } from "react";
 import { observer } from "mobx-react";
 import CardCollapse from "../../../Apps/AssetManagement/Components/CardCollapse.Component";
 import { getLanguageText, useLangtext } from "../../../lib/common";
-import { interpolateTitleTemplate } from "../../../lib/titleTemplate";
+import {
+	ELEMENT_IDENTITY_TITLE_TEMPLATE,
+	interpolateTitleTemplate,
+	looksLikeElementDefinition,
+} from "../../../lib/titleTemplate";
 import { getValueByPath } from "../../../lib/path";
 import {
 	buildSchemaDataPath,
 	findExtraPathsInScope,
 	findStructuralMissingInScope,
 	getGroupUsageCount,
-	hasSchemaValidationErrorsInScope,
 	isArrayCollectionGroup,
 	canAddCollectionEntry,
 	isGroupStructurallyMissing,
 	isGroupUsageOutOfBounds,
 	isFixedObjectGroup,
-	isSchemaField,
 	isSingleMapObjectGroup,
 } from "../../../lib/schemaDeviation";
-import { APPLICATION_ASSIGNED_DEFINITION_FIELD_NAMES } from "../../../lib/elementDefinitionTypes";
 import { buildMandatoryGroupValue } from "../../../lib/schemaEntryDefaults";
 import {
-	isDockpartsChooseGroup,
 	needsChooseOnAdd,
 	tryAssetMstAppend,
 } from "../../../lib/assetSchemaMutations";
@@ -41,9 +41,11 @@ import SchemaEditorExtraData from "./SchemaEditorExtraData";
 import SchemaEditorStructuralMissing from "./SchemaEditorStructuralMissing";
 import { IElement } from "../../../Stores/Models/Element.Model";
 import { ISchemaItem } from "../../../Stores/Types/SchemaItem";
-import SchemaEditorDockpartEntry from "./SchemaEditorDockpartEntry";
 import SchemaEditorItem from "./SchemaEditorItem";
+import SchemaEditorPathTitle from "./SchemaEditorPathTitle";
+import SchemaSvgIcon from "../SchemaSvgIcon";
 import { ISchemaGroupModel } from "../../../Stores/Models/SchemaGroup.Model";
+import { rootStore } from "../../../Stores/Root.Store";
 import { useSchemaEditorContext } from "./SchemaEditorContext";
 import { buildSchemaEditorSchemaPath } from "../../../lib/schemaEditorFieldPath";
 import { formatSchemaGroupTypeLabel } from "../../../lib/schemaEditorPathMeta";
@@ -79,10 +81,9 @@ const SchemaEditorGroup: React.FC<SchemaEditorGroupProps> = ({
 	depth = 0,
 }) => {
 	const langtext = useLangtext();
-	const { requestChooseOnAdd, dataEntryPath, schemaName } = useSchemaEditorContext();
+	const { requestChooseOnAdd } = useSchemaEditorContext();
 	const path = buildSchemaDataPath(pathPrefix, schemaDefinitionGroup);
 	const schemaPath = buildSchemaEditorSchemaPath(
-		dataEntryPath,
 		pathPrefix,
 		schemaDefinitionGroup.dataStructure.itemName
 	);
@@ -135,7 +136,6 @@ const SchemaEditorGroup: React.FC<SchemaEditorGroupProps> = ({
 	}, [canEdit, elementData, isGroupMissing, path, schemaDefinitionGroup]);
 
 	const childPathPrefix = path;
-	const isDockpartsArray = isDockpartsChooseGroup(schemaDefinitionGroup);
 
 	const editAllowed = canEdit;
 	const isArrayGroup = isArrayCollectionGroup(schemaDefinitionGroup);
@@ -316,35 +316,6 @@ const SchemaEditorGroup: React.FC<SchemaEditorGroupProps> = ({
 			);
 		});
 
-	const isDefinitionTypeField = (item: ISchemaItem) =>
-		isSchemaField(item) &&
-		APPLICATION_ASSIGNED_DEFINITION_FIELD_NAMES.has(item.dataStructure.itemName);
-
-	const renderAnyDefinitionGroupChildren = () => {
-		const typeItems = sortedGroupItems.filter(isDefinitionTypeField);
-		const restItems = sortedGroupItems.filter((item) => !isDefinitionTypeField(item));
-		const typeHasErrors =
-			canEdit &&
-			typeItems.length > 0 &&
-			hasSchemaValidationErrorsInScope(elementData, typeItems, childPathPrefix);
-
-		return (
-			<>
-				{typeItems.length > 0 ? (
-					<CardCollapse
-						title={langtext("general.element_definition_type")}
-						defaultCollapsed
-						hasContentError={typeHasErrors}
-						depth={depth + 1}
-					>
-						{renderChildItems(childPathPrefix, `${childPathPrefix}.type`, typeItems)}
-					</CardCollapse>
-				) : null}
-				{renderChildItems(childPathPrefix, childPathPrefix, restItems)}
-			</>
-		);
-	};
-
 	const isVariableMapGroup =
 		schemaDefinitionGroup.collectionType === "map" &&
 		!isFixedObjectGroup(schemaDefinitionGroup) &&
@@ -372,7 +343,12 @@ const SchemaEditorGroup: React.FC<SchemaEditorGroupProps> = ({
 	);
 
 	const groupLabel = getLanguageText(schemaDefinitionGroup.formProperties.label);
-	const titleTemplate = schemaDefinitionGroup.formProperties.titleTemplate;
+	const isIdentitySummaryGroup =
+		schemaDefinitionGroup.dataStructure.itemName === "definition" &&
+		looksLikeElementDefinition(elementDataFragment);
+	const titleTemplate =
+		schemaDefinitionGroup.formProperties.titleTemplate?.trim() ||
+		(isIdentitySummaryGroup ? ELEMENT_IDENTITY_TITLE_TEMPLATE : "");
 	const titleContext = { root: elementData, basePath: path };
 
 	const renderArrayEntry = (arrayIndex: number, total: number) => {
@@ -468,26 +444,6 @@ const SchemaEditorGroup: React.FC<SchemaEditorGroupProps> = ({
 		}
 
 		if (isArrayGroup && Array.isArray(elementDataFragment)) {
-			if (isDockpartsChooseGroup(schemaDefinitionGroup)) {
-				return elementDataFragment.map((entry, arrayIndex) => (
-					<SchemaEditorDockpartEntry
-						key={`${path}[${arrayIndex}]`}
-						entryPath={`${path}[${arrayIndex}]`}
-						dockpart={entry}
-						elementData={elementData}
-						canEdit={canEdit}
-						arrayIndex={arrayIndex}
-						total={elementDataFragment.length}
-						minUsage={schemaDefinitionGroup.minUsage}
-						editAllowed={editAllowed}
-						entryDepth={entryDepth}
-						onMoveUp={() => handleMoveArrayEntry(arrayIndex, -1)}
-						onMoveDown={() => handleMoveArrayEntry(arrayIndex, 1)}
-						onRemove={() => handleRemoveEntry(arrayIndex)}
-					/>
-				));
-			}
-
 			return elementDataFragment.map((_, arrayIndex) =>
 				renderArrayEntry(arrayIndex, elementDataFragment.length)
 			);
@@ -508,31 +464,8 @@ const SchemaEditorGroup: React.FC<SchemaEditorGroupProps> = ({
 			);
 		}
 
-		if (schemaName === "ANY-DEFINITION" && schemaItemsGroupName === "definition") {
-			return renderAnyDefinitionGroupChildren();
-		}
-
 		return renderChildItems(childPathPrefix, childPathPrefix);
 	};
-
-	if (schemaName === "ANY-DEFINITION" && schemaItemsGroupName === "definition") {
-		const groupBody = renderAnyDefinitionGroupChildren();
-		const extraDataEntries = findExtraPathsInScope(
-			elementData,
-			schemaDefinitionGroup.items,
-			childPathPrefix
-		);
-		const structuralMissingEntries = isGroupMissing
-			? [{ path, kind: "group" as const }]
-			: findStructuralMissingInScope(elementData, schemaDefinitionGroup.items, childPathPrefix);
-		return (
-			<>
-				{groupBody ? <div className={groupClassName}>{groupBody}</div> : null}
-				<SchemaEditorStructuralMissing entries={structuralMissingEntries} />
-				<SchemaEditorExtraData entries={extraDataEntries} />
-			</>
-		);
-	}
 
 	const groupTitle = (() => {
 		if (!titleTemplate) {
@@ -554,14 +487,48 @@ const SchemaEditorGroup: React.FC<SchemaEditorGroupProps> = ({
 
 	return (
 		<CardCollapse
-			title={groupTitle}
-			defaultCollapsed={schemaDefinitionGroup.formProperties.collapsed === true}
+			title={
+				isIdentitySummaryGroup ? (
+					<span className="schema-wizard-identity__summary">
+						<SchemaSvgIcon
+							svgString={rootStore.configSchemas.getIconByDefinition(
+								(elementDataFragment as { baseType?: string; type?: string; subType?: string }) ?? {}
+							)}
+							element={
+								(elementDataFragment as {
+									baseType?: string;
+									type?: string;
+									subType?: string;
+									name?: string;
+									label?: string;
+								}) ?? {}
+							}
+						/>
+						<SchemaEditorPathTitle
+							title={groupTitle}
+							mstPath={canEdit ? path : undefined}
+							mstValue={elementDataFragment}
+							schemaPath={canEdit ? schemaPath : undefined}
+							schemaTypeLabel={canEdit ? formatSchemaGroupTypeLabel(schemaDefinitionGroup) : undefined}
+						/>
+					</span>
+				) : (
+					<SchemaEditorPathTitle
+						title={groupTitle}
+						mstPath={canEdit ? path : undefined}
+						schemaPath={canEdit ? schemaPath : undefined}
+						schemaTypeLabel={canEdit ? formatSchemaGroupTypeLabel(schemaDefinitionGroup) : undefined}
+					/>
+				)
+			}
+			defaultCollapsed={
+				isIdentitySummaryGroup
+					? schemaDefinitionGroup.formProperties.collapsed !== false
+					: schemaDefinitionGroup.formProperties.collapsed === true
+			}
 			hasContentError={isGroupMissing}
 			hasContentWarning={!isGroupMissing && isUsageOutOfBounds}
 			depth={depth}
-			mstPath={canEdit ? path : undefined}
-			schemaPath={canEdit ? schemaPath : undefined}
-			schemaTypeLabel={canEdit ? formatSchemaGroupTypeLabel(schemaDefinitionGroup) : undefined}
 			actionElement={
 				editAllowed && showAddControls ? (
 					<SchemaEditorGroupAddButton
@@ -588,16 +555,12 @@ const SchemaEditorGroup: React.FC<SchemaEditorGroupProps> = ({
 							: [];
 				const structuralMissingEntries = isGroupMissing
 					? [{ path, kind: "group" as const }]
-					: isDockpartsArray
-						? []
-						: structuralScopePaths.flatMap((scopePath) =>
+					: structuralScopePaths.flatMap((scopePath) =>
 							findStructuralMissingInScope(elementData, schemaDefinitionGroup.items, scopePath)
 						);
-				const extraDataEntries = isDockpartsArray
-					? []
-					: structuralScopePaths.flatMap((scopePath) =>
-						findExtraPathsInScope(elementData, schemaDefinitionGroup.items, scopePath)
-					);
+				const extraDataEntries = structuralScopePaths.flatMap((scopePath) =>
+					findExtraPathsInScope(elementData, schemaDefinitionGroup.items, scopePath)
+				);
 				return (
 					<>
 						{groupBody ? <div className={groupClassName}>{groupBody}</div> : null}

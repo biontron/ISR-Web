@@ -1,5 +1,16 @@
 import { getValueByPath } from "./path";
 
+/** Wie Dockpart `#{id} {type} / {version} - {label}` — Titel der Basis-Element-Gruppe. */
+export const ELEMENT_IDENTITY_TITLE_TEMPLATE = "{baseType} / {type} / {subType} - {name}";
+
+export function looksLikeElementDefinition(value: unknown): boolean {
+	if (value == null || typeof value !== "object") {
+		return false;
+	}
+	const record = value as Record<string, unknown>;
+	return "baseType" in record && "type" in record && "name" in record;
+}
+
 export type TitleTemplateContext = {
 	/** Elementwurzel — für `$…` / `/…` und relative Pfade über `basePath`. */
 	root?: unknown;

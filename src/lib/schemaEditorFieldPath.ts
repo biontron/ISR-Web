@@ -25,21 +25,11 @@ function appendSchemaSegment(
 }
 
 /** Kumulierter Schema-Pfad (Definition) inkl. itemName — ohne MST/settings-Mapping. */
-export function buildSchemaEditorSchemaPath(
-	dataEntryPath: string,
-	pathPrefix: string,
-	itemName: string
-): string {
-	const parent = pathPrefix || dataEntryPath || "";
-	return appendSchemaSegment(parent, itemName.trim(), false);
+export function buildSchemaEditorSchemaPath(pathPrefix: string, itemName: string): string {
+	return appendSchemaSegment(pathPrefix || "", itemName.trim(), false);
 }
 
 /** MST-Datenpfad inkl. itemName — entspricht getValueByPath/setValueByPath. */
-export function buildSchemaEditorMstPath(
-	dataEntryPath: string,
-	pathPrefix: string,
-	itemName: string
-): string {
-	const parent = pathPrefix || dataEntryPath || "";
-	return appendSchemaSegment(parent, itemName.trim(), true);
+export function buildSchemaEditorMstPath(pathPrefix: string, itemName: string): string {
+	return appendSchemaSegment(pathPrefix || "", itemName.trim(), true);
 }

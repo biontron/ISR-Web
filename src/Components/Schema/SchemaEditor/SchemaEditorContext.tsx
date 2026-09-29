@@ -1,5 +1,7 @@
 import React, { createContext, useContext } from "react";
 import { ISchemaGroupModel } from "../../../Stores/Models/SchemaGroup.Model";
+import type { ElementMarkFlags } from "../../../lib/elementXPathValidation";
+import type { SchemaWizardExtras } from "../../../lib/schemaWizards";
 
 export interface SchemaChooseOnAddRequest {
 	path: string;
@@ -8,18 +10,18 @@ export interface SchemaChooseOnAddRequest {
 	onCancel: () => void;
 }
 
+export type SchemaEditorWizardExtras = SchemaWizardExtras;
+
 export interface SchemaEditorContextValue {
 	/** Schema-Typ, z. B. ANY-PROPERTIES, COMPONENT-DOCKS, CONNECTION */
 	schemaName?: string;
-	/** Daten-Einstiegspunkt am Element: "", "properties", "settings" */
-	dataEntryPath: string;
-	/** Generische Choose-Pipeline bei leerem group.items[] (z. B. dockparts) */
+	/** Generische Choose-Pipeline (z. B. dockparts) */
 	requestChooseOnAdd?: (request: SchemaChooseOnAddRequest) => void;
+	fieldMarks?: ElementMarkFlags;
+	wizardExtras?: SchemaWizardExtras;
 }
 
-const SchemaEditorContext = createContext<SchemaEditorContextValue>({
-	dataEntryPath: "",
-});
+const SchemaEditorContext = createContext<SchemaEditorContextValue>({});
 
 export function useSchemaEditorContext(): SchemaEditorContextValue {
 	return useContext(SchemaEditorContext);

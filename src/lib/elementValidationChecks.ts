@@ -1,10 +1,13 @@
 import { ActiveElement, isTreeElement } from "../Interfaces/Element";
 import { IRootStore } from "../Stores/Root.Store";
+import type { IElement } from "../Stores/Models/Element.Model";
+import type { ValidationRuleRecord } from "../Stores/Models/ValidationRule.Model";
 import { resolveElementSettingsSchemaName } from "./elementDefinitionTypes";
 import {
 	hasSchemaValidationErrorsInScope,
 	resolveSchemaValidationScope,
 } from "./schemaDeviation";
+import { collectElementXPathMarks, type ElementValidationResult } from "./elementValidation";
 import { touchedObjectErrorRegistry } from "./touchedObjectErrors";
 
 function hasSchemaSectionErrors(
@@ -93,4 +96,25 @@ export function hasElementValidationOrStoreErrors(
 		return true;
 	}
 	return hasActiveElementSchemaValidationErrors(root, element as ActiveElement);
+}
+
+export function collectElementValidation(
+	root: IRootStore,
+	element: ActiveElement | IElement | undefined,
+	validationRules?: readonly ValidationRuleRecord[] | readonly unknown[]
+): ElementValidationResult {
+	if (!element) {
+		return {
+			invalid: false,
+			marks: collectElementXPathMarks(undefined, []),
+		};
+	}
+	const rules =
+		validationRules ??
+		root.ui.activeView?.validationRules ??
+		[];
+	return {
+		invalid: hasActiveElementSchemaValidationErrors(root, element as ActiveElement),
+		marks: collectElementXPathMarks(element, rules as unknown[]),
+	};
 }

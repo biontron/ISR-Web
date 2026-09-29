@@ -11,7 +11,8 @@ import {
 	moveArrayEntryByPath,
 	moveMapEntryByPath,
 } from "../../lib/path";
-import { hasElementValidationOrStoreErrors } from "../../lib/elementValidationChecks";
+import { collectElementValidation } from "../../lib/elementValidationChecks";
+import { touchedObjectErrorRegistry } from "../../lib/touchedObjectErrors";
 import { tryAssetArrayAdd, tryAssetArrayRemove, tryAssetMstAppend } from "../../lib/assetSchemaMutations";
 import { IRootStore } from "../Root.Store";
 import { ISchemaItem } from "../Types/SchemaItem";
@@ -65,7 +66,9 @@ export const ElementModel = types
 				return;
 			}
 
-			const hasErrors = hasElementValidationOrStoreErrors(root, self as IElement);
+			const hasErrors =
+				!!touchedObjectErrorRegistry.get(self.id) ||
+				collectElementValidation(root, self as IElement).invalid;
 
 			if (hasErrors) {
 				if (self.status === "deleted") {

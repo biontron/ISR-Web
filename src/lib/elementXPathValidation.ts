@@ -6,7 +6,6 @@ import type {
 } from "../Stores/Models/ValidationRule.Model";
 import {
 	addXPathRule,
-	readXPathRuleType,
 	removeXPathRule,
 	snapshotXPathRules,
 	toXPathRuleRecord,
@@ -21,6 +20,7 @@ import {
 	isUsableXPathExpression,
 	type FilterableElement,
 } from "./elementXPathFilter";
+import { collectElementXPathMarks } from "./elementValidation";
 import { elementStatusShowsIndicator } from "./elementStatusStyle";
 
 export type { ValidationRuleRecord, ValidationRuleType };
@@ -311,24 +311,23 @@ export function collectViewElementMarks(
 	const applyPositive = options?.applyPositive === true;
 	const applyNegative = options?.applyNegative === true;
 	const rules = view?.validationRules ?? [];
-	for (const rule of rules) {
-		const xpath = rule.xpath?.trim() ?? "";
-		if (!xpath) {
-			continue;
+	for (const element of candidates) {
+		const xpathMarks = collectElementXPathMarks(element, rules, {
+			applyPositive,
+			applyNegative,
+		});
+		const entry = ensureMarks(
+			marks,
+			element.id,
+			elementStatusShowsIndicator(element.status as never)
+		);
+		if (xpathMarks.positive) {
+			entry.positive = true;
 		}
-		const type = readXPathRuleType(rule);
-		if (type === "positive" && !applyPositive) {
-			continue;
+		if (xpathMarks.negative) {
+			entry.negative = true;
 		}
-		if (type === "negative" && !applyNegative) {
-			continue;
-		}
-		if (type !== "positive" && type !== "negative") {
-			continue;
-		}
-		for (const element of candidates) {
-			applyXPathRule(marks, element, xpath, type);
-		}
+		addFieldPaths(entry, xpathMarks.fieldPaths);
 	}
 
 	const query = searchText.trim();

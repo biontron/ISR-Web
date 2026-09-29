@@ -383,6 +383,8 @@
 		"dockpart_version": "Version",
 		"dockpart_label": "Label",
 		"dockpart_notes": "Notes",
-		"dockpart_state": "State"
+		"dockpart_state": "State",
+		"wizard_type": "Wizard type",
+		"wizard_fallback": "Unknown or missing wizard type uses atomic fields"
 	}
 }

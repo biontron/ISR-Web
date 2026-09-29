@@ -76,9 +76,9 @@ const SchemaEditorDockpartEntry: React.FC<SchemaEditorDockpartEntryProps> = ({
 				/>
 				{resolvedSchema ? (
 					<SchemaEditor
-						schemaDefinition={resolvedSchema}
+						schema={resolvedSchema}
 						pathPrefix={entryPath}
-						elementData={elementData}
+						data={elementData}
 						canEdit={canEdit}
 						depth={entryDepth}
 					/>

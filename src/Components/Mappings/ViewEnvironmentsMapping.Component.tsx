@@ -2,15 +2,15 @@ import React from "react";
 import { Button, List, Radio } from "antd";
 import { DeleteOutlined, PlusOutlined } from "@ant-design/icons";
 import { observer } from "mobx-react";
-import { IView } from "../../../../Stores/Models/View.Model";
-import { rootStore } from "../../../../Stores/Root.Store";
-import { useLangtext } from "../../../../lib/common";
-import { environmentDisplayName } from "../../../../Stores/Models/Environment.Model";
+import { IView } from "../../Stores/Models/View.Model";
+import { rootStore } from "../../Stores/Root.Store";
+import { useLangtext } from "../../lib/common";
+import { environmentDisplayName } from "../../Stores/Models/Environment.Model";
 import {
 	readViewEnvironmentBindings,
 	resolvePrimaryEnvironmentRef,
 	withSinglePrimary,
-} from "../../../../lib/viewEnvironments";
+} from "../../lib/viewEnvironments";
 
 const ViewEnvironmentsMapping: React.FC<{ view: IView }> = observer(({ view }) => {
 	const langtext = useLangtext();

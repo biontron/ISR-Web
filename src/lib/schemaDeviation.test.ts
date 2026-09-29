@@ -31,7 +31,7 @@ function createField(
 	return {
 		kind: "field",
 		order: 1,
-		dataStructure: { itemName, default: undefined, nullable: false },
+		dataStructure: { itemName, xpath: "", default: undefined, nullable: false },
 		formProperties: { label: { de: itemName, en: itemName } },
 		fieldType: "string",
 		itemFlags: { readonly: false, hidden: false, nullable: false },
@@ -51,7 +51,7 @@ function createGroup(
 	return {
 		kind: "group",
 		order: 1,
-		dataStructure: { itemName },
+		dataStructure: { itemName, xpath: "" },
 		formProperties: { label: { de: itemName, en: itemName } },
 		itemFlags: { readonly: false, hidden: false },
 		minUsage,
@@ -81,7 +81,7 @@ describe("schemaDeviation", () => {
 		it("nullable Pflichtfeld akzeptiert Leerstring", () => {
 			const field = createField("subType", 1, {
 				itemFlags: { readonly: true, hidden: false, nullable: true },
-				dataStructure: { itemName: "subType", default: "", nullable: true },
+				dataStructure: { itemName: "subType", xpath: "", default: "", nullable: true },
 			});
 			const data = { subType: "" };
 
@@ -92,7 +92,7 @@ describe("schemaDeviation", () => {
 		it("applies typed default values", () => {
 			const field = createField("count", 1, {
 				fieldType: "number",
-				dataStructure: { itemName: "count", default: "42", nullable: false },
+				dataStructure: { itemName: "count", xpath: "", default: "42", nullable: false },
 			});
 
 			expect(getFieldDefaultValue(field)).toBe(42);

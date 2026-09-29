@@ -1,6 +1,6 @@
 # XPath in ISR-Web
 
-Relatives XPath 1.0 gegen eine XML-Darstellung. Kontextknoten ist immer `<element>` (`elementToFilterXml`). Zusätzlich zu XPath 1.0 wertet die UI `match()`, `matches()` und `fn:matches()` als reguläre Ausdrücke aus.
+Relatives XPath 1.0 gegen eine XML-Darstellung. Standard-Kontextknoten ist `<element>` (`elementToFilterXml`). Zusätzlich zu XPath 1.0 wertet die UI `match()`, `matches()` und `fn:matches()` als reguläre Ausdrücke aus.
 
 XPath-Indizes sind 1-basiert (`docks[1]/dockparts[2]/…`). MST-/JSON-Pfade im Schema-Editor sind 0-basiert (`docks[0].dockparts[1].…`).
 
@@ -37,7 +37,7 @@ Beispiele:
 - `matches(docks[1]/dockparts[2]/settings/address/ip, '192\\.168\\.40\\..*')`
 - `class='Connection'`
 
-Gemeinsame Engine: `elementToFilterXml` + `elementMatchesXPath` (`elementXPathFilter.ts`). Dieselbe Auswertung gilt für globale Suche, Zuordnungs-Filter, Automapping, View-Validierung und Schema-Editor-Feldmarken. Connection-Endpunktwahl nutzt sie noch nicht. `titleTemplate` und IaC-Templates haben eigene XPath-Kontexte (siehe unten).
+Gemeinsame Engine: `elementToFilterXml` + `elementMatchesXPath` (`elementXPathFilter.ts`). Dieselbe Auswertung gilt für globale Suche, Zuordnungs-Filter, Automapping, View-Validierung, Schema-Editor-Feldmarken und optionale Schema-Item-Location (`dataStructure.xpath`). Connection-Endpunktwahl nutzt sie noch nicht. `titleTemplate` und IaC-Templates haben eigene XPath-Kontexte (siehe unten).
 
 ## Suche
 
@@ -76,7 +76,22 @@ REST: optionales `ViewItem.validationRules`. Fehlendes Feld lädt als leere List
 
 ## Schema-Editor
 
+Schreiben hängt am durchgereichten `pathPrefix` plus relativem `itemName` (MST, 0-basiert). Optionaler `dataStructure.xpath` ist ein Location-/Filter-Overlay:
+
+- ohne führendes `/` oder `element/…`: relativ zum aktuellen `pathPrefix` (Teilbaum). Unter einem Dockpart reicht `address` / `address/ip`; der Editor hängt den Prefix an und sucht auch Nachfahren (`settings/address`).
+- führendes `/` oder `element/…`: element-absolut, typisch als Sichtbarkeitsfilter (`class='View'`). 0 Treffer ⇒ Item wird nicht gerendert.
+- ohne `xpath` bleibt `itemName` + Prefix inklusive Dockpart-`settings`-Mapping.
+
 `titleTemplate` an Schema-Gruppen/Feldern interpoliert `{pfad}` und `#{pfad}` — JSON-Pfad (`settings.ip`, `$.id`) und XPath (`settings/ip`, `./ip`) relativ zum aktuellen Dockpart oder Gruppeneintrag (`titleTemplate.ts`). Das ist ein anderer Kontext als die Element-Suche.
+
+## Element-weite Validierung
+
+`collectElementValidation` (`elementValidationChecks.ts`) prüft das **ganze Element**, nicht den sichtbaren Mount:
+
+- Formular: alle zutreffenden Formular-Schemata (ANY-DEFINITION, ANY-PROPERTIES, Settings, COMPONENT-DOCKS, CONNECTION) inkl. Kinder unter Wizards → Pflicht, Pattern, Struktur → Feldfehler und `status: invalid`.
+- XPath: `View.validationRules` über dieselbe Engine → positiv/negativ am Element und an getroffenen Feldpfaden.
+
+Ein Mount auf `properties` ändert die Anzeige, nicht den Validierungsraum. Pflichtfehler in Docks halten das Element ungültig. `itemFlags.hidden` oder XPath-Filter blenden UI aus, nehmen das Feld nicht aus der Prüfung.
 
 Validierungs-XPath, der `docks`/`settings`/`definition` trifft, markiert die entsprechenden Felder zusätzlich zur Schema-Validierung (Pflichtfeld/Regex) — über dieselbe Element-Engine.
 

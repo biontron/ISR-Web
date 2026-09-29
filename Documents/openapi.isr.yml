@@ -656,6 +656,110 @@ paths:
         - basicAuth: []
 
 
+  /environments/{environmentId}/component-status:
+    get:
+      summary: List operational status of all components
+      description: >
+        Betriebsstatus (online, active, absent, n/a) aller Components.
+        Die Geräte- und Funktions-Components selbst werden dabei nicht verändert.
+        Zuordnung über componentId.
+      operationId: listComponentStatus
+      tags:
+        - ComponentStatus
+      parameters:
+        - name: Authorization
+          in: header
+          required: true
+          schema:
+            type: string
+        - name: environmentId
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        200:
+          description: Status entries
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ComponentStatusList"
+      security:
+        - basicAuth: []
+
+  /environments/{environmentId}/component-status/{componentId}:
+    get:
+      summary: Read operational status of one component
+      operationId: getComponentStatus
+      tags:
+        - ComponentStatus
+      parameters:
+        - name: Authorization
+          in: header
+          required: true
+          schema:
+            type: string
+        - name: environmentId
+          in: path
+          required: true
+          schema:
+            type: string
+        - name: componentId
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        200:
+          description: Status of the component
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ComponentStatusItem"
+        404:
+          description: No status stored for this component
+      security:
+        - basicAuth: []
+    put:
+      summary: Create or replace operational status
+      description: >
+        Schreibt nur die Status-Resource. Existiert die Component nicht, antwortet der Server mit 404
+        und lässt sie unverändert.
+      operationId: putComponentStatus
+      tags:
+        - ComponentStatus
+      parameters:
+        - name: Authorization
+          in: header
+          required: true
+          schema:
+            type: string
+        - name: environmentId
+          in: path
+          required: true
+          schema:
+            type: string
+        - name: componentId
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ComponentStatusItem"
+      responses:
+        200:
+          description: Status replaced
+        201:
+          description: Status created
+        404:
+          description: Referenced component does not exist
+      security:
+        - basicAuth: []
+
   /environments/{environmentId}/connections:
     get:
       summary: List all connection
@@ -1508,6 +1612,27 @@ components:
       items:
         $ref: "#/components/schemas/AssetItem"
 
+    ComponentStatusItem:
+      required:
+        - componentId
+        - status
+      properties:
+        componentId:
+          type: string
+          description: ID der Geräte- oder Funktions-Component
+        status:
+          type: string
+          enum: [online, active, absent, n/a]
+        timestamp:
+          type: string
+          format: date-time
+        reportedBy:
+          type: string
+    ComponentStatusList:
+      type: array
+      items:
+        $ref: "#/components/schemas/ComponentStatusItem"
+
     AttachmentType:
       required:
         - id
@@ -1711,7 +1836,10 @@ components:
           properties:
             itemName:
               type: string
-              description: JSON-Pfad-Segment / Eigenschaftsname in Instanzdaten
+              description: Relativer JSON-Schlüssel auf der aktuellen Ebene (kein Pfad)
+            xpath:
+              type: string
+              description: Optionaler Location-XPath relativ zum Editor-pathPrefix
             default:
               type: string
             nullable:
@@ -1723,6 +1851,17 @@ components:
           properties:
             label:
               $ref: "#/components/schemas/MultilingualTextType"
+            collapsed:
+              type: boolean
+            titleTemplate:
+              type: string
+        wizardType:
+          type: string
+          description: >-
+            Optionaler Wizard (fehlt oder unbekannt → atomarer SchemaEditor).
+            Bekannte IDs: markdown, dockpartBasedOn, dockparts, elementMapping,
+            connectionMapping, viewEnvironments, viewValidation, ipv4, ipv6,
+            elementIdentity.
         fieldType:
           $ref: "#/components/schemas/SchemaDataType"
         rules:
@@ -1763,6 +1902,10 @@ components:
           properties:
             itemName:
               type: string
+              description: Relativer JSON-Schlüssel auf der aktuellen Ebene (kein Pfad)
+            xpath:
+              type: string
+              description: Optionaler Location-XPath relativ zum Editor-pathPrefix
         formProperties:
           type: object
           required:
@@ -1770,6 +1913,17 @@ components:
           properties:
             label:
               $ref: "#/components/schemas/MultilingualTextType"
+            collapsed:
+              type: boolean
+            titleTemplate:
+              type: string
+        wizardType:
+          type: string
+          description: >-
+            Optionaler Wizard (fehlt oder unbekannt → atomarer SchemaEditor).
+            Bekannte IDs: markdown, dockpartBasedOn, dockparts, elementMapping,
+            connectionMapping, viewEnvironments, viewValidation, ipv4, ipv6,
+            elementIdentity.
         itemFlags:
           $ref: "#/components/schemas/SchemaGroupFlags"
         minUsage:

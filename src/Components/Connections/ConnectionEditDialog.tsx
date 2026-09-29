@@ -5,7 +5,7 @@ import React, { useEffect, useMemo, useState } from "react";
 import { Button, Modal, Tooltip, message } from "antd";
 import { CodeOutlined } from "@ant-design/icons";
 import { observer } from "mobx-react";
-import SchemaEditor from "../Schema/SchemaEditor/SchemaEditor.Component";
+import SchemaEditor from "../Schema/SchemaEditor";
 import JsonInspectDialog from "../ChangeMode/JsonInspectDialog";
 import { rootStore } from "../../Stores/Root.Store";
 import { getConnectionDisplayName, IConnection } from "../../Stores/Models/Connection.Model";
@@ -153,7 +153,7 @@ const ConnectionEditDialog: React.FC<ConnectionEditDialogProps> = ({
 						<SchemaEditor
 							schemaName="CONNECTION"
 							pathPrefix=""
-							elementData={connection}
+							data={connection}
 							canEdit={canEdit}
 						/>
 					</div>

@@ -4,7 +4,7 @@
 
 import { Button, Divider, Tooltip } from "antd";
 import React, { Fragment } from "react";
-import SchemaEditor from "../../../Components/Schema/SchemaEditor/SchemaEditor.Component";
+import SchemaEditor from "../../../Components/Schema/SchemaEditor";
 import { useLangtext } from "../../../lib/common";
 import { rootStore } from "../../../Stores/Root.Store";
 import { observer } from "mobx-react";
@@ -95,7 +95,7 @@ const ElementPropertiesDetails: React.FC<ElementPropertiesDetailsProps> = () => 
 					<SchemaEditor
 						schemaName="ANY-PROPERTIES"
 						pathPrefix="properties"
-						elementData={activeElement}
+						data={activeElement}
 						canEdit={canEdit}
 					/>
 				</section>
@@ -108,7 +108,7 @@ const ElementPropertiesDetails: React.FC<ElementPropertiesDetailsProps> = () => 
 					</Tooltip>
 					<div className={settingsBodyClass}>
 						<SchemaEditor
-							schemaDefinition={rootStore.configSchemas.findSchemaForDefinition(
+							schema={rootStore.configSchemas.findSchemaForDefinition(
 								activeElement.definition
 							)}
 							schemaName={resolveElementSettingsSchemaName(
@@ -116,7 +116,7 @@ const ElementPropertiesDetails: React.FC<ElementPropertiesDetailsProps> = () => 
 								rootStore.configSchemas.schemaCompat
 							)}
 							pathPrefix="settings"
-							elementData={activeElement}
+							data={activeElement}
 							canEdit={canEdit}
 						/>
 					</div>
@@ -131,7 +131,7 @@ const ElementPropertiesDetails: React.FC<ElementPropertiesDetailsProps> = () => 
 					<SchemaEditor
 						schemaName="ANY-DEFINITION"
 						pathPrefix=""
-						elementData={activeElement}
+						data={activeElement}
 						canEdit={canEdit}
 					/>
 				</section>

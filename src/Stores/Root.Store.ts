@@ -15,6 +15,7 @@ import { EnvironmentStore } from "./Environment.Store";
 import { initialUIStore, UIStore } from "./UI.Store";
 import { I18NStoreModel } from "./i18n.Store";
 import { UserSettingsStore } from "./UserSettings.Store";
+import { ComponentStatusStore } from "./ComponentStatus.Store";
 
 /**
  * Our root store - the entry point for all data models in our application
@@ -29,6 +30,7 @@ export const RootStore = types
 			views: types.optional(ViewStore, {}),
 			groups: types.optional(GroupStore, {}),
 			assets: types.optional(AssetStore, {}),
+			componentStatus: types.optional(ComponentStatusStore, {}),
 			connections: types.optional(ConnectionStore, {}),
 			config: types.optional(ConfigModel, {}),
 			configSchemas: types.optional(ConfigSchemaStore, {}),

@@ -23,6 +23,7 @@ export const SchemaFieldModel = types.model("SchemaField", {
 		 * Field name / field identifier ("part of path")
 		 */
 		itemName: types.string, // the field name (part of path)
+		xpath: types.optional(types.string, ""),
 		default: types.maybe(types.string), // defaultValue
 		nullable: types.optional(types.boolean, false), // can be null
 	}),
@@ -35,6 +36,8 @@ export const SchemaFieldModel = types.model("SchemaField", {
 		collapsed: types.optional(types.boolean, false),
 		titleTemplate: types.optional(types.string, ""),
 	}),
+
+	wizardType: types.optional(types.string, ""),
 
 	fieldType: types.enumeration("DataType", [
 		"string",

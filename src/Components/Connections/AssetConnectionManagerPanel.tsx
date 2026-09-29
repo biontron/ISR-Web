@@ -1,11 +1,12 @@
-import React, { Fragment } from "react";
+import React from "react";
 import { Empty } from "antd";
 import { observer } from "mobx-react";
 import { rootStore } from "../../Stores/Root.Store";
 import { IAsset } from "../../Stores/Models/Asset.Model";
-import ConnectionMapping from "../Schema/SchemaEditor/Mappings/ConnectionMapping.Component";
+import SchemaEditor from "../Schema/SchemaEditor";
 import AssetDocksSection from "../../Apps/AssetManagement/Components/AssetDocksSection";
 import { useLangtext } from "../../lib/common";
+import { CONNECTIONS_HOST_SCHEMA } from "../../lib/schemaEditorHostSchemas";
 
 type AssetConnectionManagerPanelProps = {
 	assetId: string | null | undefined;
@@ -25,8 +26,16 @@ const AssetConnectionManagerPanel: React.FC<AssetConnectionManagerPanelProps> = 
 
 		return (
 			<div className="connection-dialog__asset-panel">
-				<AssetDocksSection asset={asset as IAsset} canEdit={canEdit && rootStore.ui.canEditActiveElement()} />
-				<ConnectionMapping element={asset as IAsset} />
+				<AssetDocksSection
+					asset={asset as IAsset}
+					canEdit={canEdit && rootStore.ui.canEditActiveElement()}
+				/>
+				<SchemaEditor
+					schema={CONNECTIONS_HOST_SCHEMA}
+					pathPrefix=""
+					data={asset as IAsset}
+					canEdit={canEdit}
+				/>
 			</div>
 		);
 	}

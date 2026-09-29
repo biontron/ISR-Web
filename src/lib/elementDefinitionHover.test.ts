@@ -92,4 +92,17 @@ describe("elementDefinitionHover", () => {
 			className: "Asset",
 		});
 	});
+
+	it("ordnet den Betriebsstatus an, ohne den Bearbeitungsstatus zu ersetzen", () => {
+		expect(
+			buildElementDefinitionHoverRows({
+				id: "A-1",
+				status: "untouched",
+				operationalStatus: "active",
+			}).filter((row) => row.label === "Status" || row.label === "Betrieb")
+		).toEqual([
+			{ label: "Status", value: "untouched" },
+			{ label: "Betrieb", value: "aktiv" },
+		]);
+	});
 });

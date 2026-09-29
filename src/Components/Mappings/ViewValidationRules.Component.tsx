@@ -2,9 +2,9 @@ import React, { useEffect, useState } from "react";
 import { Button, Col, Input, List, Radio, Row } from "antd";
 import { DeleteOutlined, PlusOutlined } from "@ant-design/icons";
 import { observer } from "mobx-react";
-import { IView } from "../../../../Stores/Models/View.Model";
-import { rootStore } from "../../../../Stores/Root.Store";
-import { useLangtext } from "../../../../lib/common";
+import { IView } from "../../Stores/Models/View.Model";
+import { rootStore } from "../../Stores/Root.Store";
+import { useLangtext } from "../../lib/common";
 import {
 	addValidationRule,
 	removeValidationRule,
@@ -12,7 +12,7 @@ import {
 	updateValidationRule,
 	type ValidationRuleRecord,
 	type ValidationRuleType,
-} from "../../../../lib/elementXPathValidation";
+} from "../../lib/elementXPathValidation";
 
 const ViewValidationRules: React.FC<{ view: IView }> = observer(({ view }) => {
 	const langtext = useLangtext();
