@@ -320,6 +320,7 @@
 		"account_username_required": "Bitte geben Sie Ihren Benutzernamen ein",
 		"account_password": "Passwort",
 		"account_password_required": "Bitte geben Sie Ihr Passwort ein",
+		"account_password_stored": "Lokal gespeichert",
 		"account_domain": "Domäne",
 		"account_domain_required": "Bitte geben Sie den Namen Ihre Domäne ein",
 		"account_domain_placeholder": "Namen der Domäne eingeben oder auswählen",

@@ -5,27 +5,27 @@ function named(id: string, name: string) {
 }
 
 describe("elementDisplayOrder", () => {
-	it("sortiert ohne gespeicherte Folge alphabetisch", () => {
+	it("lässt ohne gespeicherte Folge die gegebene Reihenfolge stehen", () => {
 		const ordered = orderByChildSequence(
 			[named("b", "Zeta"), named("a", "Alpha")],
 			null
 		);
-		expect(ordered.map((item) => item.id)).toEqual(["a", "b"]);
+		expect(ordered.map((item) => item.id)).toEqual(["b", "a"]);
 	});
 
-	it("lässt eine Hand-Reihenfolge stehen und hängt neue Ids hinten an", () => {
+	it("lässt eine Hand-Reihenfolge stehen und hängt neue Ids in ihrer Folge hinten an", () => {
 		const ordered = orderByChildSequence(
-			[named("a", "Alpha"), named("m", "Mitte"), named("z", "Zeta")],
-			["z", "a"]
+			[named("m", "Mitte"), named("a", "Alpha"), named("z", "Zeta")],
+			["z"]
 		);
-		expect(ordered.map((item) => item.id)).toEqual(["z", "a", "m"]);
+		expect(ordered.map((item) => item.id)).toEqual(["z", "m", "a"]);
 	});
 
-	it("sortiert die erste Zuordnung alphabetisch und hängt danach nur an", () => {
-		const first = orderAfterAssign([], [named("z", "Zeta"), named("a", "Alpha")], false);
-		expect(first.map((item) => item.id)).toEqual(["a", "z"]);
-		const next = orderAfterAssign(first, [named("m", "Mitte")], true);
-		expect(next.map((item) => item.id)).toEqual(["a", "z", "m"]);
+	it("hängt Zuordnungen an, ohne die Liste alphabetisch zu sortieren", () => {
+		const first = orderAfterAssign([], [named("z", "Zeta"), named("a", "Alpha")]);
+		expect(first.map((item) => item.id)).toEqual(["z", "a"]);
+		const next = orderAfterAssign(first, [named("m", "Mitte")]);
+		expect(next.map((item) => item.id)).toEqual(["z", "a", "m"]);
 	});
 
 	it("schiebt eine zusammenhängende Auswahl als Block", () => {

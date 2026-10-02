@@ -18,7 +18,7 @@ interface CardCollapseProps {
 	defaultCollapsed?: boolean;
 	/** +/- ausblenden, z. B. leere Liste im Lesemodus. */
 	collapsible?: boolean;
-	/** Leeres Element statt +/-. */
+	/** Leere Liste als graue Fläche, ohne +/-. */
 	empty?: boolean;
 }
 
@@ -43,6 +43,7 @@ const CardCollapse: React.FC<CardCollapseProps> = ({
 	empty = false,
 }) => {
 	const [collapsed, setCollapsed] = useState(defaultCollapsed && !hasContentError);
+	const showEmptyArea = !collapsible && empty;
 	const showBody = collapsible && !collapsed;
 	const heading = collapsed && summary != null && summary !== "" ? summary : title;
 
@@ -70,11 +71,12 @@ const CardCollapse: React.FC<CardCollapseProps> = ({
 							}}
 							icon={collapsed ? <PlusOutlined /> : <MinusOutlined />}
 						/>
-					) : empty ? (
-						<span className="card-collapse__empty" aria-hidden="true" />
 					) : null}
 				</div>
 			</div>
+			{showEmptyArea ? (
+				<div className="card-collapse__body card-collapse__body--empty" aria-hidden="true" />
+			) : null}
 			{showBody && (
 				<div className={`card-collapse__body ${bodyStateClass}`.trim()}>
 					{renderCollapseBody(children)}

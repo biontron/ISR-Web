@@ -23,11 +23,16 @@ const CustomerLogin: React.FC = observer(() => {
 		? authStore.knownDomains[0]
 		: rootStore.config.domain;
 
+	const [credentialsUnlocked, setCredentialsUnlocked] = useState(false);
+	const useStoredAccount = authStore.hasStoredSession() && !credentialsUnlocked;
+
 	const handleRememberChange = (e: any) => {
 		authStore.setShouldRemember(e.target.checked);
 		if (!e.target.checked) {
+			setCredentialsUnlocked(true);
 			form.setFieldsValue({
 				username: "",
+				password: "",
 				domain: rootStore.config.domain
 			});
 		}
@@ -35,7 +40,11 @@ const CustomerLogin: React.FC = observer(() => {
 
 	const handleLogin = async (values: any) => {
 		const { username, password, domain } = values;
-		await authStore.login(username, password, domain);
+		if (authStore.hasStoredSession()) {
+			authStore.resumeStoredSession(domain);
+		} else {
+			await authStore.login(username, password, domain);
+		}
 		if (authStore.isLoggedIn()) {
 			setDomainOptions(authStore.knownDomains.map((domain: string) => ({ value: domain })));
 			navigate(`/${authStore.getDomain()}/am`);
@@ -71,16 +80,20 @@ const CustomerLogin: React.FC = observer(() => {
 						label={langtext("general.account_username")}
 						name="username"
 						initialValue={authStore.username}
-						rules={[{ required: true, message: langtext("general.account_username_required") }]}
+						rules={useStoredAccount ? [] : [{ required: true, message: langtext("general.account_username_required") }]}
 					>
-						<Input name="username"/>
+						<Input name="username" disabled={useStoredAccount}/>
 					</Form.Item>
 					<Form.Item
 						label={langtext("general.account_password")}
 						name="password"
-						rules={[{ required: true, message: langtext("general.account_password_required") }]}
+						rules={useStoredAccount ? [] : [{ required: true, message: langtext("general.account_password_required") }]}
 					>
-						<Input.Password name="password"/>
+						<Input.Password
+							name="password"
+							disabled={useStoredAccount}
+							placeholder={useStoredAccount ? langtext("general.account_password_stored") : undefined}
+						/>
 					</Form.Item>
 					<Form.Item
 						label={langtext("general.account_domain")}

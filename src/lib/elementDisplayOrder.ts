@@ -26,7 +26,7 @@ type ChildOrderSource = {
 	settings?: { get?: (key: string) => unknown } | Record<string, unknown> | null;
 };
 
-/** Gespeicherte Reihenfolge aus dem Verknüpfen-Dialog. Leer heißt: alphabetisch anzeigen. */
+/** Gespeicherte Reihenfolge aus dem Verknüpfen-Dialog. Leer heißt: gegebene Folge behalten. */
 export function readChildOrder(element: ChildOrderSource | null | undefined): string[] | null {
 	const settings = element?.settings;
 	if (!settings) {
@@ -49,10 +49,10 @@ export function childOrderEpoch(
 	return items.map((item) => (readChildOrder(item) ?? []).join(",")).join("|");
 }
 
-/** Ohne gespeicherte Folge alphabetisch. Neue Ids hängen hinten an, die Hand-Reihenfolge bleibt. */
+/** Ohne gespeicherte Folge bleibt die gegebene Reihenfolge. Neue Ids hängen hinten an. */
 export function orderByChildSequence<T extends NamedElement>(items: readonly T[], stored: string[] | null): T[] {
 	if (!stored || stored.length === 0) {
-		return [...items].sort(compareByElementName);
+		return [...items];
 	}
 	const byId = new Map<string, T>();
 	for (const item of items) {
@@ -70,22 +70,18 @@ export function orderByChildSequence<T extends NamedElement>(items: readonly T[]
 		ordered.push(item);
 		used.add(id);
 	}
-	const rest = items.filter((item) => item.id && !used.has(item.id)).sort(compareByElementName);
+	const rest = items.filter((item) => item.id && !used.has(item.id));
 	return [...ordered, ...rest];
 }
 
-/** Erste Zuordnung sortiert alles alphabetisch. Danach bleiben gesetzte Positionen, Neue kommen hinten dazu. */
+/** Neue Zuordnungen hängen in der gewählten Folge hinten an. Die bestehende Reihenfolge bleibt. */
 export function orderAfterAssign<T extends NamedElement>(
 	current: readonly T[],
-	newcomers: readonly T[],
-	hadStoredOrder: boolean
+	newcomers: readonly T[]
 ): T[] {
 	const existing = new Set(current.map((item) => item.id));
 	const added = newcomers.filter((item) => item.id && !existing.has(item.id));
-	if (!hadStoredOrder) {
-		return [...current, ...added].sort(compareByElementName);
-	}
-	return [...current, ...[...added].sort(compareByElementName)];
+	return [...current, ...added];
 }
 
 /** Markierte Ids um eine Position schieben. Zusammenhängende Auswahl bleibt ein Block. */

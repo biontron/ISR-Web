@@ -49,6 +49,11 @@ export class RestRequestError extends Error {
 class Api {
 	constructor(private baseUrl: string) {}
 
+	public hasAuthToken(): boolean {
+		const token = storage.getItem("token");
+		return token != null && token !== "";
+	}
+
 	public async request(url: string, options?: RequestInit) {
 		let headers: HeadersInit = {
 			"Content-Type": "application/json",

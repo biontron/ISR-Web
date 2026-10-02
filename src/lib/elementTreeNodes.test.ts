@@ -85,7 +85,7 @@ describe("elementTreeNodes", () => {
 		expect(underA.map((node) => node.key)).toEqual(["g-a/device-1"]);
 	});
 
-	it("sortiert die erste Ebene unter der View und die Kinder einer View-Gruppe nach Namen", () => {
+	it("behält die Verknüpfungsreihenfolge unter der View und in einer View-Gruppe", () => {
 		const root = rootWith(
 			[
 				group("g-z", { parentIdRef: "view1", name: "Zeta" }),
@@ -97,7 +97,7 @@ describe("elementTreeNodes", () => {
 			]
 		);
 		const tree = buildElementTreeNodes(root, { id: "view1", class: "View" });
-		expect(tree.map((node) => node.title)).toEqual(["Alpha", "Zeta"]);
+		expect(tree.map((node) => node.title)).toEqual(["Zeta", "Alpha"]);
 		const underAlpha = buildElementTreeNodes(
 			root,
 			{
@@ -107,7 +107,7 @@ describe("elementTreeNodes", () => {
 			},
 			{ parentKey: "g-a", ancestorIds: new Set(["view1", "g-a"]) }
 		);
-		expect(underAlpha.map((node) => node.title)).toEqual(["Erste", "Zweite"]);
+		expect(underAlpha.map((node) => node.title)).toEqual(["Zweite", "Erste"]);
 	});
 
 	it("übernimmt die im Verknüpfen-Dialog gespeicherte Reihenfolge", () => {

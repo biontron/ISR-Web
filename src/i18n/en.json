@@ -320,6 +320,7 @@
 		"account_username_required": "Please input your username",
 		"account_password": "Password",
 		"account_password_required": "Please input your password",
+		"account_password_stored": "Stored locally",
 		"account_domain": "Domain",
 		"account_domain_required": "Please input your domain name",
 		"account_domain_placeholder": "Enter or select domain name",

@@ -34,6 +34,7 @@ export class AuthStore {
 			lastMessageType: observable,
 			login: action,
 			logout: action,
+			resumeStoredSession: action,
 			setDomain: action,
 			setShouldRemember: action,
 		});
@@ -106,6 +107,29 @@ export class AuthStore {
 		localStorage.removeItem("lang");
 		localStorage.removeItem("knownDomains");
 		localStorage.removeItem("username");
+	}
+
+	/**
+	 * Lokale Anmeldung: Benutzername und Token liegen bereits im Speicher.
+	 * Dann reicht die Domäne; Benutzername und Passwort müssen nicht erneut eingegeben werden.
+	 */
+	public hasStoredSession(): boolean {
+		return this.shouldRemember && Boolean(this.username) && api.hasAuthToken();
+	}
+
+	/**
+	 * Gespeicherte Anmeldung für eine Domäne fortsetzen, ohne Passwort erneut zu senden.
+	 */
+	public resumeStoredSession(domain: string): boolean {
+		if (!this.username || !api.hasAuthToken()) {
+			return false;
+		}
+
+		this.isAuthenticated = true;
+		this.setDomain(domain);
+		this.setLoginMessage(rootStore.i18n.text("general.login_success"), "success");
+		void rootStore.userSettings.load();
+		return true;
 	}
 
 	public setShouldRemember(value: boolean) {

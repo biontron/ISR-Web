@@ -378,11 +378,7 @@ const AssetReferenceMapping: React.FC<{ element: ActiveElement }> = observer(({ 
 		if (!canEdit || selectedAvailable.length === 0) {
 			return;
 		}
-		const next = orderAfterAssign(
-			assignedElements,
-			selectedAvailable,
-			readChildOrder(mappingParent) != null
-		);
+		const next = orderAfterAssign(assignedElements, selectedAvailable);
 		selectedAvailable.forEach((child) => assignMappedElement(child, mappingParent));
 		storeAssignedOrder(next);
 		setSelectedAvailableKeys([]);
@@ -402,11 +398,7 @@ const AssetReferenceMapping: React.FC<{ element: ActiveElement }> = observer(({ 
 		if (!canEdit || availableElements.length === 0) {
 			return;
 		}
-		const next = orderAfterAssign(
-			assignedElements,
-			availableElements,
-			readChildOrder(mappingParent) != null
-		);
+		const next = orderAfterAssign(assignedElements, availableElements);
 		availableElements.forEach((child) => assignMappedElement(child, mappingParent));
 		storeAssignedOrder(next);
 		setSelectedAvailableKeys([]);
