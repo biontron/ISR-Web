@@ -35,6 +35,7 @@ import {
 	applyAutomappingToViewGroups,
 	viewGroupsHaveActivatedFilterRules,
 } from "../../lib/elementAutomapping";
+import { hasElementValidationOrStoreErrors } from "../../lib/elementValidationChecks";
 
 const iconGroupGap: React.CSSProperties = { marginLeft: 8 };
 
@@ -66,6 +67,8 @@ const ChangeModeToolbar: React.FC = () => {
 	};
 
 	const canSaveToolbar = shouldEnableChangeModeSave(activeElement?.status);
+	const hasFieldErrors =
+		!!activeElement && hasElementValidationOrStoreErrors(rootStore, activeElement);
 
 	const handleSave = async () => {
 		if (!activeElement) {
@@ -227,6 +230,7 @@ const ChangeModeToolbar: React.FC = () => {
 							</Tooltip>
 							<Tooltip title={langtext("general.element_save")}>
 								<Button
+									danger={hasFieldErrors}
 									icon={<SaveOutlined />}
 									onClick={handleSave}
 									loading={saving}

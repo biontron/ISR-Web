@@ -183,6 +183,11 @@ export const GroupModel = types.compose(
 		);
 		self.markTouched();
 	},
+	setChildOrder(ids: string[]) {
+		self.beginEdit();
+		self.settings.set("childOrder", [...ids]);
+		self.markTouched();
+	},
 	setFilterRules(rules: unknown[]) {
 		self.beginEdit();
 		const root = getRoot(self) as IRootStore;

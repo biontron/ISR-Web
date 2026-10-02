@@ -12,7 +12,7 @@ describe("connectionGraphCircles", () => {
 		const web = asset("web", "server-32", [
 			{
 				id: "d1",
-				dockparts: [{ id: "p1", type: "VLAN", label: "VLAN", valueRef: "ctx#v10" }],
+				dockparts: [{ id: "p1", type: "VLAN", label: "VLAN", inheritance: "ctx#v10" }],
 			},
 		]);
 		const hosts = [

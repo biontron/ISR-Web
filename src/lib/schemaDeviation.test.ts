@@ -249,6 +249,27 @@ describe("schemaDeviation", () => {
 			expect(missing).toEqual([{ path: "properties.responsibles", kind: "group" }]);
 		});
 
+		it("wertet ein leeres festes Objekt als vorhanden", () => {
+			const management = createGroup("management", [createField("owner", 0)], "map", 1, 1);
+			expect(
+				isGroupStructurallyMissing({ settings: { management: {} } }, "settings.management", management)
+			).toBe(false);
+			expect(
+				isGroupStructurallyMissing({ settings: {} }, "settings.management", management)
+			).toBe(true);
+		});
+
+		it("behandelt null bei minUsage 0 nicht als fehlende Struktur", () => {
+			const management = createGroup("management", [], "map", 0, 1);
+			expect(
+				isGroupStructurallyMissing(
+					{ settings: { management: null } },
+					"settings.management",
+					management
+				)
+			).toBe(false);
+		});
+
 		it("handles ANY-DEFINITION-like fixed object groups without false extras", () => {
 			const descriptionGroup = createGroup(
 				"description",

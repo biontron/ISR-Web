@@ -20,7 +20,9 @@ export const ElementPropertiesControls: React.FC<ElementPropertiesControlsProps>
 
 	return (
 		<Fragment>
-			This is the place for the MQTT Status and Actionboard.
+			<div className="element-properties-tab">
+				This is the place for the MQTT Status and Actionboard.
+			</div>
 		</Fragment>
 	);
 };

@@ -7,6 +7,8 @@ import { MinusOutlined, PlusOutlined } from "@ant-design/icons";
 
 interface CardCollapseProps {
 	title: ReactNode;
+	/** Nur sichtbar, solange der Inhalt eingeklappt ist. */
+	summary?: ReactNode;
 	extraContent?: ReactNode;
 	children?: ReactNode | (() => ReactNode);
 	actionElement?: ReactNode;
@@ -14,6 +16,10 @@ interface CardCollapseProps {
 	hasContentWarning?: boolean;
 	depth?: number;
 	defaultCollapsed?: boolean;
+	/** +/- ausblenden, z. B. leere Liste im Lesemodus. */
+	collapsible?: boolean;
+	/** Leeres Element statt +/-. */
+	empty?: boolean;
 }
 
 function renderCollapseBody(children: CardCollapseProps["children"]): ReactNode {
@@ -25,6 +31,7 @@ function renderCollapseBody(children: CardCollapseProps["children"]): ReactNode 
 
 const CardCollapse: React.FC<CardCollapseProps> = ({
 	title,
+	summary,
 	extraContent,
 	children,
 	actionElement,
@@ -32,8 +39,12 @@ const CardCollapse: React.FC<CardCollapseProps> = ({
 	hasContentWarning = false,
 	depth = 0,
 	defaultCollapsed = false,
+	collapsible = true,
+	empty = false,
 }) => {
 	const [collapsed, setCollapsed] = useState(defaultCollapsed && !hasContentError);
+	const showBody = collapsible && !collapsed;
+	const heading = collapsed && summary != null && summary !== "" ? summary : title;
 
 	const bodyStateClass = hasContentError
 		? "card-collapse__body--error"
@@ -42,25 +53,29 @@ const CardCollapse: React.FC<CardCollapseProps> = ({
 			: "";
 
 	return (
-		<div className="card-collapse" data-depth={depth}>
+		<div className="card-collapse" data-depth={depth} data-empty={empty ? "true" : undefined}>
 			<div className="card-collapse__header">
-				<span className="card-collapse__title">{title}</span>
+				<span className="card-collapse__title">{heading}</span>
 				<div className="card-collapse__extra">
 					{extraContent}
 					{actionElement}
-					<Button
-						type="link"
-						className="card-collapse-toggle"
-						onClick={(event) => {
-							event.preventDefault();
-							event.stopPropagation();
-							setCollapsed((current) => !current);
-						}}
-						icon={collapsed ? <PlusOutlined /> : <MinusOutlined />}
-					/>
+					{collapsible ? (
+						<Button
+							type="link"
+							className="card-collapse-toggle"
+							onClick={(event) => {
+								event.preventDefault();
+								event.stopPropagation();
+								setCollapsed((current) => !current);
+							}}
+							icon={collapsed ? <PlusOutlined /> : <MinusOutlined />}
+						/>
+					) : empty ? (
+						<span className="card-collapse__empty" aria-hidden="true" />
+					) : null}
 				</div>
 			</div>
-			{!collapsed && (
+			{showBody && (
 				<div className={`card-collapse__body ${bodyStateClass}`.trim()}>
 					{renderCollapseBody(children)}
 				</div>

@@ -1,6 +1,20 @@
 import { ISchemaFieldModel } from "../Stores/Models/SchemaField.Model";
+import authStore from "../Stores/Auth.Store";
+import { getFieldDefaultValue } from "./schemaDeviation";
 import { getValueByPath } from "./path";
 import { generateResourceId } from "./resourceId";
+
+/** Standardwerte aus der Schema-Konfiguration (`dataStructure.default`). */
+export function resolveSchemaConfiguredDefault(field: ISchemaFieldModel): unknown | undefined {
+	const raw = getFieldDefaultValue(field);
+	if (raw === "$user") {
+		return authStore.username ?? "";
+	}
+	if (raw === "$now") {
+		return new Date().toISOString();
+	}
+	return raw;
+}
 
 export interface SchemaAddFieldContext {
 	element: unknown;
@@ -196,10 +210,5 @@ export function resolveFieldValueOnAdd(
 		}
 	}
 
-	const fromDefault = field.dataStructure?.default;
-	if (fromDefault !== undefined && fromDefault !== "") {
-		return fromDefault;
-	}
-
-	return undefined;
+	return resolveSchemaConfiguredDefault(field);
 }

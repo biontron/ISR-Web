@@ -2,8 +2,12 @@ import { ISchemaFieldModel } from "../Stores/Models/SchemaField.Model";
 import { ISchemaGroupModel } from "../Stores/Models/SchemaGroup.Model";
 import { ISchemaItem } from "../Stores/Types/SchemaItem";
 import { ISchemaDefinition } from "../Interfaces/SchemaDefinition";
-import { getFieldDefaultValue, isSchemaField, isSchemaGroup, isArrayCollectionGroup } from "./schemaDeviation";
-import { resolveFieldValueOnAdd, SchemaAddFieldContext } from "./schemaAddFieldDefaults";
+import { isSchemaField, isSchemaGroup, isArrayCollectionGroup } from "./schemaDeviation";
+import {
+	resolveFieldValueOnAdd,
+	resolveSchemaConfiguredDefault,
+	SchemaAddFieldContext,
+} from "./schemaAddFieldDefaults";
 
 function defaultForFieldType(field: ISchemaFieldModel): unknown {
 	switch (field.fieldType) {
@@ -21,7 +25,7 @@ function defaultForFieldType(field: ISchemaFieldModel): unknown {
 }
 
 function defaultForField(field: ISchemaFieldModel): unknown | undefined {
-	const fromSchema = getFieldDefaultValue(field);
+	const fromSchema = resolveSchemaConfiguredDefault(field);
 	if (fromSchema !== undefined) {
 		return fromSchema;
 	}

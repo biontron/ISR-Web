@@ -41,6 +41,7 @@ export const SCHEMA_FIELD_ITEM_FORM_ITEMS = [
 				dataStructure: { itemName: "default", default: "" },
 				formProperties: { label: { und: "Default", de: "Standardwert" } },
 				fieldType: "string",
+				example: "$user | $now",
 				itemFlags: { ...fieldFlags, nullable: true },
 				minUsage: 0,
 				maxUsage: 1,

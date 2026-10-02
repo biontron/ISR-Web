@@ -3,7 +3,7 @@ import {
 	resolveGroupDefinitionTypesForCreate,
 } from "./elementDefinitionTypes";
 import { ISchemaModel } from "../Stores/Models/Schema.Model";
-import { collectLinkedAssetIdsForView, collectUnlinkedAssetsForView, collectUnlinkedElementsForView, nestUnlinkedStackedComponents } from "./treeUnlinkedAssets";
+import { collectLinkedAssetIdsForView, collectUnlinkedAssetsForView, collectUnlinkedElementForestForView, collectUnlinkedElementsForView, nestUnlinkedStackedComponents } from "./treeUnlinkedAssets";
 import { resolveTreeNodeSegment } from "./treeNodeDisplay";
 
 describe("treeUnlinkedAssets", () => {
@@ -158,6 +158,40 @@ describe("treeUnlinkedAssets", () => {
 		expect(linked.has("a-parent")).toBe(true);
 		expect(linked.has("a-child")).toBe(true);
 		expect(linked.has("a-free")).toBe(false);
+	});
+
+	it("lässt Zugeordnete Komponenten aus elementIdRefs aus der Unverknüpft-Liste", () => {
+		const withAssignedOnFreeFolder = {
+			views: { views: [{ id: "view1" }] },
+			groups: {
+				groups: [
+					{
+						id: "g1",
+						class: "Group",
+						parentIdRef: "view1",
+						elementIdRefs: [{ id: "a-in-tree" }],
+					},
+					{
+						id: "g-free",
+						class: "Group",
+						parentIdRef: undefined,
+						elementIdRefs: [{ id: "a-assigned" }],
+					},
+				],
+			},
+			assets: {
+				assets: [
+					{ id: "a-in-tree", class: "Asset", ownerIdRef: null },
+					{ id: "a-assigned", class: "Asset", ownerIdRef: null },
+					{ id: "a-child", class: "Asset", ownerIdRef: "a-assigned" },
+					{ id: "a-free", class: "Asset", ownerIdRef: null },
+				],
+			},
+		} as any;
+		expect(collectUnlinkedElementForestForView(withAssignedOnFreeFolder, "view1").map((node) => node.element.id)).toEqual([
+			"g-free",
+			"a-free",
+		]);
 	});
 
 	it("nestet gestapelte unverknüpfte Components als Sub-Baum", () => {

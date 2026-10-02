@@ -87,7 +87,7 @@ export function hasElementConnectionValidationErrors(
 
 export function hasElementValidationOrStoreErrors(
 	root: IRootStore,
-	element: { id: string; definition?: { baseType?: string }; class?: string } | undefined
+	element: ActiveElement
 ): boolean {
 	if (!element) {
 		return false;
@@ -95,7 +95,7 @@ export function hasElementValidationOrStoreErrors(
 	if (touchedObjectErrorRegistry.get(element.id)) {
 		return true;
 	}
-	return hasActiveElementSchemaValidationErrors(root, element as ActiveElement);
+	return hasActiveElementSchemaValidationErrors(root, element);
 }
 
 export function collectElementValidation(

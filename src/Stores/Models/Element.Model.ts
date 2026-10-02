@@ -101,6 +101,7 @@ export const ElementModel = types
 			/** Nach Mutation: new/invalid bleiben, sonst changed. */
 			markTouched() {
 				markTouchedAfterMutation(self);
+				applyValidationSync();
 			},
 
 			restoreStagingState(

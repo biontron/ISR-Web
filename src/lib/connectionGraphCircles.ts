@@ -18,7 +18,7 @@ function circleFromDockpart(
 	hosts: ReadonlyArray<ContextValueHost>
 ): GraphDockCircle {
 	const type = String(part.type || part.protocol || "").trim();
-	const valueRef = String(part.valueRef ?? "").trim();
+	const valueRef = String(part.inheritance ?? "").trim();
 	const resolved = findContextValue(hosts, valueRef);
 	return {
 		dockpartId: String(part.id),

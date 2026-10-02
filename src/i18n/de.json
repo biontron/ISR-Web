@@ -129,6 +129,8 @@
 		"assetreference_filter_unlinked_only": "Nur unverknüpfte Komponenten anzeigen.",
 		"assetreference_filter_assign_all": "Alle übernehmen",
 		"assetreference_filter_unassign_all": "Alle entfernen",
+		"assetreference_move_up": "Auswahl nach oben",
+		"assetreference_move_down": "Auswahl nach unten",
 		"assetreference_filter_apply": "Filterregeln anwenden",
 		"assetreference_filter_clear": "Filterregeln aufheben",
 		"assetreference_filter_apply_success": "@@count@@ Zuordnung(en) übernommen",

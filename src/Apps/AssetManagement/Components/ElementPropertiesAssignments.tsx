@@ -19,7 +19,7 @@ const ElementPropertiesAssignments: React.FC = () => {
 
 	return (
 		<Fragment>
-			<div style={{ padding: "16px 24px" }}>
+			<div className="element-properties-tab">
 				<Tooltip title={langtext("general.element_links")}>
 					<Divider>{langtext("general.element_links")}</Divider>
 				</Tooltip>

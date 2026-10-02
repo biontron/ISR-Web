@@ -94,21 +94,6 @@ const ConnectionMapping: React.FC<ConnectionMappingProps> = observer(({ element,
 				</Space>
 			</div>
 
-			{connections.length === 0 && allConnections.length > 0 && (
-				<Alert
-					type="info"
-					showIcon
-					style={{ marginBottom: 16 }}
-					message={langtext("general.connection_overview_hidden_hint", {
-						count: String(allConnections.length),
-					})}
-					action={
-						<Button size="small" onClick={() => setOverviewVisible(true)}>
-							{langtext("general.connection_overview_open")}
-						</Button>
-					}
-				/>
-			)}
 			{hiddenConnectionCount > 0 && connections.length > 0 && (
 				<Alert
 					type="info"

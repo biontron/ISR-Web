@@ -1,5 +1,6 @@
 import { getIdentifier } from "mobx-state-tree";
 import { ITreeNode } from "../Interfaces/Tree";
+import { orderByChildSequence, readChildOrder } from "./elementDisplayOrder";
 import { indexAssetsByOwnerId, indexById, indexGroupsByParentId } from "./hierarchyIndex";
 
 type TreeDefinition = {
@@ -43,6 +44,7 @@ export type TreeParentSpec = {
 	class?: string;
 	filterRules?: unknown[];
 	elementIdRefs?: Array<{ id: unknown; environmentId?: unknown }>;
+	settings?: { get?: (key: string) => unknown } | Record<string, unknown> | null;
 };
 
 type TreeBuildContext = {
@@ -275,7 +277,7 @@ function collectDirectChildren(
 	const parentClass = parent.class ?? "";
 
 	if (parentClass === "Asset") {
-		return index.assetsByOwner.get(parent.id) ?? [];
+		return orderChildren(parent, index.assetsByOwner.get(parent.id) ?? []);
 	}
 
 	const groupChildren = index.groupsByParent.get(parent.id) ?? [];
@@ -286,10 +288,17 @@ function collectDirectChildren(
 
 	if (parentClass === "View") {
 		const staticAssets = index.assetsByOwner.get(parent.id) ?? [];
-		return [...groupChildren, ...staticAssets];
+		return orderChildren(parent, [...groupChildren, ...staticAssets]);
 	}
 
-	return [...groupChildren, ...referencedAssets];
+	return orderChildren(parent, [...groupChildren, ...referencedAssets]);
+}
+
+function orderChildren<T extends { id: string; definition?: { name?: string } }>(
+	parent: TreeParentSpec,
+	children: T[]
+): T[] {
+	return orderByChildSequence(children, readChildOrder(parent));
 }
 
 function elementMayHaveChildren(
@@ -465,6 +474,56 @@ export function resolveTreeParentSpec(
 		return group;
 	}
 	return root.assets.assets.find((item) => item.id === elementId);
+}
+
+export function countDirectTreeChildren(
+	root: TreeRoot,
+	parent: TreeParentSpec,
+	index?: TreeIndex
+): number {
+	const treeIndex = index ?? buildTreeIndex(root);
+	let count = 0;
+	for (const child of collectDirectChildren(parent, treeIndex)) {
+		if (child) {
+			count += 1;
+		}
+	}
+	return count;
+}
+
+/** Direkte Kinder je View-Gruppe und Komponente — dieselbe Menge, die der Tree lädt. */
+export function collectTreeNodeChildCounts(root: TreeRoot): Map<string, number> {
+	const index = buildTreeIndex(root);
+	const counts = new Map<string, number>();
+	for (const group of root.groups.groups) {
+		counts.set(
+			group.id,
+			countDirectTreeChildren(
+				root,
+				{
+					id: group.id,
+					class: group.class ?? "Group",
+					elementIdRefs: group.elementIdRefs,
+					filterRules: group.filterRules,
+				},
+				index
+			)
+		);
+	}
+	for (const asset of root.assets.assets) {
+		counts.set(
+			asset.id,
+			countDirectTreeChildren(
+				root,
+				{
+					id: asset.id,
+					class: asset.class ?? "Asset",
+				},
+				index
+			)
+		);
+	}
+	return counts;
 }
 
 export function buildElementTreeNodes(

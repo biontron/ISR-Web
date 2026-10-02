@@ -79,6 +79,15 @@ export function collectLinkedAssetIdsForView(root: IRootStore, viewId: string): 
 		}
 	});
 
+	for (const group of collectUnlinkedGroupsForView(root, viewId)) {
+		for (const ref of group.elementIdRefs ?? []) {
+			const assetId = resolveElementRefId(ref);
+			if (assetId) {
+				addAssetAndOwnerDescendants(assetId, linked, childrenByOwner);
+			}
+		}
+	}
+
 	return linked;
 }
 

@@ -212,6 +212,11 @@ export const AssetModel = types.compose(
 		);
 		self.markTouched();
 	},
+	setChildOrder(ids: string[]) {
+		self.beginEdit();
+		self.settings.set("childOrder", [...ids]);
+		self.markTouched();
+	},
 
 	setFilterRules(rules: unknown[]) {
 		self.beginEdit();

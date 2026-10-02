@@ -6,7 +6,8 @@ import { ISchemaFieldModel } from "../../../Stores/Models/SchemaField.Model";
 import { IElement } from "../../../Stores/Models/Element.Model";
 import { ISchemaItem } from "../../../Stores/Types/SchemaItem";
 import { resolveSchemaWizard } from "../../../lib/schemaWizards";
-import { resolveSchemaItemLocation } from "../../../lib/schemaEditorLocation";
+import { isSchemaItemHidden, resolveSchemaItemLocation } from "../../../lib/schemaEditorLocation";
+import { buildSchemaDataPath } from "../../../lib/schemaDeviation";
 import { useSchemaEditorContext } from "./SchemaEditorContext";
 
 interface SchemaEditorItemProps {
@@ -31,9 +32,21 @@ const SchemaEditorItem: React.FC<SchemaEditorItemProps> = ({
 	}
 
 	const location = resolveSchemaItemLocation(elementData, schemaDefinitionItem, pathPrefix);
-	if (!location.visible) {
+	const itemName = schemaDefinitionItem.dataStructure?.itemName ?? "";
+	const isDockCollection =
+		schemaDefinitionItem.kind === "group" &&
+		(itemName === "docks" || itemName === "dockparts");
+	if (isSchemaItemHidden(schemaDefinitionItem)) {
 		return null;
 	}
+	if (!location.visible && !isDockCollection) {
+		return null;
+	}
+
+	const mstPath =
+		isDockCollection && schemaDefinitionItem.kind === "group"
+			? buildSchemaDataPath(pathPrefix, schemaDefinitionItem as ISchemaGroupModel)
+			: location.mstPath;
 
 	const wizard = resolveSchemaWizard(schemaDefinitionItem);
 	if (wizard) {
@@ -45,7 +58,7 @@ const SchemaEditorItem: React.FC<SchemaEditorItemProps> = ({
 				pathPrefix={pathPrefix}
 				canEdit={canEdit}
 				depth={depth}
-				mstPath={location.mstPath}
+				mstPath={mstPath}
 				extras={wizardExtras}
 			/>
 		);

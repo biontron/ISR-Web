@@ -129,6 +129,8 @@
 		"assetreference_filter_unlinked_only": "Only show unlinked components.",
 		"assetreference_filter_assign_all": "Assign all",
 		"assetreference_filter_unassign_all": "Remove all",
+		"assetreference_move_up": "Move selection up",
+		"assetreference_move_down": "Move selection down",
 		"assetreference_filter_apply": "Apply filter rules",
 		"assetreference_filter_clear": "Clear filter rules",
 		"assetreference_filter_apply_success": "Adopted @@count@@ assignment(s)",

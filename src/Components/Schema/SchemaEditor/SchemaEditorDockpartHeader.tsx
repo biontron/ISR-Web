@@ -68,17 +68,21 @@ const SchemaEditorDockpartHeader: React.FC<SchemaEditorDockpartHeaderProps> = ({
 			}`.trim(),
 		}));
 
+	const shortTitle = dockpart.type || dockpart.protocol || langtext("schema_editor.dockpart_header");
+	const heading = (text: string) => (
+		<SchemaEditorPathTitle
+			title={text}
+			mstPath={canEdit ? entryPath : undefined}
+			mstValue={dockpart}
+			schemaPath={canEdit ? entryPath : undefined}
+			schemaTypeLabel={canEdit ? `dockpart · ${dockpart.type || dockpart.protocol}` : undefined}
+		/>
+	);
+
 	return (
 		<CardCollapse
-			title={
-				<SchemaEditorPathTitle
-					title={title}
-					mstPath={canEdit ? entryPath : undefined}
-					mstValue={dockpart}
-					schemaPath={canEdit ? entryPath : undefined}
-					schemaTypeLabel={canEdit ? `dockpart · ${dockpart.type || dockpart.protocol}` : undefined}
-				/>
-			}
+			title={heading(shortTitle)}
+			summary={title && title !== shortTitle ? heading(title) : undefined}
 			defaultCollapsed
 			depth={1}
 			actionElement={actionElement}

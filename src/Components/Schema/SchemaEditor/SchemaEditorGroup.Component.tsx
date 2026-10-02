@@ -50,6 +50,7 @@ import { useSchemaEditorContext } from "./SchemaEditorContext";
 import { buildSchemaEditorSchemaPath } from "../../../lib/schemaEditorFieldPath";
 import { formatSchemaGroupTypeLabel } from "../../../lib/schemaEditorPathMeta";
 import { IAsset } from "../../../Stores/Models/Asset.Model";
+import DockpartsWizard from "./Wizards/DockpartsWizard";
 
 interface SchemaEditorGroupProps {
 	pathPrefix: string;
@@ -61,6 +62,35 @@ interface SchemaEditorGroupProps {
 }
 
 type ElementDataFragment = unknown;
+
+function valueEntryCount(value: unknown): number {
+	if (value == null) {
+		return 0;
+	}
+	if (Array.isArray(value)) {
+		return value.length;
+	}
+	if (typeof value !== "object") {
+		return 0;
+	}
+	const mapLike = value as { keys?: () => Iterable<string>; get?: unknown };
+	if (typeof mapLike.keys === "function" && typeof mapLike.get === "function") {
+		return Array.from(mapLike.keys()).length;
+	}
+	return Object.keys(value as object).length;
+}
+
+function dockEntryTitle(entry: unknown, fallback: string): string {
+	if (entry == null || typeof entry !== "object") {
+		return fallback;
+	}
+	const record = entry as { id?: unknown; type?: unknown; label?: unknown };
+	const id = record.id != null && String(record.id) !== "" ? `#${record.id}` : "";
+	const type = record.type != null ? String(record.type).trim() : "";
+	const label = record.label != null ? String(record.label).trim() : "";
+	const text = [id, type, label].filter(Boolean).join(" · ");
+	return text || fallback;
+}
 
 function mapDataEntries(data: unknown): [string, unknown][] {
 	if (data == null || typeof data !== "object") {
@@ -134,6 +164,19 @@ const SchemaEditorGroup: React.FC<SchemaEditorGroupProps> = ({
 		}
 		elementData.setValueByPath(path, initial);
 	}, [canEdit, elementData, isGroupMissing, path, schemaDefinitionGroup]);
+
+	if (schemaDefinitionGroup.dataStructure.itemName === "dockparts") {
+		return (
+			<DockpartsWizard
+				element={elementData}
+				schemaItem={schemaDefinitionGroup}
+				pathPrefix={pathPrefix}
+				canEdit={canEdit}
+				depth={depth}
+				mstPath={path}
+			/>
+		);
+	}
 
 	const childPathPrefix = path;
 
@@ -362,7 +405,9 @@ const SchemaEditorGroup: React.FC<SchemaEditorGroupProps> = ({
 					root: elementData,
 					basePath: entryPath,
 				})
-			: fallbackEntryTitle;
+			: schemaDefinitionGroup.dataStructure.itemName === "docks"
+				? dockEntryTitle(entryValue, fallbackEntryTitle)
+				: fallbackEntryTitle;
 		const controls =
 			editAllowed ? (
 				<SchemaEditorGroupEntryControls
@@ -467,9 +512,9 @@ const SchemaEditorGroup: React.FC<SchemaEditorGroupProps> = ({
 		return renderChildItems(childPathPrefix, childPathPrefix);
 	};
 
-	const groupTitle = (() => {
+	const summaryText = (() => {
 		if (!titleTemplate) {
-			return groupLabel;
+			return "";
 		}
 		if (isArrayGroup && Array.isArray(elementDataFragment)) {
 			const parts = elementDataFragment
@@ -480,53 +525,71 @@ const SchemaEditorGroup: React.FC<SchemaEditorGroupProps> = ({
 					})
 				)
 				.filter(Boolean);
-			return parts.length > 0 ? parts.join(" · ") : groupLabel;
+			return parts.length > 0 ? parts.join(" · ") : "";
 		}
-		return interpolateTitleTemplate(titleTemplate, elementDataFragment, groupLabel, titleContext);
+		const interpolated = interpolateTitleTemplate(
+			titleTemplate,
+			elementDataFragment,
+			"",
+			titleContext
+		);
+		return interpolated === groupLabel ? "" : interpolated;
 	})();
+	const readOnlyEmpty =
+		!canEdit && !isIdentitySummaryGroup && valueEntryCount(elementDataFragment) === 0;
+	const singleObjectGroup = isSingleMapObjectGroup(schemaDefinitionGroup);
+	const reportGroupMissing = isGroupMissing && !singleObjectGroup;
+
+	const identityIcon = isIdentitySummaryGroup ? (
+		<SchemaSvgIcon
+			svgString={rootStore.configSchemas.getIconByDefinition(
+				(elementDataFragment as { baseType?: string; type?: string; subType?: string }) ?? {}
+			)}
+			element={
+				(elementDataFragment as {
+					baseType?: string;
+					type?: string;
+					subType?: string;
+					name?: string;
+					label?: string;
+				}) ?? {}
+			}
+		/>
+	) : null;
+
+	const heading = (text: string) =>
+		isIdentitySummaryGroup ? (
+			<span className="schema-wizard-identity__summary">
+				{identityIcon}
+				<SchemaEditorPathTitle
+					title={text}
+					mstPath={canEdit ? path : undefined}
+					mstValue={elementDataFragment}
+					schemaPath={canEdit ? schemaPath : undefined}
+					schemaTypeLabel={canEdit ? formatSchemaGroupTypeLabel(schemaDefinitionGroup) : undefined}
+				/>
+			</span>
+		) : (
+			<SchemaEditorPathTitle
+				title={text}
+				mstPath={canEdit ? path : undefined}
+				schemaPath={canEdit ? schemaPath : undefined}
+				schemaTypeLabel={canEdit ? formatSchemaGroupTypeLabel(schemaDefinitionGroup) : undefined}
+			/>
+		);
 
 	return (
 		<CardCollapse
-			title={
-				isIdentitySummaryGroup ? (
-					<span className="schema-wizard-identity__summary">
-						<SchemaSvgIcon
-							svgString={rootStore.configSchemas.getIconByDefinition(
-								(elementDataFragment as { baseType?: string; type?: string; subType?: string }) ?? {}
-							)}
-							element={
-								(elementDataFragment as {
-									baseType?: string;
-									type?: string;
-									subType?: string;
-									name?: string;
-									label?: string;
-								}) ?? {}
-							}
-						/>
-						<SchemaEditorPathTitle
-							title={groupTitle}
-							mstPath={canEdit ? path : undefined}
-							mstValue={elementDataFragment}
-							schemaPath={canEdit ? schemaPath : undefined}
-							schemaTypeLabel={canEdit ? formatSchemaGroupTypeLabel(schemaDefinitionGroup) : undefined}
-						/>
-					</span>
-				) : (
-					<SchemaEditorPathTitle
-						title={groupTitle}
-						mstPath={canEdit ? path : undefined}
-						schemaPath={canEdit ? schemaPath : undefined}
-						schemaTypeLabel={canEdit ? formatSchemaGroupTypeLabel(schemaDefinitionGroup) : undefined}
-					/>
-				)
-			}
+			title={heading(groupLabel)}
+			summary={summaryText ? heading(summaryText) : undefined}
+			collapsible={!readOnlyEmpty}
+			empty={readOnlyEmpty}
 			defaultCollapsed={
 				isIdentitySummaryGroup
 					? schemaDefinitionGroup.formProperties.collapsed !== false
 					: schemaDefinitionGroup.formProperties.collapsed === true
 			}
-			hasContentError={isGroupMissing}
+			hasContentError={reportGroupMissing}
 			hasContentWarning={!isGroupMissing && isUsageOutOfBounds}
 			depth={depth}
 			actionElement={
@@ -553,11 +616,13 @@ const SchemaEditorGroup: React.FC<SchemaEditorGroupProps> = ({
 						: shouldShowChildren
 							? [childPathPrefix]
 							: [];
-				const structuralMissingEntries = isGroupMissing
+				const structuralMissingEntries = reportGroupMissing
 					? [{ path, kind: "group" as const }]
-					: structuralScopePaths.flatMap((scopePath) =>
-							findStructuralMissingInScope(elementData, schemaDefinitionGroup.items, scopePath)
-						);
+					: isGroupMissing
+						? []
+						: structuralScopePaths.flatMap((scopePath) =>
+								findStructuralMissingInScope(elementData, schemaDefinitionGroup.items, scopePath)
+							);
 				const extraDataEntries = structuralScopePaths.flatMap((scopePath) =>
 					findExtraPathsInScope(elementData, schemaDefinitionGroup.items, scopePath)
 				);

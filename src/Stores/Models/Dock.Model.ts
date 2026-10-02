@@ -28,7 +28,7 @@ export const DOCKPART_CORE_KEYS = [
 	"basedOn",
 	"state",
 	"settings",
-	"valueRef",
+	"inheritance",
 ] as const;
 
 const DOCKPART_CORE_KEY_SET = new Set<string>(DOCKPART_CORE_KEYS);
@@ -153,7 +153,8 @@ function normalizeIncomingDockpart(snapshot: Record<string, unknown>): Record<st
 		delete settings.state;
 	}
 	next.settings = settings;
-	next.valueRef = asOptionalString(next.valueRef);
+	delete next.valueRef;
+	next.inheritance = asOptionalString(next.inheritance);
 	next.basedOn = normalizeBasedOn(next.basedOn);
 	next.state = normalizeState(next.state);
 	return next;
@@ -174,7 +175,7 @@ export const DockpartModel = types
 		basedOn: types.optional(types.array(DockpartBasedOnEntryModel), []),
 		state: types.optional(DockpartStateModel, {}),
 		settings: types.optional(types.map(types.frozen()), {}),
-		valueRef: types.optional(types.string, ""),
+		inheritance: types.optional(types.string, ""),
 		schemaExtensions: types.optional(types.map(types.frozen()), {}),
 	})
 	.preProcessSnapshot((snapshot) => {
@@ -192,8 +193,8 @@ export const DockpartModel = types
 		return flattenDockpartSnapshot(snapshot as unknown as Record<string, unknown>) as unknown as typeof snapshot;
 	})
 	.actions((self) => ({
-		setValueRef(valueRef: string) {
-			self.valueRef = valueRef;
+		setInheritance(inheritance: string) {
+			self.inheritance = inheritance;
 		},
 	}));
 

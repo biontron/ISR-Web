@@ -32,15 +32,22 @@ const AddressFamilyWizard: React.FC<SchemaWizardContext> = ({
 			})
 		: groupLabel;
 
+	const heading = (text: string) => (
+		<SchemaEditorPathTitle
+			title={text}
+			mstPath={canEdit ? mstPath : undefined}
+			mstValue={fragment}
+			schemaPath={canEdit ? mstPath : undefined}
+		/>
+	);
+
 	return (
 		<CardCollapse
-			title={
-				<SchemaEditorPathTitle
-					title={summaryTitle}
-					mstPath={canEdit ? mstPath : undefined}
-					mstValue={fragment}
-					schemaPath={canEdit ? mstPath : undefined}
-				/>
+			title={heading(groupLabel)}
+			summary={
+				titleTemplate && summaryTitle && summaryTitle !== groupLabel
+					? heading(summaryTitle)
+					: undefined
 			}
 			defaultCollapsed={group.formProperties.collapsed === true}
 			hasContentError={hasChildErrors}

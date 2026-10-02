@@ -274,18 +274,18 @@ export const ConnectionStore = types.compose("ConnectionStore", BaseStore, types
 		};
 	}
 
-	function applyDockpartValueRef(asset: IAsset, dockpartId: string, valueRef: string) {
+	function applyDockpartInheritance(asset: IAsset, dockpartId: string, inheritance: string) {
 		for (const dock of asset.docks) {
 			const part = dock.dockparts.find((entry) => String(entry.id) === dockpartId);
 			if (!part) {
 				continue;
 			}
 			asset.beginEdit();
-			part.setValueRef(valueRef);
+			part.setInheritance(inheritance);
 			asset.markTouched();
 			return;
 		}
-		throw new Error(`Dockpart '${dockpartId}' für valueRef nicht gefunden.`);
+		throw new Error(`Dockpart '${dockpartId}' für inheritance nicht gefunden.`);
 	}
 
 	function createLogicalConnection(input: CreateLogicalConnectionInput) {
@@ -354,8 +354,8 @@ export const ConnectionStore = types.compose("ConnectionStore", BaseStore, types
 			throw new Error("Context-Wert passt nicht zur Dockpart-Schicht.");
 		}
 
-		const valueRef = formatValueRef(contextAsset.id, chosen.valueId);
-		applyDockpartValueRef(fromAsset, String(fromPart.id), valueRef);
+		const inheritance = formatValueRef(contextAsset.id, chosen.valueId);
+		applyDockpartInheritance(fromAsset, String(fromPart.id), inheritance);
 
 		const contextDock = contextAsset.docks.find((dock) => String(dock.id) === chosen.dockId);
 		const fromName = formatAssetDisplayName(fromAsset);
@@ -640,7 +640,8 @@ export const ConnectionStore = types.compose("ConnectionStore", BaseStore, types
 		createLogicalConnection,
 		createContextConnection,
 		createBridgeConnection,
-		applyDockpartValueRef,
+		applyDockpartInheritance,
+		applyDockpartValueRef: applyDockpartInheritance,
 		createWithLinkparts,
 		createWithStackAnchors,
 		store,

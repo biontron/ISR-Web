@@ -57,11 +57,15 @@ const DockpartsWizard: React.FC<SchemaWizardContext> = ({
 		element.removeValueByPath(mstPath, index);
 	};
 
+	const readOnlyEmpty = !canEdit && usageCount === 0;
+
 	return (
 		<CardCollapse
 			title={getLanguageText(group.formProperties.label)}
 			defaultCollapsed={group.formProperties.collapsed === true}
 			hasContentWarning={isUsageOutOfBounds}
+			collapsible={!readOnlyEmpty}
+			empty={readOnlyEmpty}
 			depth={depth}
 			actionElement={
 				canEdit ? (

@@ -2,6 +2,7 @@ import {
 	buildElementTreeNodes,
 	collectTreeExpandKeysForElement,
 	collectTreeKeysForElementId,
+	collectTreeNodeChildCounts,
 	fillExpandedTreeNodes,
 	treeNodeElementId,
 } from "./elementTreeNodes";
@@ -82,6 +83,69 @@ describe("elementTreeNodes", () => {
 			filterRules: [],
 		}, { parentKey: "g-a", ancestorIds: new Set(["view1", "g-a"]) });
 		expect(underA.map((node) => node.key)).toEqual(["g-a/device-1"]);
+	});
+
+	it("sortiert die erste Ebene unter der View und die Kinder einer View-Gruppe nach Namen", () => {
+		const root = rootWith(
+			[
+				group("g-z", { parentIdRef: "view1", name: "Zeta" }),
+				group("g-a", { parentIdRef: "view1", name: "Alpha", elementIdRefs: [{ id: "device-2" }, { id: "device-1" }] }),
+			],
+			[
+				asset("device-2", { name: "Zweite" }),
+				asset("device-1", { name: "Erste" }),
+			]
+		);
+		const tree = buildElementTreeNodes(root, { id: "view1", class: "View" });
+		expect(tree.map((node) => node.title)).toEqual(["Alpha", "Zeta"]);
+		const underAlpha = buildElementTreeNodes(
+			root,
+			{
+				id: "g-a",
+				class: "Group",
+				elementIdRefs: [{ id: "device-2" }, { id: "device-1" }],
+			},
+			{ parentKey: "g-a", ancestorIds: new Set(["view1", "g-a"]) }
+		);
+		expect(underAlpha.map((node) => node.title)).toEqual(["Erste", "Zweite"]);
+	});
+
+	it("übernimmt die im Verknüpfen-Dialog gespeicherte Reihenfolge", () => {
+		const root = rootWith(
+			[
+				group("g-a", { parentIdRef: "view1", name: "Alpha" }),
+				group("g-z", { parentIdRef: "view1", name: "Zeta" }),
+			],
+			[]
+		);
+		const tree = buildElementTreeNodes(root, {
+			id: "view1",
+			class: "View",
+			settings: { childOrder: ["g-z", "g-a"] },
+		});
+		expect(tree.map((node) => node.title)).toEqual(["Zeta", "Alpha"]);
+	});
+
+	it("zählt direkte Kinder einer View-Gruppe inklusive elementIdRefs", () => {
+		const root = rootWith(
+			[
+				group("g-a", {
+					parentIdRef: "view1",
+					elementIdRefs: [{ id: "device-1" }, { id: "device-1" }],
+				}),
+				group("g-nested", { parentIdRef: "g-a", name: "Sub" }),
+			],
+			[
+				asset("device-1"),
+				asset("os-1", { ownerIdRef: "device-1", name: "OS" }),
+				asset("device-2", { ownerIdRef: "g-a" }),
+			]
+		);
+		const counts = collectTreeNodeChildCounts(root);
+		expect(counts.get("g-a")).toBe(3);
+		expect(counts.get("g-nested")).toBe(0);
+		expect(counts.get("device-1")).toBe(1);
+		expect(counts.get("device-2")).toBe(0);
 	});
 
 	it("hängt Assets nur über elementIdRefs, nicht über XPath", () => {

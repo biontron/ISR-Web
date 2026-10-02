@@ -12,6 +12,7 @@ import { isTreeElement } from "../../../Interfaces/Element";
 import { buildElementStatusClass } from "../../../lib/elementStatusStyle";
 import {
 	hasElementSettingsValidationErrors,
+	hasElementValidationOrStoreErrors,
 } from "../../../lib/elementValidationChecks";
 import { resolveElementSettingsSchemaName } from "../../../lib/elementDefinitionTypes";
 
@@ -19,7 +20,7 @@ interface ElementPropertiesDetailsProps {}
 
 const ElementPropertiesDetails: React.FC<ElementPropertiesDetailsProps> = () => {
 	const langtext = useLangtext();
-	const { activeElement, isReadOnly } = rootStore.ui;
+	const { activeElement } = rootStore.ui;
 
 	const canEdit = rootStore.ui.canEditActiveElement();
 	const settingsHasErrors =
@@ -36,12 +37,6 @@ const ElementPropertiesDetails: React.FC<ElementPropertiesDetailsProps> = () => 
 		activeElement?.class === "View" ||
 		activeElement?.class === "Group" ||
 		activeElement?.class === "Asset";
-
-	const handleSwitchToEditMode = () => {
-		if (activeElement && !isReadOnly) {
-			activeElement.beginEdit();           // ← Jetzt über Model
-		}
-	};
 
 	const handleStore = async () => {
 		if (!activeElement) return;
@@ -69,6 +64,9 @@ const ElementPropertiesDetails: React.FC<ElementPropertiesDetailsProps> = () => 
 		}
 	};
 
+	const hasFieldErrors =
+		!!activeElement && hasElementValidationOrStoreErrors(rootStore, activeElement);
+
 	const handleReset = () => {
 		if (activeElement) {
 			activeElement.rollbackEdit();        // ← Jetzt robust über Model
@@ -77,10 +75,11 @@ const ElementPropertiesDetails: React.FC<ElementPropertiesDetailsProps> = () => 
 
 	return (
 		<Fragment>
+			<div className="element-properties-tab">
 			{/* Status-spezifische Buttons */}
 			{(activeElement?.status === "edit" || activeElement?.status === "changed") && (
 				<>
-					<Button type="primary" onClick={handleStore}>
+					<Button type="primary" danger={hasFieldErrors} onClick={handleStore}>
 						{langtext("general.edit_store")}
 					</Button>
 					<Button onClick={handleReset}>{langtext("general.edit_reset")}</Button>
@@ -137,15 +136,7 @@ const ElementPropertiesDetails: React.FC<ElementPropertiesDetailsProps> = () => 
 				</section>
 			)}
 
-			{/* Button: In den Bearbeitungsmodus wechseln */}
-			{!isReadOnly &&
-				activeElement?.status !== "edit" &&
-				activeElement?.status !== "changed" &&
-				activeElement?.status !== "new" && (
-				<Button type="primary" onClick={handleSwitchToEditMode}>
-					{langtext("general.edit_start")}
-				</Button>
-			)}
+			</div>
 		</Fragment>
 	);
 };

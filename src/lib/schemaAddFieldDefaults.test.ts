@@ -2,6 +2,7 @@ import {
 	nextNumericIdFromRules,
 	resolveFieldValueOnAdd,
 } from "./schemaAddFieldDefaults";
+import authStore from "../Stores/Auth.Store";
 
 describe("schemaAddFieldDefaults", () => {
 	it("vergibt nächste numerische ID gemäß rules", () => {
@@ -64,5 +65,25 @@ describe("schemaAddFieldDefaults", () => {
 			}
 		);
 		expect(value).toBeUndefined();
+	});
+
+	it("füllt $user und $now aus der Schema-Konfiguration", () => {
+		authStore.username = "ada";
+		const user = resolveFieldValueOnAdd(
+			{
+				dataStructure: { itemName: "user", default: "$user" },
+				fieldType: "string",
+			} as any,
+			{ element: {}, dataPathPrefix: "properties.notations" }
+		);
+		const timestamp = resolveFieldValueOnAdd(
+			{
+				dataStructure: { itemName: "timestamp", default: "$now" },
+				fieldType: "string",
+			} as any,
+			{ element: {}, dataPathPrefix: "properties.notations" }
+		);
+		expect(user).toBe("ada");
+		expect(String(timestamp)).toMatch(/^\d{4}-\d{2}-\d{2}T/);
 	});
 });

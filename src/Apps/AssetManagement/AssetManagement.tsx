@@ -24,6 +24,7 @@ import ViewPickerEmpty from "./Components/ViewPickerEmpty";
 import "../../Styles/AssetManagement.css";
 import { useLangtext } from "../../lib/common";
 import { buildElementStatusClass } from "../../lib/elementStatusStyle";
+import { hasElementValidationOrStoreErrors } from "../../lib/elementValidationChecks";
 import { FullscreenOutlined, FullscreenExitOutlined } from "@ant-design/icons";
 
 const { TabPane } = Tabs;
@@ -106,9 +107,17 @@ const AssetManagement = observer(() => {
 		setSizes(PRESETS[mode]);
 	};
 
+	const hasFieldErrors =
+		!isReadOnly &&
+		!!activeElement &&
+		hasElementValidationOrStoreErrors(rootStore, activeElement);
 	const propertiesFrameClass = buildElementStatusClass(
 		"element-properties-frame",
-		!isReadOnly && activeElement ? activeElement.status : undefined
+		hasFieldErrors
+			? "invalid"
+			: !isReadOnly && activeElement
+				? activeElement.status
+				: undefined
 	);
 
 	const requestedPropertiesTab = rootStore.ui.elementPropertiesTab;

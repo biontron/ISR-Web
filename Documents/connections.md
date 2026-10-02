@@ -46,16 +46,16 @@ Direktverbindung zwischen Docks funktionaler Components (im Device).
 
 ### b) Context
 
-Component (Device oder Funktionsblock) zeigt per `valueRef` auf einen **Context-Component**-Wert.
+Component (Device oder Funktionsblock) zeigt per `inheritance` auf einen **Context-Component**-Wert.
 
 - `kind`: `context`
 - Connection: Component ↔ Context-Component
-- `valueRef`: `contextId#valueId` (`valueId` = Dockpart-ID am Context)
+- `inheritance`: `contextId#valueId` (`valueId` = Dockpart-ID am Context)
 - Keine Kopie von VLAN-/Netzwerten in `settings`
 - Mehrere VLANs am selben Context; Dockparts dürfen auf verschiedene Werte zeigen
 - Fehlt die Ref oder der Wert: sichtbarer Fehler
 
-Drag-and-Drop auf eine Context-Component setzt `valueRef` und die Context-Connection. Das Device wird **nicht** in den Context gestapelt (`ownerIdRef` bleibt). Bei mehreren passenden Werten muss der Nutzer wählen.
+Drag-and-Drop auf eine Context-Component setzt `inheritance` und die Context-Connection. Das Device wird **nicht** in den Context gestapelt (`ownerIdRef` bleibt). Bei mehreren passenden Werten muss der Nutzer wählen.
 
 ### c) Bridge
 
@@ -73,7 +73,7 @@ Ohne Docks. Device, Funktions-Component, Context-Component und View-Group als En
 | IP | `#7c3aed` |
 | sonst | `#64748b` |
 
-Kreise sitzen am jeweiligen Kasten (Device: Netzwerk-Stack, Funktionsblock: SIP/HTTP/…, Context: VLAN/Netz). `valueRef` wird gegen die Context-Component aufgelöst, nicht gegen View-Groups.
+Kreise sitzen am jeweiligen Kasten (Device: Netzwerk-Stack, Funktionsblock: SIP/HTTP/…, Context: VLAN/Netz). `inheritance` wird gegen die Context-Component aufgelöst, nicht gegen View-Groups.
 
 ## REST Connection
 
@@ -82,4 +82,4 @@ Kreise sitzen am jeweiligen Kasten (Device: Netzwerk-Stack, Funktionsblock: SIP/
 
 ## REST Dockpart
 
-- `valueRef`: `contextId#valueId` oder leer
+- `inheritance`: `contextId#valueId` oder leer

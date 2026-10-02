@@ -31,6 +31,7 @@ import { collectUnlinkedElementForestForView, countUnlinkedElementNodes, Unlinke
 import {
 	ancestorIdsFromTreeKey,
 	buildElementTreeNodes,
+	collectTreeNodeChildCounts,
 	collectAncestorKeysForElement,
 	collectTreeExpandKeysForElement,
 	collectTreeKeysForElementId,
@@ -49,6 +50,7 @@ import {
 	canDropAssetOnContextComponent,
 	resolveContextBind,
 } from "../../../lib/connectionContextBind";
+import { childOrderEpoch } from "../../../lib/elementDisplayOrder";
 
 function viewIdFromSelectValue(val: unknown): string | undefined {
 	if (typeof val === "string" && val.trim() !== "") {
@@ -152,6 +154,8 @@ function suppressNativeTreeTitle(node: HTMLElement | null) {
 	});
 }
 
+const ViewGroupChildCountContext = React.createContext<Map<string, number>>(new Map());
+
 const TreeNodeTitle = observer(function TreeNodeTitle({
 	nodeData,
 	marks,
@@ -196,26 +200,33 @@ const TreeNodeTitle = observer(function TreeNodeTitle({
 	});
 
 	const segment = resolveTreeNodeSegment(definition, nodeData.class);
-	const treeNodeClasses = `${treeNodeSegmentClassName(segment)} ${status === "new" || status === "edit" || status === "changed" || status === "invalid" ? "EditMode" : ""} ${rootStore.ui.activeElement?.id === elementId ? "ActiveElement" : ""} ${marks?.searchMatch ? "SearchMatch" : ""}`;
+	const childCounts = React.useContext(ViewGroupChildCountContext);
+	const childCount = childCounts.get(elementId) ?? 0;
+	const statusClasses = `${status === "new" || status === "edit" || status === "changed" || status === "invalid" ? "EditMode" : ""} ${rootStore.ui.activeElement?.id === elementId ? "ActiveElement" : ""} ${marks?.searchMatch ? "SearchMatch" : ""}`;
 
 	return (
 		<ElementDefinitionHoverTooltip fields={hoverFields}>
 			<span
 				ref={hoverTargetRef}
-				className={`element-tree-node-title ${treeNodeClasses}`}
+				className={`element-tree-node-title ${statusClasses}`}
 			>
-				&#160;
-				<SchemaSvgIcon
-					svgString={rootStore.configSchemas.getIconByDefinition(definition)}
-					element={{
-						class: nodeData.class,
-						baseType: nodeData.baseType,
-						type: nodeData.elementType,
-						subType: nodeData.subType,
-						elementType: nodeData.elementType,
-					}}
-				/>
-				<span>&#160;{displayName || "???"}</span>
+				<span className={`element-tree-node-title__chip ${treeNodeSegmentClassName(segment)}`}>
+					&#160;
+					<SchemaSvgIcon
+						svgString={rootStore.configSchemas.getIconByDefinition(definition)}
+						element={{
+							class: nodeData.class,
+							baseType: nodeData.baseType,
+							type: nodeData.elementType,
+							subType: nodeData.subType,
+							elementType: nodeData.elementType,
+						}}
+					/>
+					<span className="element-tree-node-title__name">&#160;{displayName || "???"}</span>
+				</span>
+				{childCount > 0 ? (
+					<span className="tree-node-child-count">{childCount.toLocaleString("de-DE")}</span>
+				) : null}
 				<ElementSignalBars
 					flags={{
 						changed: elementStatusShowsIndicator(status as never) || !!marks?.changed,
@@ -239,7 +250,8 @@ const ElementHierarchyTree = observer(function ElementHierarchyTree() {
 	const viewId = view?.id;
 	const assignmentEpoch = hierarchyAssignmentEpoch(rootStore.groups.groups);
 	const ownerEpoch = hierarchyOwnerEpoch(rootStore.assets.assets);
-	const dataEpoch = `${viewId ?? ""}:${rootStore.groups.groups.length}:${rootStore.assets.assets.length}:${assignmentEpoch}:${ownerEpoch}`;
+	const orderEpoch = `${childOrderEpoch(rootStore.views.views)}:${childOrderEpoch(rootStore.groups.groups)}:${childOrderEpoch(rootStore.assets.assets)}`;
+	const dataEpoch = `${viewId ?? ""}:${rootStore.groups.groups.length}:${rootStore.assets.assets.length}:${assignmentEpoch}:${ownerEpoch}:${orderEpoch}`;
 	const [treeData, setTreeData] = React.useState<ITreeNode[]>([]);
 
 	React.useEffect(() => {
@@ -467,6 +479,10 @@ const ElementHierarchyTreeView = observer(function ElementHierarchyTreeView({
 
 const ElementUnlinkedList = observer(function ElementUnlinkedList() {
 	const viewId = rootStore.ui.activeView?.id;
+	const assignmentEpoch = hierarchyAssignmentEpoch(rootStore.groups.groups);
+	const ownerEpoch = hierarchyOwnerEpoch(rootStore.assets.assets);
+	const groupCount = rootStore.groups.groups.length;
+	const assetCount = rootStore.assets.assets.length;
 	const [unlinkedForest, setUnlinkedForest] = React.useState<UnlinkedElementNode[]>([]);
 
 	React.useEffect(() => {
@@ -478,7 +494,7 @@ const ElementUnlinkedList = observer(function ElementUnlinkedList() {
 			setUnlinkedForest(collectUnlinkedElementForestForView(rootStore, viewId));
 		}, 0);
 		return () => window.clearTimeout(timer);
-	}, [viewId, rootStore.groups.groups.length, rootStore.assets.assets.length]);
+	}, [viewId, groupCount, assetCount, assignmentEpoch, ownerEpoch]);
 
 	return <ElementUnlinkedListView unlinkedForest={unlinkedForest} />;
 });
@@ -563,8 +579,20 @@ export const ElementTree = observer((props: Props) => {
 	const navigate = useNavigate();
 	const langtext = useLangtext();
 	const viewClasses = `${activeElement?.status === "new" || activeElement?.status === "edit" || activeElement?.status === "changed" || activeElement?.status === "invalid" ? "EditMode" : ""} ${rootStore.ui.activeView?.id === activeElement?.id ? "ActiveElement" : ""}`;
+	const assignmentEpoch = hierarchyAssignmentEpoch(rootStore.groups.groups);
+	const ownerEpoch = hierarchyOwnerEpoch(rootStore.assets.assets);
+	const childCounts = React.useMemo(
+		() => collectTreeNodeChildCounts(rootStore),
+		[
+			assignmentEpoch,
+			ownerEpoch,
+			rootStore.groups.groups.length,
+			rootStore.assets.assets.length,
+		]
+	);
 
 	return (
+		<ViewGroupChildCountContext.Provider value={childCounts}>
 		<div className="element-tree">
 			<div className="element-tree__scroll">
 			<Row gutter={[16, 16]}>
@@ -615,5 +643,6 @@ export const ElementTree = observer((props: Props) => {
 			</div>
 			<ElementUnlinkedList />
 		</div>
+		</ViewGroupChildCountContext.Provider>
 	);
 });

@@ -13,4 +13,16 @@ describe("DockpartModel", () => {
 		expect(snapshot.version).toBe("4");
 		expect("versions" in snapshot).toBe(false);
 	});
+
+	it("schreibt inheritance und nicht valueRef", () => {
+		const part = DockpartModel.create({
+			id: "1",
+			type: "VLAN",
+			inheritance: "ctx#v10",
+			valueRef: "alt#x",
+		} as any);
+		const snapshot = getSnapshot(part);
+		expect(snapshot.inheritance).toBe("ctx#v10");
+		expect("valueRef" in snapshot).toBe(false);
+	});
 });

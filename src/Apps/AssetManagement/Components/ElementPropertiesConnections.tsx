@@ -41,7 +41,7 @@ export const ElementPropertiesConnections: React.FC<ElementPropertiesConnections
 
 		return (
 			<Fragment>
-				<div style={{ padding: "16px 24px" }}>
+				<div className="element-properties-tab">
 					{activeElement.class === "Asset" ? (
 						<AssetDocksSection asset={activeElement as IAsset} canEdit={canEdit} />
 					) : null}

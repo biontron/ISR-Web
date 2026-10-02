@@ -11,6 +11,17 @@ function isExtensible(obj: any): boolean {
 	return obj != null && typeof obj === "object" && !Object.isFrozen(obj) && !Object.isSealed(obj);
 }
 
+/** MST-Map / Map — nicht jedes Objekt mit einer get-Methode. */
+function isKeyedMap(
+	value: unknown
+): value is { get: (key: string) => unknown; keys: () => Iterable<string> } {
+	if (value == null || typeof value !== "object" || Array.isArray(value)) {
+		return false;
+	}
+	const record = value as { get?: unknown; keys?: unknown };
+	return typeof record.get === "function" && typeof record.keys === "function";
+}
+
 export function getValueByPath(element: any, path: string): any {
 	if (!path || !element) return undefined;
 
@@ -20,16 +31,17 @@ export function getValueByPath(element: any, path: string): any {
 	for (const segment of segments) {
 		if (current == null) return undefined;
 
-		if (current.get && typeof current.get === "function") {
+		if (/^\d+$/.test(segment) && Array.isArray(current)) {
+			current = current[parseInt(segment, 10)];
+			continue;
+		}
+
+		if (isKeyedMap(current)) {
 			current = current.get(segment);
 			continue;
 		}
 
-		if (/^\d+$/.test(segment) && Array.isArray(current)) {
-			current = current[parseInt(segment, 10)];
-		} else {
-			current = current[segment];
-		}
+		current = current[segment];
 	}
 	return current;
 }

@@ -473,6 +473,10 @@ export function getGroupUsageCount(group: ISchemaGroupModel, value: unknown): nu
 		return Array.isArray(value) ? value.length : 0;
 	}
 
+	if (isSingleMapObjectGroup(group)) {
+		return value != null && typeof value === "object" && !Array.isArray(value) ? 1 : 0;
+	}
+
 	if (group.collectionType === "map") {
 		return getDataEntries(value).length;
 	}
@@ -559,7 +563,7 @@ export function isGroupStructurallyMissing(
 		return false;
 	}
 
-	if (value === undefined) {
+	if (value == null) {
 		return group.minUsage > 0;
 	}
 
@@ -571,8 +575,12 @@ export function isGroupStructurallyMissing(
 		return !Array.isArray(value);
 	}
 
+	if (isSingleMapObjectGroup(group)) {
+		return typeof value !== "object" || Array.isArray(value);
+	}
+
 	if (group.collectionType === "map" || isFixedObjectGroup(group)) {
-		if (value == null || typeof value !== "object" || Array.isArray(value)) {
+		if (typeof value !== "object" || Array.isArray(value)) {
 			return true;
 		}
 	}

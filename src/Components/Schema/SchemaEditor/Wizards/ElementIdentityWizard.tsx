@@ -65,20 +65,23 @@ const ElementIdentityWizard: React.FC<SchemaWizardContext> = ({
 			/>
 		));
 
+	const heading = (text: string) => (
+		<span className="schema-wizard-identity__summary">
+			<SchemaSvgIcon svgString={icon} element={definition ?? {}} />
+			<SchemaEditorPathTitle
+				title={text}
+				mstPath={canEdit ? mstPath : undefined}
+				mstValue={definition}
+				schemaPath={canEdit ? mstPath : undefined}
+				schemaTypeLabel={canEdit ? "elementIdentity" : undefined}
+			/>
+		</span>
+	);
+
 	return (
 		<CardCollapse
-			title={
-				<span className="schema-wizard-identity__summary">
-					<SchemaSvgIcon svgString={icon} element={definition ?? {}} />
-					<SchemaEditorPathTitle
-						title={summaryTitle}
-						mstPath={canEdit ? mstPath : undefined}
-						mstValue={definition}
-						schemaPath={canEdit ? mstPath : undefined}
-						schemaTypeLabel={canEdit ? "elementIdentity" : undefined}
-					/>
-				</span>
-			}
+			title={heading(groupLabel)}
+			summary={summaryTitle && summaryTitle !== groupLabel ? heading(summaryTitle) : undefined}
 			defaultCollapsed={group.formProperties.collapsed !== false}
 			hasContentError={hasChildErrors}
 			depth={depth}

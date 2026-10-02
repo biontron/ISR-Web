@@ -139,6 +139,11 @@ export const ViewModel = types.compose(
 		self.validationRules = cast(xpathRuleSnapshots(rules));
 		self.markTouched();
 	},
+	setChildOrder(ids: string[]) {
+		self.beginEdit();
+		self.settings.set("childOrder", [...ids]);
+		self.markTouched();
+	},
 }));
 
 // Build custom resolver for Views - This is need to lazily set the activeView when the router changes

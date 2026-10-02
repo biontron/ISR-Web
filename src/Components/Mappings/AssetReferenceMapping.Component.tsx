@@ -13,6 +13,8 @@ import {
 	DoubleRightOutlined,
 	DeleteOutlined,
 	PlusOutlined,
+	UpOutlined,
+	DownOutlined,
 } from "@ant-design/icons";
 import { rootStore } from "../../Stores/Root.Store";
 import { ActiveElement } from "../../Interfaces/Element";
@@ -50,6 +52,13 @@ import {
 	hoverFieldsFromElementIdRef,
 	hoverFieldsFromLiveElement,
 } from "../../lib/elementDefinitionHover";
+import {
+	compareByElementName,
+	moveSelectedIds,
+	orderAfterAssign,
+	orderByChildSequence,
+	readChildOrder,
+} from "../../lib/elementDisplayOrder";
 
 type MappingParent = IView | IGroup | IAsset;
 
@@ -299,7 +308,10 @@ const AssetReferenceMapping: React.FC<{ element: ActiveElement }> = observer(({ 
 
 	const mappingParent = hasAssignmentParent(element) ? element : undefined;
 	const assignedElements = mappingParent
-		? collectAssignedElements(rootStore, mappingParent.id)
+		? orderByChildSequence(
+				collectAssignedElements(rootStore, mappingParent.id),
+				readChildOrder(mappingParent)
+			)
 		: [];
 
 	const viewId = activeView?.id;
@@ -340,7 +352,9 @@ const AssetReferenceMapping: React.FC<{ element: ActiveElement }> = observer(({ 
 		rootStore.assets.assets.length,
 		rootStore.groups.groups.length,
 	]);
-	const visibleAvailable = availableElements.slice(0, CANDIDATE_RENDER_LIMIT);
+	const visibleAvailable = [...availableElements]
+		.sort(compareByElementName)
+		.slice(0, CANDIDATE_RENDER_LIMIT);
 
 	if (!mappingParent) {
 		return null;
@@ -356,11 +370,21 @@ const AssetReferenceMapping: React.FC<{ element: ActiveElement }> = observer(({ 
 		selectedAvailableKeys.includes(assignmentKey(item))
 	);
 
+	const storeAssignedOrder = (items: AssignableTreeElement[]) => {
+		mappingParent.setChildOrder(items.map((item) => item.id));
+	};
+
 	const shiftLeft = () => {
 		if (!canEdit || selectedAvailable.length === 0) {
 			return;
 		}
+		const next = orderAfterAssign(
+			assignedElements,
+			selectedAvailable,
+			readChildOrder(mappingParent) != null
+		);
 		selectedAvailable.forEach((child) => assignMappedElement(child, mappingParent));
+		storeAssignedOrder(next);
 		setSelectedAvailableKeys([]);
 	};
 
@@ -368,7 +392,9 @@ const AssetReferenceMapping: React.FC<{ element: ActiveElement }> = observer(({ 
 		if (!canEdit || selectedAssigned.length === 0) {
 			return;
 		}
+		const selectedIds = new Set(selectedAssigned.map((item) => item.id));
 		selectedAssigned.forEach((child) => unassignElementFromParent(child, mappingParent));
+		storeAssignedOrder(assignedElements.filter((item) => !selectedIds.has(item.id)));
 		setSelectedAssignedKeys([]);
 	};
 
@@ -376,7 +402,13 @@ const AssetReferenceMapping: React.FC<{ element: ActiveElement }> = observer(({ 
 		if (!canEdit || availableElements.length === 0) {
 			return;
 		}
+		const next = orderAfterAssign(
+			assignedElements,
+			availableElements,
+			readChildOrder(mappingParent) != null
+		);
 		availableElements.forEach((child) => assignMappedElement(child, mappingParent));
+		storeAssignedOrder(next);
 		setSelectedAvailableKeys([]);
 	};
 
@@ -385,7 +417,22 @@ const AssetReferenceMapping: React.FC<{ element: ActiveElement }> = observer(({ 
 			return;
 		}
 		assignedElements.forEach((child) => unassignElementFromParent(child, mappingParent));
+		mappingParent.setChildOrder([]);
 		setSelectedAssignedKeys([]);
+	};
+
+	const moveAssigned = (direction: -1 | 1) => {
+		if (!canEdit || selectedAssigned.length === 0) {
+			return;
+		}
+		const selectedIds = new Set(selectedAssigned.map((item) => item.id));
+		mappingParent.setChildOrder(
+			moveSelectedIds(
+				assignedElements.map((item) => item.id),
+				selectedIds,
+				direction
+			)
+		);
 	};
 
 	const environmentLabel = (item: AssignableTreeElement) => {
@@ -469,7 +516,7 @@ const AssetReferenceMapping: React.FC<{ element: ActiveElement }> = observer(({ 
 	) => (
 		<Row gutter={[16, 16]} justify="start" align="top">
 			<Col span={11}>
-				<div>{leftTitle}</div>
+				<div className="asset-reference-column-title">{leftTitle}</div>
 				<List<AssignableTreeElement>
 					dataSource={leftItems}
 					locale={{ emptyText: <Empty description={leftTitle} /> }}
@@ -485,7 +532,7 @@ const AssetReferenceMapping: React.FC<{ element: ActiveElement }> = observer(({ 
 			</Col>
 
 			<Col span={11}>
-				<div>{rightTitle}</div>
+				<div className="asset-reference-column-title">{rightTitle}</div>
 				<List<AssignableTreeElement>
 					dataSource={rightItems}
 					locale={{ emptyText: <Empty description={rightTitle} /> }}
@@ -538,6 +585,20 @@ const AssetReferenceMapping: React.FC<{ element: ActiveElement }> = observer(({ 
 						onClick={shiftAllRight}
 						disabled={!canEdit || assignedElements.length === 0}
 						title={langtext("general.assetreference_filter_unassign_all")}
+						style={{ marginBottom: 8 }}
+					/>
+					<Button
+						icon={<UpOutlined />}
+						onClick={() => moveAssigned(-1)}
+						disabled={!canEdit || selectedAssigned.length === 0}
+						title={langtext("general.assetreference_move_up")}
+						style={{ marginBottom: 8 }}
+					/>
+					<Button
+						icon={<DownOutlined />}
+						onClick={() => moveAssigned(1)}
+						disabled={!canEdit || selectedAssigned.length === 0}
+						title={langtext("general.assetreference_move_down")}
 					/>
 				</>
 			),
