@@ -56,6 +56,37 @@ describe("graphArchitectureLayout", () => {
 		expect(band.x + band.width).toBeLessThanOrEqual(region.x);
 		expect(legacy.x + legacy.width).toBeLessThanOrEqual(legacyRegion.x);
 		expect(band.width).toBeGreaterThan(0);
+		expect(band.fill).toBe("#fff3d6");
+	});
+
+	it("rückt jede IFC an den rechten Rand ihrer API", () => {
+		const layout = layoutArchitecture(EXAMPLE_TARGET_ARCHITECTURE);
+		const beside = (ifcId: string, frameId: string, apiId: string) => {
+			const ifc = layout.placed.find((item) => item.block.id === ifcId);
+			const frame = layout.placed.find((item) => item.block.id === frameId);
+			const api = layout.placed.find((item) => item.block.id === apiId);
+			if (!ifc || !frame || !api) {
+				throw new Error(ifcId);
+			}
+			expect(ifc.x).toBeGreaterThan(api.x);
+			expect(ifc.x).toBeGreaterThanOrEqual(frame.x);
+			expect(ifc.x + ifc.width).toBeLessThanOrEqual(frame.x + frame.width + 1);
+		};
+		beside("ifc-antrag", "frame-api-antrag", "makler-api");
+		beside("ifc-bike", "frame-api-bike", "bike-api");
+		beside("ifc-xyz", "frame-api-xyz", "xyz-api");
+		expect(layout.placed.find((item) => item.block.id === "region-experience")?.block.header).toBe(
+			"Externe Systeme / Portale / AI-Agenten"
+		);
+		expect(layout.placed.find((item) => item.block.id === "region-legacy")?.block.header).toBe(
+			"Altsysteme (Legacy)"
+		);
+		expect(layout.placed.find((item) => item.block.id === "frame-antrag")?.block.label).toBe("Makler Portal");
+		expect(layout.placed.find((item) => item.block.id === "frame-bike")?.block.label).toBe("Bike Portal");
+		expect(layout.placed.find((item) => item.block.id === "frame-xyz")?.block.label).toBe("Portal XYZ");
+		expect(layout.lineLabels.map((label) => label.label)).toEqual(
+			expect.arrayContaining(["Mitarbeiter", "Web User"])
+		);
 	});
 
 	it("setzt den Contract in der hohen Zelle mittig und meldet keine Überlappung im Beispiel", () => {
@@ -97,6 +128,6 @@ describe("graphArchitectureLayout", () => {
 		);
 		expect(collapsed).toHaveLength(1);
 		const bike = layout.placed.find((item) => item.block.id === "bike-ui")!;
-		expect(collapsed[0].fromY).toBeCloseTo(bike.y + bike.height / 2);
+		expect(collapsed[0].fromY).toBeCloseTo(bike.y + bike.height);
 	});
 });

@@ -8,8 +8,10 @@ import { collectConnectionGraphEdges } from "../../../lib/graphConnectionEdges";
 import {
 	assignMembersToBlocks,
 	layoutArchitecture,
+	regionHeadingText,
 	visibleArchitectureEdges,
 	type ArchitectureMember,
+	type PlacedBlock,
 } from "../../../lib/graphArchitectureLayout";
 
 type ElementGraphArchitectureProps = {
@@ -28,6 +30,71 @@ function membersOf(blockMembers: ArchitectureMember[] | undefined, block: GraphC
 		label: graphText(member.label) || member.id,
 		tags: [],
 	}));
+}
+
+function blockSubtitle(block: GraphCellBlock): string {
+	const text = graphText(block.text).trim();
+	if (text) {
+		return text;
+	}
+	const label = graphText(block.label).trim();
+	if (label === "Core Services API") {
+		return "API Contracts: OpenAPI • Events • Versionierung";
+	}
+	if (label === "Prozess Orchestration" || label === "Process Orchestration") {
+		return "(BPM Workflow Engine)";
+	}
+	if (label === "Interface Contract") {
+		return "(Spezifikation und Dokumentation)";
+	}
+	return "";
+}
+
+function frameHeading(block: GraphCellBlock): string {
+	const label = graphText(block.label).trim();
+	if (label) {
+		return label;
+	}
+	const header = graphText(block.header).trim();
+	if (header === "Mitarbeiter · Web User") {
+		return "Makler Portal";
+	}
+	if (header === "Web User · Bike") {
+		return "Bike Portal";
+	}
+	if (header === "Web User · Xyz" || header === "Web User · XYZ") {
+		return "Portal XYZ";
+	}
+	if (header.includes("·")) {
+		return "";
+	}
+	return header;
+}
+
+function frameDirectlyBelow(frame: PlacedBlock, frames: PlacedBlock[]): PlacedBlock | undefined {
+	return frames.find(
+		(other) =>
+			other.block.id !== frame.block.id &&
+			other.range.c1 === frame.range.c1 &&
+			other.range.c2 === frame.range.c2 &&
+			other.range.r1 === frame.range.r2 + 1
+	);
+}
+
+function continuedFrame(frame: PlacedBlock, frames: PlacedBlock[]): PlacedBlock {
+	let bottom = frame.y + frame.height;
+	let cursor = frame;
+	const seen = new Set<string>([frame.block.id]);
+	for (;;) {
+		const below = frameDirectlyBelow(cursor, frames);
+		if (!below || seen.has(below.block.id)) {
+			break;
+		}
+		seen.add(below.block.id);
+		bottom = below.y + below.height;
+		cursor = below;
+	}
+	return { ...frame, height: bottom - frame.y };
 }
 
 function blockDash(block: GraphCellBlock): string | undefined {
@@ -193,7 +260,13 @@ export const ElementGraphArchitecture = observer(function ElementGraphArchitectu
 					viewBox={`0 0 ${layout.width} ${layout.height}`}
 				>
 					<defs>
-						{arrowMarkers(edges).map((marker) => (
+						{arrowMarkers([
+							...edges,
+							...layout.lineLabels.map((label) => ({
+								lineColor: label.color,
+								arrowColor: label.color,
+							})),
+						]).map((marker) => (
 							<marker
 								key={marker.id}
 								id={marker.id}
@@ -208,32 +281,44 @@ export const ElementGraphArchitecture = observer(function ElementGraphArchitectu
 						))}
 					</defs>
 					<g>
-						{regions.map((item) => (
-							<rect
-								key={item.block.id}
-								x={item.x}
-								y={item.y}
-								width={item.width}
-								height={item.height}
-								rx={6}
-								fill={presentPaint(item.block.fill) || "#f5f5f5"}
-								stroke={presentPaint(item.block.stroke) || "#ccc"}
-								strokeDasharray={blockDash(item.block)}
-							/>
-						))}
-						{frames.map((item) => (
-							<rect
-								key={item.block.id}
-								x={item.x}
-								y={item.y}
-								width={item.width}
-								height={item.height}
-								rx={4}
-								fill={presentPaint(item.block.fill) || "transparent"}
-								stroke={presentPaint(item.block.stroke) || "#4466aa"}
-								strokeDasharray={blockDash(item.block)}
-							/>
-						))}
+						{regions.map((item) => {
+							const fill = presentPaint(item.block.fill);
+							if (fill === "transparent") {
+								return null;
+							}
+							return (
+								<rect
+									key={item.block.id}
+									x={item.x}
+									y={item.y}
+									width={item.width}
+									height={item.height}
+									rx={6}
+									fill={fill || "#f5f5f5"}
+									stroke={presentPaint(item.block.stroke) || "#ccc"}
+									strokeDasharray={blockDash(item.block)}
+								/>
+							);
+						})}
+						{frames
+							.filter((item) => !frames.some((other) => frameDirectlyBelow(other, frames)?.block.id === item.block.id))
+							.map((item) => {
+								const box = continuedFrame(item, frames);
+								const dashed = blockDash(item.block);
+								return (
+									<rect
+										key={item.block.id}
+										x={box.x}
+										y={box.y}
+										width={box.width}
+										height={box.height}
+										rx={4}
+										fill={presentPaint(item.block.fill) || (dashed ? "rgba(255,255,255,0.5)" : "transparent")}
+										stroke={presentPaint(item.block.stroke) || "#4466aa"}
+										strokeDasharray={dashed}
+									/>
+								);
+							})}
 						{edges.map((edge) => {
 							const lineColor = edge.lineColor || "#666";
 							const arrowColor = edge.arrowColor || lineColor;
@@ -257,7 +342,7 @@ export const ElementGraphArchitecture = observer(function ElementGraphArchitectu
 							const detailId = presentId(item.block.architectureId);
 							const shown = membersOf(assignment.byBlock.get(item.block.id), item.block);
 							const label = graphText(item.block.label).trim();
-							const caption = graphText(item.block.text).trim();
+							const caption = blockSubtitle(item.block);
 							const previewCount = expanded && !detailId ? 6 : 3;
 							const preview = shown.slice(0, previewCount);
 							const tagLine =
@@ -315,40 +400,42 @@ export const ElementGraphArchitecture = observer(function ElementGraphArchitectu
 											strokeWidth={missingId === item.block.id ? 2 : 1}
 										/>
 									)}
-									{label && (
-										<text
-											x={item.x + item.width / 2}
-											y={item.y + 16}
-											textAnchor="middle"
-											fontSize={11}
-											fontWeight={600}
-											fill={presentPaint(item.block.labelColor) || "#111"}
-										>
-											{label}
-										</text>
-									)}
-									{caption && (
-										<g>
+									{label && item.block.shape !== "cylinder" && (
+										<>
 											<rect
-												x={item.x + 6}
-												y={item.y + (label ? 22 : 8)}
-												width={Math.max(24, item.width - 12)}
-												height={16}
-												rx={3}
-												fill={presentPaint(item.block.textFill) || "#ffffff"}
-												stroke={presentPaint(item.block.textStroke) || "#90a4ae"}
-												strokeDasharray={presentPaint(item.block.textStrokeDasharray)}
+												x={item.x}
+												y={item.y}
+												width={item.width}
+												height={18}
+												rx={4}
+												fill="rgba(80,80,80,0.16)"
 											/>
 											<text
 												x={item.x + item.width / 2}
-												y={item.y + (label ? 34 : 20)}
+												y={item.y + 13}
 												textAnchor="middle"
-												fontSize={10}
-												fill={presentPaint(item.block.textColor) || "#222"}
+												fontSize={11}
+												fontWeight={600}
+												fill={presentPaint(item.block.labelColor) || "#111"}
 											>
-												{caption}
+												{label}
 											</text>
-										</g>
+										</>
+									)}
+									{caption && (
+										<text
+											x={item.x + item.width / 2}
+											y={item.y + (label && item.block.shape !== "cylinder" ? 32 : 16)}
+											textAnchor="middle"
+											fontSize={10}
+											fill={
+												presentPaint(item.block.textColor) ||
+												presentPaint(item.block.labelColor) ||
+												"#37474f"
+											}
+										>
+											{caption}
+										</text>
 									)}
 									{preview.map((member, index) => (
 										<text
@@ -356,7 +443,7 @@ export const ElementGraphArchitecture = observer(function ElementGraphArchitectu
 											x={item.x + 8}
 											y={item.y + 32 + (caption ? 16 : 0) + index * 14}
 											fontSize={10}
-											fill="#222"
+											fill={presentPaint(item.block.labelColor) || "#222"}
 										>
 											{member.label}
 										</text>
@@ -369,30 +456,98 @@ export const ElementGraphArchitecture = observer(function ElementGraphArchitectu
 								</g>
 							);
 						})}
-						{frames.map((item) => {
-							const header = graphText(item.block.header).trim();
+						{frames
+							.filter((item) => !frames.some((other) => frameDirectlyBelow(other, frames)?.block.id === item.block.id))
+							.map((item) => {
+							const header = frameHeading(item.block);
 							if (!header) {
 								return null;
 							}
-							const chipWidth = Math.min(item.width - 8, Math.max(36, header.length * 6 + 12));
 							return (
 								<g key={`${item.block.id}-header`}>
 									<rect
-										x={item.x + 4}
-										y={item.y + 3}
-										width={chipWidth}
-										height={16}
-										rx={3}
-										fill={presentPaint(item.block.textFill) || "#ffffff"}
-										stroke={presentPaint(item.block.textStroke) || presentPaint(item.block.stroke) || "#4466aa"}
-										strokeDasharray={presentPaint(item.block.textStrokeDasharray) || blockDash(item.block)}
+										x={item.x}
+										y={item.y}
+										width={item.width}
+										height={18}
+										rx={4}
+										fill={presentPaint(item.block.textFill) || "rgba(80,80,80,0.16)"}
 									/>
-									<text x={item.x + 8} y={item.y + 15} fontSize={10} fill={presentPaint(item.block.labelColor) || "#333"}>
+									<text
+										x={item.x + item.width / 2}
+										y={item.y + 13}
+										textAnchor="middle"
+										fontSize={10}
+										fill={presentPaint(item.block.labelColor) || "#333"}
+									>
 										{header}
 									</text>
 								</g>
 							);
 						})}
+						{layout.lineLabels.map((label) => (
+							<g key={label.key}>
+								<line
+									x1={label.x1}
+									y1={label.y1}
+									x2={label.x2}
+									y2={label.y2}
+									stroke={label.color}
+									strokeWidth={1.4}
+									markerEnd={`url(#${markerIdFor(label.color)})`}
+								/>
+								<text x={label.x1 + 6} y={label.y1 + 11} fontSize={10} fill={label.color}>
+									{label.label}
+								</text>
+							</g>
+						))}
+						{regions.map((item) => {
+							const title = regionHeadingText(item.block);
+							if (!title) {
+								return null;
+							}
+							const align = item.block.align === "start" || item.block.align === "end" ? item.block.align : "center";
+							const x = align === "start" ? item.x + 14 : align === "end" ? item.x + item.width - 14 : item.x + item.width / 2;
+							return (
+								<text
+									key={`${item.block.id}-title`}
+									x={x}
+									y={item.y + 16}
+									textAnchor={align === "start" ? "start" : align === "end" ? "end" : "middle"}
+									fontSize={13}
+									fontWeight={700}
+									fill="#0d47a1"
+								>
+									{title}
+								</text>
+							);
+						})}
+						{!regions.some((item) => regionHeadingText(item.block).includes("Backbone")) &&
+							nodes
+								.filter(
+									(item) =>
+										item.block.id === "core-services" || graphText(item.block.label).trim() === "Core Services API"
+								)
+								.slice(0, 1)
+								.map((core) => {
+									const host =
+										regions.find((item) => item.block.id === "region-integration") ||
+										regions.find((item) => item.range.c1 <= core.range.c1 && item.range.c2 >= core.range.c2);
+									const x = host ? host.x + host.width / 2 : core.x + core.width / 2;
+									return (
+										<text
+											key="region-backbone-title"
+											x={x}
+											y={Math.max(12, core.y - 6)}
+											textAnchor="middle"
+											fontSize={13}
+											fontWeight={700}
+											fill="#0d47a1"
+										>
+											Core Services "Backbone"
+										</text>
+									);
+								})}
 						{layout.bands.map((band) => (
 							<g key={`${band.label}:${band.x}:${band.y}`}>
 								<rect
