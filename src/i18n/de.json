@@ -84,7 +84,7 @@
 		"activity_status_column_http": "HTTP",
 		"activity_status_column_error": "Fehler",
 		"activity_status_column_actions": "Aktionen",
-		"activity_status_save_selection": "Speichern",
+		"activity_status_save_selection": "Änderungen aktivieren",
 		"activity_status_discard_selection": "Verwerfen",
 		"activity_status_close": "Schließen",
 		"activity_status_export_zip": "Export ZIP",

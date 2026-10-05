@@ -84,7 +84,7 @@
 		"activity_status_column_http": "HTTP",
 		"activity_status_column_error": "Error",
 		"activity_status_column_actions": "Actions",
-		"activity_status_save_selection": "Save",
+		"activity_status_save_selection": "Apply changes",
 		"activity_status_discard_selection": "Discard",
 		"activity_status_close": "Close",
 		"activity_status_export_zip": "Export ZIP",
