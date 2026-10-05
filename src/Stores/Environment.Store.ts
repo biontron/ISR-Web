@@ -99,6 +99,9 @@ export const EnvironmentStore = types.compose(
 						},
 						properties: {
 							bgColor: created?.properties?.bgColor ?? "",
+							ignoredDevices: Array.isArray(created?.properties?.ignoredDevices)
+								? created.properties.ignoredDevices
+								: [],
 						},
 					});
 					self.environments.push(environment);
@@ -110,6 +113,29 @@ export const EnvironmentStore = types.compose(
 				}
 			});
 
+			function environmentPayload(environment: IEnvironment, name = environment.definition.name) {
+				return {
+					id: environment.id,
+					definition: {
+						baseType: environment.definition.baseType,
+						subType: environment.definition.subType,
+						name,
+					},
+					properties: {
+						bgColor: environment.properties.bgColor,
+						ignoredDevices: environment.properties.ignoredDevices.slice(),
+					},
+				};
+			}
+
+			const persist = flow(function* persistEnvironment(environment: IEnvironment) {
+				const domain = authStore.getDomain();
+				if (!domain) {
+					return;
+				}
+				yield api.put(`/${domain}/environments/${environment.id}`, environmentPayload(environment));
+			});
+
 			const rename = flow(function* renameEnvironment(environmentId: string, name: string) {
 				const domain = authStore.getDomain();
 				const environment = self.findById(environmentId);
@@ -119,17 +145,7 @@ export const EnvironmentStore = types.compose(
 				}
 				environment.setName(trimmed);
 				try {
-					yield api.put(`/${domain}/environments/${environmentId}`, {
-						id: environment.id,
-						definition: {
-							baseType: environment.definition.baseType,
-							subType: environment.definition.subType,
-							name: trimmed,
-						},
-						properties: {
-							bgColor: environment.properties.bgColor,
-						},
-					});
+					yield api.put(`/${domain}/environments/${environmentId}`, environmentPayload(environment, trimmed));
 				} catch (error) {
 					alert("Fehler beim Umbenennen des Environment");
 					console.error("Error renaming environment:", error);
@@ -162,7 +178,7 @@ export const EnvironmentStore = types.compose(
 				}
 			});
 
-			return { load, create, rename, remove, removeLocal };
+			return { load, create, rename, persist, remove, removeLocal };
 		})
 );
 

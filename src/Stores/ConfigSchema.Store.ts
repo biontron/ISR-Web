@@ -211,6 +211,50 @@ export const ConfigSchemaStore = types
 			yield api.putSchemaItem(domain, schema.storeType, schema.id, body);
 		});
 
+		const stageNewSchema = (schema: ISchemaModel | IConnectSchemaModel) => {
+			if (self.getSchema(schema.storeType, schema.id)) {
+				throw new Error("Diese Schema-ID existiert bereits.");
+			}
+			switch (schema.storeType) {
+				case "DOCKPART":
+					self.dockparts.push(schema as IConnectSchemaModel);
+					break;
+				case "INTERNAL":
+					self.internals.push(schema as ISchemaModel);
+					break;
+				case "VIEWGROUP":
+					self.viewgroups.push(schema as ISchemaModel);
+					break;
+				default:
+					self.components.push(schema as ISchemaModel);
+					break;
+			}
+			schema.setStatus("new");
+		};
+
+		const removeStagedSchema = (schema: ISchemaModel | IConnectSchemaModel) => {
+			const drop = (list: { id: string }[]) => {
+				const index = list.findIndex((item) => item.id === schema.id);
+				if (index >= 0) {
+					list.splice(index, 1);
+				}
+			};
+			switch (schema.storeType) {
+				case "DOCKPART":
+					drop(self.dockparts);
+					break;
+				case "INTERNAL":
+					drop(self.internals);
+					break;
+				case "VIEWGROUP":
+					drop(self.viewgroups);
+					break;
+				default:
+					drop(self.components);
+					break;
+			}
+		};
+
 		const createSchema = flow(function* createSchema(
 			schema: ISchemaModel | IConnectSchemaModel,
 			domainFromRoute?: string
@@ -239,6 +283,8 @@ export const ConfigSchemaStore = types
 			loadByBaseType: loadByStoreType,
 			loadAll,
 			saveSchema,
+			stageNewSchema,
+			removeStagedSchema,
 			createSchema,
 		};
 	});

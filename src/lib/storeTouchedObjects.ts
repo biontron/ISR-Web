@@ -5,6 +5,7 @@ import { IView } from "../Stores/Models/View.Model";
 import { IGroup } from "../Stores/Models/Group.Model";
 import { IAsset } from "../Stores/Models/Asset.Model";
 import { IConnection } from "../Stores/Models/Connection.Model";
+import { IEnvironment } from "../Stores/Models/Environment.Model";
 import { buildRestRequestForTouchedObject } from "./restRequestForTouchedObject";
 import { syncElementValidationStatus } from "./elementSchemaValidation";
 import { collectTouchedObjects, TouchedObjectRef } from "./touchedObjects";
@@ -21,7 +22,10 @@ export interface StoreSelectedResult {
 }
 
 const STORE_PHASE_ORDER: Array<{ touch: TouchedObjectRef["touch"]; kinds: TouchedObjectRef["kind"][] }> = [
+	{ touch: "create", kinds: ["EditorSchema", "DockpartSchema"] },
+	{ touch: "update", kinds: ["EditorSchema", "DockpartSchema"] },
 	{ touch: "create", kinds: ["Asset", "Group", "View"] },
+	{ touch: "update", kinds: ["Environment"] },
 	{ touch: "update", kinds: ["Asset", "Group", "View"] },
 	{ touch: "create", kinds: ["Connection"] },
 	{ touch: "update", kinds: ["Connection"] },
@@ -55,12 +59,32 @@ function removeAfterDelete(root: IRootStore, ref: TouchedObjectRef): void {
 		case "Connection":
 			root.connections.removeLocal(ref.element as IConnection);
 			break;
+		case "EditorSchema":
+		case "DockpartSchema":
+			root.configSchemas.removeStagedSchema(
+				ref.element as Parameters<IRootStore["configSchemas"]["removeStagedSchema"]>[0]
+			);
+			break;
+		case "Environment":
+			break;
 	}
 }
 
+function syncTouchedValidation(root: IRootStore, ref: TouchedObjectRef): void {
+	if (ref.kind === "Environment") {
+		return;
+	}
+	syncElementValidationStatus(root, ref.element as IElement);
+}
+
 function onStoreSuccess(root: IRootStore, ref: TouchedObjectRef): void {
-	const element = ref.element as IElement;
 	touchedObjectErrorRegistry.clear(ref.id);
+	if (ref.kind === "Environment") {
+		(ref.element as IEnvironment).commitIgnoredDevices();
+		return;
+	}
+
+	const element = ref.element as IElement;
 
 	if (ref.touch === "delete") {
 		removeAfterDelete(root, ref);
@@ -68,7 +92,7 @@ function onStoreSuccess(root: IRootStore, ref: TouchedObjectRef): void {
 	}
 
 	element.commitEdit();
-	syncElementValidationStatus(root, element);
+	syncTouchedValidation(root, ref);
 }
 
 async function storeSingleRef(
@@ -93,7 +117,7 @@ async function storeSingleRef(
 			isNetworkError: false,
 		};
 		touchedObjectErrorRegistry.setFailure(failure);
-		syncElementValidationStatus(root, ref.element as IElement);
+		syncTouchedValidation(root, ref);
 		return { ok: false, failure };
 	}
 
@@ -126,7 +150,7 @@ async function storeSingleRef(
 				isNetworkError: details.isNetworkError,
 			};
 			touchedObjectErrorRegistry.setFailure(failure);
-			syncElementValidationStatus(root, ref.element as IElement);
+			syncTouchedValidation(root, ref);
 			return { ok: false, failure };
 		}
 
@@ -145,7 +169,7 @@ async function storeSingleRef(
 			cause: error,
 		};
 		touchedObjectErrorRegistry.setFailure(failure);
-		syncElementValidationStatus(root, ref.element as IElement);
+		syncTouchedValidation(root, ref);
 		return { ok: false, failure };
 	}
 }

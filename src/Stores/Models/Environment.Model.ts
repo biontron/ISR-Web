@@ -20,15 +20,73 @@ export const EnvironmentModel = types
 				bgColor: types.optional(types.string, ""),
 				responsibles: types.optional(types.frozen(), []),
 				notations: types.optional(types.frozen(), []),
+				ignoredDevices: types.optional(types.array(types.string), []),
 			}),
 			{}
 		),
 	})
+	.volatile(() => ({
+		status: "untouched" as "untouched" | "changed",
+		ignoredDevicesSnapshot: null as string[] | null,
+	}))
 	.actions((self) => ({
 		setName(name: string) {
 			self.definition.name = name;
 		},
+		setIgnoredDevices(names: readonly string[]) {
+			const next = compactIgnoredDeviceNames(names);
+			const baseline = self.ignoredDevicesSnapshot ?? self.properties.ignoredDevices.slice();
+			if (ignoredDeviceListsEqual(next, baseline)) {
+				self.properties.ignoredDevices.replace(baseline.slice());
+				self.ignoredDevicesSnapshot = null;
+				self.status = "untouched";
+				return;
+			}
+			if (self.ignoredDevicesSnapshot === null) {
+				self.ignoredDevicesSnapshot = self.properties.ignoredDevices.slice();
+			}
+			self.properties.ignoredDevices.replace(next);
+			self.status = "changed";
+		},
+		commitIgnoredDevices() {
+			self.ignoredDevicesSnapshot = null;
+			self.status = "untouched";
+		},
+		rollbackIgnoredDevices() {
+			if (self.ignoredDevicesSnapshot) {
+				self.properties.ignoredDevices.replace(self.ignoredDevicesSnapshot.slice());
+			}
+			self.ignoredDevicesSnapshot = null;
+			self.status = "untouched";
+		},
 	}));
+
+function compactIgnoredDeviceNames(names: readonly string[]): string[] {
+	const seen = new Set<string>();
+	const next: string[] = [];
+	for (const raw of names) {
+		const name = raw.trim();
+		const key = name.toLocaleLowerCase("de");
+		if (!name || seen.has(key)) {
+			continue;
+		}
+		seen.add(key);
+		next.push(name);
+	}
+	return next;
+}
+
+function ignoredDeviceListsEqual(left: readonly string[], right: readonly string[]): boolean {
+	if (left.length !== right.length) {
+		return false;
+	}
+	for (let index = 0; index < left.length; index++) {
+		if (left[index] !== right[index]) {
+			return false;
+		}
+	}
+	return true;
+}
 
 export interface IEnvironment extends Instance<typeof EnvironmentModel> {}
 

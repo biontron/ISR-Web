@@ -21,8 +21,38 @@ export function buildRestRequestForTouchedObject(
 	ref: TouchedObjectRef
 ): TouchedObjectRestRequest {
 	const domain = authStore.getDomain() ?? "";
-	const viewId = root.ui.activeView?.id ?? "";
 	const itemId = ref.id;
+	let operation: "create" | "update" | "delete";
+	switch (ref.touch) {
+		case "create":
+			operation = "create";
+			break;
+		case "update":
+			operation = "update";
+			break;
+		case "delete":
+			operation = "delete";
+			break;
+	}
+
+	if (ref.kind === "EditorSchema" || ref.kind === "DockpartSchema") {
+		const url = buildRestUrl(domain, ref.kind, operation, {
+			itemId,
+			schemaId: itemId,
+			schemaStoreType: ref.schemaStoreType,
+		});
+		const request: TouchedObjectRestRequest = {
+			method: url.method,
+			path: url.path,
+			fullUrl: url.fullUrl,
+		};
+		if (ref.touch !== "delete") {
+			request.payload = restWritePayloadForRef(root, ref);
+		}
+		return request;
+	}
+
+	const viewId = root.ui.activeView?.id ?? "";
 	let env = "";
 	if (ref.kind === "Asset") {
 		const asset = root.assets.assets.find((item) => item.id === itemId);
@@ -46,19 +76,6 @@ export function buildRestRequestForTouchedObject(
 		}
 	} else {
 		env = resolveWriteEnvironmentId(knownEnvironmentIds(root), root.ui.activeView);
-	}
-
-	let operation: "create" | "update" | "delete";
-	switch (ref.touch) {
-		case "create":
-			operation = "create";
-			break;
-		case "update":
-			operation = "update";
-			break;
-		case "delete":
-			operation = "delete";
-			break;
 	}
 
 	const url = buildRestUrl(domain, kindToRestUrlKind(ref.kind), operation, {

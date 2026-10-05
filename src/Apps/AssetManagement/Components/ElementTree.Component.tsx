@@ -2,7 +2,7 @@
 # Infrastructure Repository (ISR) / Infrastruktur Repository (ISR)
 # SPDX-License-Identifier: GPL-2.0 
 */
-import { Select, Button, Col, Row, Space, Tree, message } from "antd";
+import { Select, Button, Col, Input, Row, Space, Tag, Tooltip, Tree, message } from "antd";
 import { observer } from "mobx-react";
 import { resolveIdentifier } from "mobx-state-tree";
 import { useNavigate } from "react-router-dom";
@@ -27,7 +27,10 @@ import {
 } from "../../../lib/treeNodeDisplay";
 import ElementDefinitionHoverTooltip from "../../../Components/Schema/ElementDefinitionHoverTooltip";
 import { hoverFieldsFromLiveElement } from "../../../lib/elementDefinitionHover";
-import { collectUnlinkedElementForestForView, countUnlinkedElementNodes, UnlinkedElementNode, UnlinkedTreeElement } from "../../../lib/treeUnlinkedAssets";
+import { collectUnlinkedElementForestForView, countUnlinkedElementNodes, flattenUnlinkedForest, UnlinkedElementNode, UnlinkedTreeElement } from "../../../lib/treeUnlinkedAssets";
+import { stageUnlinkedElementsForDelete } from "../../../lib/unlinkedElementActions";
+import { environmentDisplayName, IEnvironment } from "../../../Stores/Models/Environment.Model";
+import { knownEnvironmentIds, readViewEnvironmentBindings, resolveWriteEnvironmentId } from "../../../lib/viewEnvironments";
 import {
 	ancestorIdsFromTreeKey,
 	buildElementTreeNodes,
@@ -243,7 +246,7 @@ function renderTreeNodeTitle(nodeData: ITreeNode, marks?: ElementMarkFlags) {
 	return <TreeNodeTitle nodeData={nodeData} marks={marks} />;
 }
 
-const UNLINKED_RENDER_LIMIT = 80;
+const UNLINKED_RENDER_LIMIT = 1000;
 
 const ElementHierarchyTree = observer(function ElementHierarchyTree() {
 	const view = rootStore.ui.activeView;
@@ -483,6 +486,9 @@ const ElementUnlinkedList = observer(function ElementUnlinkedList() {
 	const ownerEpoch = hierarchyOwnerEpoch(rootStore.assets.assets);
 	const groupCount = rootStore.groups.groups.length;
 	const assetCount = rootStore.assets.assets.length;
+	const ignoreEpoch = rootStore.environments.environments
+		.map((environment) => `${environment.id}:${environment.properties.ignoredDevices.join("\u0001")}`)
+		.join("\u0002");
 	const [unlinkedForest, setUnlinkedForest] = React.useState<UnlinkedElementNode[]>([]);
 
 	React.useEffect(() => {
@@ -494,9 +500,92 @@ const ElementUnlinkedList = observer(function ElementUnlinkedList() {
 			setUnlinkedForest(collectUnlinkedElementForestForView(rootStore, viewId));
 		}, 0);
 		return () => window.clearTimeout(timer);
-	}, [viewId, groupCount, assetCount, assignmentEpoch, ownerEpoch]);
+	}, [viewId, groupCount, assetCount, assignmentEpoch, ownerEpoch, ignoreEpoch]);
 
 	return <ElementUnlinkedListView unlinkedForest={unlinkedForest} />;
+});
+
+const IgnoredDeviceNameField = observer(function IgnoredDeviceNameField({
+	environment,
+	index,
+}: {
+	environment: IEnvironment;
+	index: number;
+}) {
+	const stored = environment.properties.ignoredDevices[index] ?? "";
+	const [value, setValue] = React.useState(stored);
+
+	React.useEffect(() => {
+		setValue(stored);
+	}, [stored]);
+
+	const commit = () => {
+		const next = environment.properties.ignoredDevices.slice();
+		next[index] = value;
+		environment.setIgnoredDevices(next);
+	};
+
+	return (
+		<Input
+			size="small"
+			value={value}
+			onChange={(event) => setValue(event.target.value)}
+			onBlur={commit}
+			onPressEnter={(event) => (event.target as HTMLInputElement).blur()}
+		/>
+	);
+});
+
+const IgnoredDevicesEditor = observer(function IgnoredDevicesEditor({
+	environment,
+	showEnvironmentName,
+}: {
+	environment: IEnvironment;
+	showEnvironmentName: boolean;
+}) {
+	const langtext = useLangtext();
+	const [draft, setDraft] = React.useState("");
+	const names = environment.properties.ignoredDevices;
+
+	const addName = () => {
+		const name = draft.trim();
+		if (!name) {
+			return;
+		}
+		environment.setIgnoredDevices([...names, name]);
+		setDraft("");
+	};
+
+	return (
+		<div className="element-tree-unlinked__ignore-env">
+			{showEnvironmentName ? (
+				<div className="element-tree-unlinked__ignore-env-name">{environmentDisplayName(environment)}</div>
+			) : null}
+			{names.map((name, index) => (
+				<div className="element-tree-unlinked__ignore-row" key={`${environment.id}:${index}:${name}`}>
+					<IgnoredDeviceNameField environment={environment} index={index} />
+					<Button
+						size="small"
+						onClick={() => environment.setIgnoredDevices(names.filter((_, entryIndex) => entryIndex !== index))}
+					>
+						{langtext("general.tree_unlinked_ignore_remove")}
+					</Button>
+				</div>
+			))}
+			<div className="element-tree-unlinked__ignore-add">
+				<Input
+					size="small"
+					value={draft}
+					placeholder={langtext("general.tree_unlinked_ignore_placeholder")}
+					onChange={(event) => setDraft(event.target.value)}
+					onPressEnter={addName}
+				/>
+				<Button size="small" onClick={addName}>
+					{langtext("general.tree_unlinked_ignore_add")}
+				</Button>
+			</div>
+		</div>
+	);
 });
 
 const ElementUnlinkedListView = observer(function ElementUnlinkedListView({
@@ -508,16 +597,91 @@ const ElementUnlinkedListView = observer(function ElementUnlinkedListView({
 	const navigate = useNavigate();
 	const selectedId = rootStore.ui.activeElement?.id;
 	const marks = rootStore.ui.elementMarks;
+	const isReadOnly = rootStore.ui.isReadOnly;
 	const totalUnlinked = countUnlinkedElementNodes(unlinkedForest);
 	const treeData = React.useMemo(
 		() => unlinkedForestToTreeNodes(unlinkedForest.slice(0, UNLINKED_RENDER_LIMIT)),
 		[unlinkedForest]
 	);
 	const [expandedKeys, setExpandedKeys] = React.useState<React.Key[]>([]);
+	const [checkedKeys, setCheckedKeys] = React.useState<React.Key[]>([]);
+	const viewEnvironments = readViewEnvironmentBindings(rootStore.ui.activeView).map((binding) => binding.ref);
+	const visibleIgnoreEnvironments = rootStore.environments.environments.filter((environment) => {
+		return (
+			environment.properties.ignoredDevices.length > 0 &&
+			(viewEnvironments.includes(environment.id) || viewEnvironments.length === 0)
+		);
+	});
 
 	React.useEffect(() => {
 		setExpandedKeys(collectExpandableUnlinkedKeys(treeData));
 	}, [treeData]);
+
+	React.useEffect(() => {
+		const present = new Set(flattenUnlinkedForest(unlinkedForest).map((element) => element.id));
+		setCheckedKeys((current) => current.filter((key) => present.has(String(key))));
+	}, [unlinkedForest]);
+
+	const checkedElements = () => {
+		const selected = new Set(checkedKeys.map(String));
+		return flattenUnlinkedForest(unlinkedForest).filter((element) => selected.has(element.id));
+	};
+
+	const markForDelete = (elements: UnlinkedTreeElement[]) => {
+		const count = stageUnlinkedElementsForDelete(rootStore, elements);
+		if (count > 0) {
+			message.success(langtext("general.tree_unlinked_marked", { count }));
+		}
+		setCheckedKeys([]);
+	};
+
+	const selectAllVisible = () => {
+		setCheckedKeys(
+			flattenUnlinkedForest(unlinkedForest.slice(0, UNLINKED_RENDER_LIMIT)).map((element) => element.id)
+		);
+	};
+
+	const ignoreChecked = () => {
+		const namesByEnvironment = new Map<string, string[]>();
+		const ignored: UnlinkedTreeElement[] = [];
+		for (const element of checkedElements()) {
+			if (element.class !== "Asset") {
+				continue;
+			}
+			const name = element.definition?.name?.trim() ?? "";
+			if (!name) {
+				continue;
+			}
+			const ownEnvironmentId =
+				"environmentId" in element && typeof element.environmentId === "string"
+					? element.environmentId.trim()
+					: "";
+			const environmentId =
+				ownEnvironmentId ||
+				resolveWriteEnvironmentId(knownEnvironmentIds(rootStore), rootStore.ui.activeView);
+			if (!environmentId) {
+				continue;
+			}
+			const names = namesByEnvironment.get(environmentId) ?? [];
+			names.push(name);
+			namesByEnvironment.set(environmentId, names);
+			ignored.push(element);
+		}
+		if (namesByEnvironment.size === 0) {
+			message.warning(langtext("general.tree_unlinked_ignore_needs_name"));
+			return;
+		}
+		namesByEnvironment.forEach((names, environmentId) => {
+			const environment = rootStore.environments.findById(environmentId);
+			if (!environment) {
+				return;
+			}
+			environment.setIgnoredDevices([...environment.properties.ignoredDevices, ...names]);
+		});
+		stageUnlinkedElementsForDelete(rootStore, ignored);
+		message.success(langtext("general.tree_unlinked_ignored", { count: ignored.length }));
+		setCheckedKeys([]);
+	};
 
 	React.useEffect(() => {
 		if (!selectedId) {
@@ -537,14 +701,42 @@ const ElementUnlinkedListView = observer(function ElementUnlinkedListView({
 				{langtext("general.tree_unlinked_components")}
 				{totalUnlinked > 0 ? ` (${totalUnlinked})` : ""}
 			</div>
+			{!isReadOnly ? (
+				<div className="element-tree-unlinked__toolbar">
+					<Button
+						size="small"
+						danger
+						disabled={checkedKeys.length === 0}
+						onClick={() => markForDelete(checkedElements())}
+					>
+						{langtext("general.tree_unlinked_mark_delete")}
+					</Button>
+					<Button
+						size="small"
+						disabled={totalUnlinked === 0}
+						onClick={selectAllVisible}
+					>
+						{langtext("general.tree_unlinked_mark_delete_all")}
+					</Button>
+					<Tooltip title={langtext("general.tree_unlinked_ignore_tooltip")}>
+						<span>
+							<Button size="small" disabled={checkedKeys.length === 0} onClick={ignoreChecked}>
+								{langtext("general.tree_unlinked_ignore")}
+							</Button>
+						</span>
+					</Tooltip>
+				</div>
+			) : null}
 			<div className="element-tree-unlinked__panel">
 				<Tree
-					checkable={false}
+					checkable={!isReadOnly}
 					selectable
 					showLine
 					treeData={treeData}
 					expandedKeys={expandedKeys}
 					onExpand={(keys) => setExpandedKeys(keys)}
+					checkedKeys={checkedKeys}
+					onCheck={(keys) => setCheckedKeys(Array.isArray(keys) ? keys : keys.checked)}
 					selectedKeys={selectedId ? [selectedId] : []}
 					onSelect={(keys) => {
 						const id = keys[0] != null ? String(keys[0]) : "";
@@ -568,6 +760,30 @@ const ElementUnlinkedListView = observer(function ElementUnlinkedListView({
 					</div>
 				) : null}
 			</div>
+			{visibleIgnoreEnvironments.length > 0 ? (
+				<div className="element-tree-unlinked__ignore">
+					<div className="element-tree-unlinked__ignore-title">
+						{langtext("general.tree_unlinked_ignore_list")}
+					</div>
+					{visibleIgnoreEnvironments.map((environment) =>
+						isReadOnly ? (
+							environment.properties.ignoredDevices.map((name) => (
+								<Tag key={`${environment.id}:${name}`}>
+									{visibleIgnoreEnvironments.length > 1
+										? `${environmentDisplayName(environment)}: ${name}`
+										: name}
+								</Tag>
+							))
+						) : (
+							<IgnoredDevicesEditor
+								key={environment.id}
+								environment={environment}
+								showEnvironmentName={visibleIgnoreEnvironments.length > 1}
+							/>
+						)
+					)}
+				</div>
+			) : null}
 		</div>
 	);
 });

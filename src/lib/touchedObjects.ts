@@ -4,9 +4,20 @@ import { IView } from "../Stores/Models/View.Model";
 import { IGroup } from "../Stores/Models/Group.Model";
 import { IAsset } from "../Stores/Models/Asset.Model";
 import { getConnectionDisplayName, IConnection } from "../Stores/Models/Connection.Model";
+import type { ISchemaModel } from "../Stores/Models/Schema.Model";
+import type { IConnectSchemaModel } from "../Stores/Models/ConnectSchema.Model";
+import type { IEnvironment } from "../Stores/Models/Environment.Model";
+import { SchemaStoreType } from "./schemaDomain";
 import { isTouchedStatus, touchKindFromStatus } from "./elementStaging";
 
-export type TouchedObjectKind = "View" | "Group" | "Asset" | "Connection";
+export type TouchedObjectKind =
+	| "View"
+	| "Group"
+	| "Asset"
+	| "Connection"
+	| "Environment"
+	| "EditorSchema"
+	| "DockpartSchema";
 
 export interface TouchedObjectRef {
 	id: string;
@@ -14,7 +25,8 @@ export interface TouchedObjectRef {
 	touch: "create" | "update" | "delete";
 	name: string;
 	status: ElementStatus;
-	element: IView | IGroup | IAsset | IConnection;
+	schemaStoreType?: SchemaStoreType;
+	element: IView | IGroup | IAsset | IConnection | IEnvironment | ISchemaModel | IConnectSchemaModel;
 }
 
 function elementName(element: IView | IGroup | IAsset | IConnection): string {
@@ -63,7 +75,81 @@ export function collectTouchedObjects(root: IRootStore): TouchedObjectRef[] {
 		pushIfTouched(pending, connection, "Connection");
 	}
 
+	const environments = root.environments?.environments;
+	if (environments) {
+		for (const environment of environments) {
+			if (environment.status !== "changed") {
+				continue;
+			}
+			pending.push({
+				id: environment.id,
+				kind: "Environment",
+				touch: "update",
+				name: environment.definition?.name?.trim() || environment.id,
+				status: "changed",
+				element: environment,
+			});
+		}
+	}
+
+	const configSchemas = root.configSchemas;
+	if (configSchemas) {
+		for (const schema of configSchemas.internals) {
+			pushNewSchema(pending, schema);
+		}
+		for (const schema of configSchemas.viewgroups) {
+			pushNewSchema(pending, schema);
+		}
+		for (const schema of configSchemas.components) {
+			pushNewSchema(pending, schema);
+		}
+		for (const schema of configSchemas.dockparts) {
+			pushNewSchema(pending, schema);
+		}
+	}
+
 	return pending;
+}
+
+function schemaLabel(schema: ISchemaModel | IConnectSchemaModel): string {
+	const name: unknown = schema.name;
+	if (name && typeof name === "object" && typeof (name as { get?: unknown }).get === "function") {
+		const map = name as { get: (key: string) => string | undefined };
+		return map.get("de") || map.get("und") || map.get("en") || map.get("intl") || schema.id;
+	}
+	if (name && typeof name === "object") {
+		const record = name as Record<string, unknown>;
+		for (const key of ["de", "und", "en", "intl"]) {
+			const value = record[key];
+			if (typeof value === "string" && value) {
+				return value;
+			}
+		}
+	}
+	return schema.id;
+}
+
+/** Nur neu angelegte Schemata. Bestehende Bearbeitungen bleiben lokal. */
+function pushNewSchema(
+	pending: TouchedObjectRef[],
+	schema: ISchemaModel | IConnectSchemaModel
+): void {
+	if (!isTouchedStatus(schema.status)) {
+		return;
+	}
+	const touch = touchKindFromStatus(schema.status, schema.statusBeforeInvalid);
+	if (touch !== "create") {
+		return;
+	}
+	pending.push({
+		id: schema.id,
+		kind: schema.storeType === "DOCKPART" ? "DockpartSchema" : "EditorSchema",
+		schemaStoreType: schema.storeType,
+		touch,
+		name: schemaLabel(schema),
+		status: schema.status,
+		element: schema,
+	});
 }
 
 export function hasTouchedObjects(root: IRootStore): boolean {
@@ -84,10 +170,21 @@ function removeFromStore(root: IRootStore, ref: TouchedObjectRef): void {
 		case "Connection":
 			root.connections.removeLocal(ref.element as IConnection);
 			break;
+		case "EditorSchema":
+		case "DockpartSchema":
+			root.configSchemas.removeStagedSchema(ref.element as ISchemaModel | IConnectSchemaModel);
+			break;
+		case "Environment":
+			break;
 	}
 }
 
 export function undoTouchedObject(root: IRootStore, ref: TouchedObjectRef): void {
+	if (ref.kind === "Environment") {
+		(ref.element as IEnvironment).rollbackIgnoredDevices();
+		return;
+	}
+
 	const element = ref.element as IElement;
 
 	switch (ref.touch) {

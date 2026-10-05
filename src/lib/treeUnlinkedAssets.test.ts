@@ -189,8 +189,8 @@ describe("treeUnlinkedAssets", () => {
 			},
 		} as any;
 		expect(collectUnlinkedElementForestForView(withAssignedOnFreeFolder, "view1").map((node) => node.element.id)).toEqual([
-			"g-free",
 			"a-free",
+			"g-free",
 		]);
 	});
 
@@ -207,6 +207,64 @@ describe("treeUnlinkedAssets", () => {
 		expect(device?.children.map((child) => child.element.id)).toEqual(["os"]);
 		expect(device?.children[0]?.children.map((child) => child.element.id)).toEqual(["app"]);
 		expect(forest.find((node) => node.element.id === "free")?.children).toEqual([]);
+	});
+
+	it("sortiert den Wald nach Anzeigenamen", () => {
+		const named = {
+			views: { views: [{ id: "view1" }] },
+			groups: { groups: [] },
+			assets: {
+				assets: [
+					{ id: "z", class: "Asset", definition: { name: "Zeta" }, ownerIdRef: null },
+					{ id: "b", class: "Asset", definition: { name: "PC 10" }, ownerIdRef: null },
+					{ id: "a", class: "Asset", definition: { name: "PC 2" }, ownerIdRef: null },
+				],
+			},
+		} as any;
+		expect(collectUnlinkedElementForestForView(named, "view1").map((node) => node.element.id)).toEqual([
+			"a",
+			"b",
+			"z",
+		]);
+	});
+
+	it("blendet ignorierte Gerätenamen des Environments aus", () => {
+		const ignored = {
+			views: { views: [{ id: "view1" }] },
+			groups: { groups: [] },
+			assets: {
+				assets: [
+					{
+						id: "keep",
+						class: "Asset",
+						environmentId: "env1",
+						definition: { name: "Keep" },
+						ownerIdRef: null,
+					},
+					{
+						id: "drop",
+						class: "Asset",
+						environmentId: "env1",
+						definition: { name: "Printer" },
+						ownerIdRef: null,
+					},
+					{
+						id: "other-env",
+						class: "Asset",
+						environmentId: "env2",
+						definition: { name: "Printer" },
+						ownerIdRef: null,
+					},
+				],
+			},
+			environments: {
+				environments: [{ id: "env1", properties: { ignoredDevices: ["printer"] } }],
+			},
+		} as any;
+		expect(collectUnlinkedElementForestForView(ignored, "view1").map((node) => node.element.id)).toEqual([
+			"keep",
+			"other-env",
+		]);
 	});
 });
 

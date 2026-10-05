@@ -3,6 +3,7 @@ import { IAsset } from "../Stores/Models/Asset.Model";
 import { IGroup } from "../Stores/Models/Group.Model";
 import { IRootStore } from "../Stores/Root.Store";
 import { readGroupParentId } from "./elementAssignments";
+import { compareByElementName } from "./elementDisplayOrder";
 import { indexAssetsByOwnerId, indexGroupsByParentId } from "./hierarchyIndex";
 
 function resolveElementRefId(ref: { id: unknown }): string | undefined {
@@ -232,6 +233,64 @@ export function nestUnlinkedStackedComponents(
 	return roots;
 }
 
+function ignoredNameSet(root: IRootStore, environmentId: string): Set<string> {
+	if (!environmentId) {
+		return new Set();
+	}
+	const environments = root.environments as
+		| {
+				findById?: (id: string) => { properties?: { ignoredDevices?: readonly string[] } } | undefined;
+				environments?: ReadonlyArray<{ id: string; properties?: { ignoredDevices?: readonly string[] } }>;
+		  }
+		| undefined;
+	const environment =
+		environments?.findById?.(environmentId) ??
+		environments?.environments?.find((entry) => entry.id === environmentId);
+	const names = environment?.properties?.ignoredDevices ?? [];
+	return new Set(
+		names
+			.map((name) => name.trim().toLocaleLowerCase("de"))
+			.filter((name) => name !== "")
+	);
+}
+
+function isIgnoredUnlinkedAsset(root: IRootStore, element: UnlinkedTreeElement): boolean {
+	if (element.class !== "Asset") {
+		return false;
+	}
+	const name = element.definition?.name?.trim() ?? "";
+	const environmentId = "environmentId" in element && typeof element.environmentId === "string"
+		? element.environmentId.trim()
+		: "";
+	if (!name || !environmentId) {
+		return false;
+	}
+	return ignoredNameSet(root, environmentId).has(name.toLocaleLowerCase("de"));
+}
+
+function withoutIgnoredDevices(root: IRootStore, nodes: UnlinkedElementNode[]): UnlinkedElementNode[] {
+	const kept: UnlinkedElementNode[] = [];
+	for (const node of nodes) {
+		if (isIgnoredUnlinkedAsset(root, node.element)) {
+			continue;
+		}
+		kept.push({
+			element: node.element,
+			children: withoutIgnoredDevices(root, node.children),
+		});
+	}
+	return kept;
+}
+
+function sortUnlinkedForest(nodes: UnlinkedElementNode[]): UnlinkedElementNode[] {
+	return [...nodes]
+		.sort((left, right) => compareByElementName(left.element, right.element))
+		.map((node) => ({
+			element: node.element,
+			children: sortUnlinkedForest(node.children),
+		}));
+}
+
 /** Unverknüpfte View-Folder und technische Elemente der aktiven View. */
 export function collectUnlinkedElementsForView(
 	root: IRootStore,
@@ -247,5 +306,20 @@ export function collectUnlinkedElementForestForView(
 	root: IRootStore,
 	viewId: string | undefined
 ): UnlinkedElementNode[] {
-	return nestUnlinkedStackedComponents(collectUnlinkedElementsForView(root, viewId));
+	const nested = nestUnlinkedStackedComponents(collectUnlinkedElementsForView(root, viewId));
+	return sortUnlinkedForest(withoutIgnoredDevices(root, nested));
+}
+
+export function flattenUnlinkedForest(nodes: UnlinkedElementNode[]): UnlinkedTreeElement[] {
+	const elements: UnlinkedTreeElement[] = [];
+	const walk = (list: UnlinkedElementNode[]) => {
+		for (const node of list) {
+			elements.push(node.element);
+			if (node.children.length > 0) {
+				walk(node.children);
+			}
+		}
+	};
+	walk(nodes);
+	return elements;
 }
