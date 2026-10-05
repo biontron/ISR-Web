@@ -318,7 +318,7 @@ const GraphCanvas = observer(
 
 			try {
 			const graphRoot = element as TreeElement;
-			const graphConfig = resolveGraphConfigForView(view.settings);
+			const graphConfig = resolveGraphConfigForView(view.settings, { view });
 			const g = new dagreD3.graphlib.Graph({ compound: true, directed: true });
 			g.setDefaultEdgeLabel(() => ({ label: "" }));
 			g.setGraph({});

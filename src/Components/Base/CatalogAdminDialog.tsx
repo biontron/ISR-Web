@@ -29,6 +29,7 @@ interface CatalogAdminDialogProps {
 	onDelete: (id: string) => Promise<void> | void;
 	onExport: (id: string) => void;
 	resolveInspect?: (id: string) => JsonInspectTarget | null;
+	selectionExtra?: (selectedId: string) => React.ReactNode;
 }
 
 const CatalogAdminDialog: React.FC<CatalogAdminDialogProps> = observer(({
@@ -45,6 +46,7 @@ const CatalogAdminDialog: React.FC<CatalogAdminDialogProps> = observer(({
 	onDelete,
 	onExport,
 	resolveInspect,
+	selectionExtra,
 }) => {
 	const langtext = useLangtext();
 	const [selectedId, setSelectedId] = useState("");
@@ -114,7 +116,7 @@ const CatalogAdminDialog: React.FC<CatalogAdminDialogProps> = observer(({
 				title={title}
 				onCancel={onClose}
 				footer={null}
-				width={720}
+				width={kind === "environment" ? 1100 : 720}
 				destroyOnClose
 			>
 				<Table
@@ -133,6 +135,7 @@ const CatalogAdminDialog: React.FC<CatalogAdminDialogProps> = observer(({
 					})}
 					locale={{ emptyText: langtext("general.catalog_empty") }}
 				/>
+				{selectionExtra && selectedId ? selectionExtra(selectedId) : null}
 				<Space style={{ marginTop: 16 }} wrap>
 					<Button
 						type="primary"

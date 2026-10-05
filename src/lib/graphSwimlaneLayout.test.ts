@@ -76,7 +76,7 @@ describe("graphSwimlaneLayout", () => {
 		expect(byLane.get("Services")?.map((node) => node.id)).toEqual(["svc"]);
 		expect(byLane.get("ungrouped")?.map((node) => node.id)).toEqual(["other"]);
 		expect(resolveSwimlaneIdForComponent(createAsset("x", [{ tag: "#Network" }]), DEFAULT_GRAPH_CONFIG)).toBe(
-			"Network"
+			"ungrouped"
 		);
 	});
 

@@ -4,7 +4,7 @@
 */
 import { flow, getRoot, Instance, types } from "mobx-state-tree";
 import { BaseStore } from "./Base.Store";
-import { EnvironmentModel, IEnvironment } from "./Models/Environment.Model";
+import { EnvironmentModel, environmentRestProperties, IEnvironment } from "./Models/Environment.Model";
 import type { IRootStore } from "./Root.Store";
 import authStore from "./Auth.Store";
 import api from "../lib/api";
@@ -121,10 +121,7 @@ export const EnvironmentStore = types.compose(
 						subType: environment.definition.subType,
 						name,
 					},
-					properties: {
-						bgColor: environment.properties.bgColor,
-						ignoredDevices: environment.properties.ignoredDevices.slice(),
-					},
+					properties: environmentRestProperties(environment),
 				};
 			}
 

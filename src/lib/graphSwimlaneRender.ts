@@ -1,6 +1,6 @@
 import { select, Selection } from "d3-selection";
 import * as dagreD3 from "dagre-d3-es";
-import { GraphConfig, resolveSwimlaneLabel } from "./graphConfig";
+import { GraphConfig, resolveSwimlaneLabel, swimlanesWithRest } from "./graphConfig";
 import { layoutSwimlaneStackNodes } from "./graphComponentStackLayout";
 import { SWIMLANE_GRAPH_ROOT_ID } from "./graphDagreBuild";
 import { swimlaneNodeId } from "./graphSwimlaneLayout";
@@ -66,7 +66,7 @@ export function applySwimlaneFullWidthLayout(
 
 	let y = LANE_PAD_Y;
 
-	for (const lane of config.swimlanes) {
+	for (const lane of swimlanesWithRest(config)) {
 		const laneId = swimlaneNodeId(lane.id);
 		const laneG = rootInner.selectAll<SVGGElement, unknown>("g.cluster").filter(function () {
 			return (readGraphNodeId(this) ?? this.getAttribute("id")) === laneId;

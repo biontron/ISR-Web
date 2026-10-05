@@ -14,6 +14,10 @@ import {
 	GraphZoomButtons,
 	useGraphZoom,
 } from "./Components/ElementGraph.Component";
+import { ElementGraphArchitecture } from "./Components/ElementGraphArchitecture";
+import { resolveGraphConfigForView } from "../../lib/graphViewModel";
+import type { GraphArchitectureRepresentation } from "../../lib/graphConfig";
+import { graphText } from "../../lib/graphConfig";
 import ElementPropertiesDetails from "./Components/ElementPropertiesDetails";
 import ElementPropertiesAssignments from "./Components/ElementPropertiesAssignments";
 import { ElementPropertiesConnections } from "./Components/ElementPropertiesConnections";
@@ -49,6 +53,11 @@ const AssetManagement = observer(() => {
 	const [graphFullscreen, setGraphFullscreen] = useState(false);
 	const [activeGraphTab, setActiveGraphTab] = useState("GraphStack");
 	const { zoomLevel, zoomIn, zoomOut } = useGraphZoom();
+	const graphConfig = resolveGraphConfigForView(activeView?.settings, { view: activeView });
+	const architectures = (graphConfig.representations ?? []).filter(
+		(entry): entry is GraphArchitectureRepresentation => entry.kind === "architecture"
+	);
+	const activeArchitecture = architectures.find((entry) => `arch:${entry.id}` === activeGraphTab);
 	const groupsLoading = rootStore.groups.loading;
 	const assetsLoading = rootStore.assets.loading;
 
@@ -272,6 +281,9 @@ const AssetManagement = observer(() => {
 						<TabPane tab={langtext("general.graph_tab_overview")} key="GraphStack" />
 						<TabPane tab={langtext("general.graph_tab_swimlanes")} key="GraphSwimlanes" />
 						<TabPane tab={langtext("general.graph_tab_map")} key="GraphMap" />
+						{architectures.map((entry) => (
+							<TabPane tab={graphText(entry.label)} key={`arch:${entry.id}`} />
+						))}
 					</Tabs>
 
 					<div className="graph-panel-content">
@@ -283,6 +295,15 @@ const AssetManagement = observer(() => {
 						)}
 						{activeGraphTab === "GraphMap" && (
 							<ElementGraphMap element={activeElement} zoomLevel={zoomLevel} />
+						)}
+						{activeArchitecture && (
+							<ElementGraphArchitecture
+								key={activeArchitecture.id}
+								architecture={activeArchitecture}
+								architectures={architectures}
+								zoomLevel={zoomLevel}
+								onOpenArchitecture={(id) => setActiveGraphTab(`arch:${id}`)}
+							/>
 						)}
 					</div>
 				</Sider>
@@ -311,6 +332,9 @@ const AssetManagement = observer(() => {
 							<TabPane tab={langtext("general.graph_tab_overview")} key="GraphStack" />
 							<TabPane tab={langtext("general.graph_tab_swimlanes")} key="GraphSwimlanes" />
 							<TabPane tab={langtext("general.graph_tab_map")} key="GraphMap" />
+							{architectures.map((entry) => (
+								<TabPane tab={graphText(entry.label)} key={`arch:${entry.id}`} />
+							))}
 						</Tabs>
 					</div>
 
@@ -323,6 +347,15 @@ const AssetManagement = observer(() => {
 						)}
 						{activeGraphTab === "GraphMap" && (
 							<ElementGraphMap element={activeElement} zoomLevel={zoomLevel} />
+						)}
+						{activeArchitecture && (
+							<ElementGraphArchitecture
+								key={activeArchitecture.id}
+								architecture={activeArchitecture}
+								architectures={architectures}
+								zoomLevel={zoomLevel}
+								onOpenArchitecture={(id) => setActiveGraphTab(`arch:${id}`)}
+							/>
 						)}
 					</div>
 				</div>

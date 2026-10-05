@@ -100,22 +100,6 @@
         "de": "Datenbanken"
       },
       "tags": ["database"]
-    },
-    {
-      "id": "Network",
-      "label": {
-        "und": "Network",
-        "de": "Netzwerk"
-      },
-      "tags": ["Network"]
-    },
-    {
-      "id": "ungrouped",
-      "label": {
-        "und": "Ungrouped",
-        "de": "Ungruppiert"
-      },
-      "tags": ["other"]
     }
   ]
 }

@@ -2,7 +2,7 @@ import * as dagreD3 from "dagre-d3-es";
 import { TreeElement } from "../Interfaces/Element";
 import { rootStore } from "../Stores/Root.Store";
 import { formatAssetDefinitionTypeLabel, resolveAssetElementType } from "./elementDefinitionTypes";
-import { GraphConfig, loadGraphConfig } from "./graphConfig";
+import { GraphConfig, loadGraphConfig, swimlanesWithRest } from "./graphConfig";
 import {
 	assignComponentsToSwimlanes,
 	collectSwimlaneComponentsFromTree,
@@ -484,7 +484,7 @@ export function buildSwimlaneGraph(
 		});
 	}
 
-	for (const lane of graphConfig.swimlanes) {
+	for (const lane of swimlanesWithRest(graphConfig)) {
 		const laneId = swimlaneNodeId(lane.id);
 		const laneStyle = resolveGraphStyle(
 			{ class: "Group", properties: { style: { graph: { layout: "GROUP" } } } },

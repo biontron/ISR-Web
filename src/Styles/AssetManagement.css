@@ -184,6 +184,19 @@
   min-width: 100%;
 }
 
+.graph-architecture-errors {
+  padding: 4px 8px;
+  color: #8a1f1f;
+  font-size: 12px;
+}
+
+.graph-architecture-wizard__section {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin-bottom: 16px;
+}
+
 .graph-zoom-buttons {
   display: flex;
   align-items: center;

@@ -22,6 +22,7 @@ import {
 	buildSnapshotJsonInspectTarget,
 } from "../../lib/jsonInspectResolve";
 import CatalogAdminDialog from "./CatalogAdminDialog";
+import EnvironmentGraphSettings from "../../Apps/AssetManagement/Components/EnvironmentSettings";
 import UserSettingsDialog from "./UserSettingsDialog";
 
 interface CommonLayoutProps {
@@ -318,6 +319,7 @@ const CommonLayout: React.FC<CommonLayoutProps> = observer(({ children }) => {
 					}
 					downloadJson(`${environment.id}.json`, getSnapshot(environment));
 				}}
+				selectionExtra={(id) => <EnvironmentGraphSettings environmentId={id} canEdit={canEdit} />}
 				resolveInspect={(id) => {
 					const environment = rootStore.environments.findById(id);
 					if (!environment) {

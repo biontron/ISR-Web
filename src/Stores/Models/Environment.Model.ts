@@ -21,6 +21,7 @@ export const EnvironmentModel = types
 				responsibles: types.optional(types.frozen(), []),
 				notations: types.optional(types.frozen(), []),
 				ignoredDevices: types.optional(types.array(types.string), []),
+				graph: types.maybe(types.frozen()),
 			}),
 			{}
 		),
@@ -28,10 +29,20 @@ export const EnvironmentModel = types
 	.volatile(() => ({
 		status: "untouched" as "untouched" | "changed",
 		ignoredDevicesSnapshot: null as string[] | null,
+		graphSnapshot: undefined as unknown,
+		graphSnapshotTaken: false,
 	}))
 	.actions((self) => ({
 		setName(name: string) {
 			self.definition.name = name;
+		},
+		setGraphRepresentations(representations: readonly unknown[]) {
+			if (!self.graphSnapshotTaken) {
+				self.graphSnapshot = self.properties.graph;
+				self.graphSnapshotTaken = true;
+			}
+			self.properties.graph = { representations: representations.slice() };
+			self.status = "changed";
 		},
 		setIgnoredDevices(names: readonly string[]) {
 			const next = compactIgnoredDeviceNames(names);
@@ -39,7 +50,7 @@ export const EnvironmentModel = types
 			if (ignoredDeviceListsEqual(next, baseline)) {
 				self.properties.ignoredDevices.replace(baseline.slice());
 				self.ignoredDevicesSnapshot = null;
-				self.status = "untouched";
+				self.status = self.graphSnapshotTaken ? "changed" : "untouched";
 				return;
 			}
 			if (self.ignoredDevicesSnapshot === null) {
@@ -50,6 +61,8 @@ export const EnvironmentModel = types
 		},
 		commitIgnoredDevices() {
 			self.ignoredDevicesSnapshot = null;
+			self.graphSnapshot = undefined;
+			self.graphSnapshotTaken = false;
 			self.status = "untouched";
 		},
 		rollbackIgnoredDevices() {
@@ -57,6 +70,11 @@ export const EnvironmentModel = types
 				self.properties.ignoredDevices.replace(self.ignoredDevicesSnapshot.slice());
 			}
 			self.ignoredDevicesSnapshot = null;
+			if (self.graphSnapshotTaken) {
+				self.properties.graph = self.graphSnapshot;
+				self.graphSnapshot = undefined;
+				self.graphSnapshotTaken = false;
+			}
 			self.status = "untouched";
 		},
 	}));
@@ -89,6 +107,27 @@ function ignoredDeviceListsEqual(left: readonly string[], right: readonly string
 }
 
 export interface IEnvironment extends Instance<typeof EnvironmentModel> {}
+
+export function environmentRestProperties(environment: {
+	properties: {
+		bgColor: string;
+		responsibles: unknown;
+		notations: unknown;
+		ignoredDevices: { slice(): readonly string[] };
+		graph?: unknown;
+	};
+}): Record<string, unknown> {
+	const properties: Record<string, unknown> = {
+		bgColor: environment.properties.bgColor,
+		responsibles: environment.properties.responsibles,
+		notations: environment.properties.notations,
+		ignoredDevices: environment.properties.ignoredDevices.slice(),
+	};
+	if (environment.properties.graph != null) {
+		properties.graph = environment.properties.graph;
+	}
+	return properties;
+}
 
 export function environmentDisplayName(environment?: IEnvironment | null): string {
 	const name = environment?.definition?.name?.trim();

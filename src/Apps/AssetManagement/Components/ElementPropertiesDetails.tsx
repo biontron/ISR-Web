@@ -69,7 +69,7 @@ const ElementPropertiesDetails: React.FC<ElementPropertiesDetailsProps> = () => 
 
 	const handleReset = () => {
 		if (activeElement) {
-			activeElement.rollbackEdit();        // ← Jetzt robust über Model
+			activeElement.rollbackEdit();
 		}
 	};
 

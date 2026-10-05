@@ -1,6 +1,6 @@
 import { getSnapshot } from "mobx-state-tree";
 import { IRootStore } from "../Stores/Root.Store";
-import { IEnvironment } from "../Stores/Models/Environment.Model";
+import { environmentRestProperties, IEnvironment } from "../Stores/Models/Environment.Model";
 import { TouchedObjectRef } from "./touchedObjects";
 import { rewriteFilterRulesInSnapshot } from "./filterRuleNormalize";
 import { parseDockRef } from "./connectionEndpointRef";
@@ -159,10 +159,7 @@ export function restWritePayloadForRef(
 				subType: environment.definition.subType,
 				name: environment.definition.name,
 			},
-			properties: {
-				bgColor: environment.properties.bgColor,
-				ignoredDevices: environment.properties.ignoredDevices.slice(),
-			},
+			properties: environmentRestProperties(environment),
 		};
 	}
 	const snapshot = getSnapshot(ref.element);

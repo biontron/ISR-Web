@@ -1,6 +1,14 @@
 import { TreeElement } from "../Interfaces/Element";
-import { GraphConfig, loadGraphConfig, resolveSwimlaneForTags } from "./graphConfig";
+import { rootStore } from "../Stores/Root.Store";
+import {
+	GraphArchitectureRepresentation,
+	GraphConfig,
+	GraphRepresentation,
+	loadGraphConfig,
+	resolveSwimlaneForTags,
+} from "./graphConfig";
 import { readElementGraphTags } from "./graphElementStyle";
+import { resolveViewEnvironmentRefs, ViewEnvironmentSource } from "./viewEnvironments";
 
 export type GraphViewNode = {
 	id: string;
@@ -9,15 +17,88 @@ export type GraphViewNode = {
 	condensed: boolean;
 };
 
-export function resolveGraphConfigForView(viewSettings?: { get?: (key: string) => unknown }): GraphConfig {
-	if (!viewSettings || typeof viewSettings.get !== "function") {
-		return loadGraphConfig();
+export type GraphEnvironmentConfigSource = {
+	properties?: { graph?: unknown };
+};
+
+export type ResolveGraphConfigOptions = {
+	view?: ViewEnvironmentSource | null;
+	environments?: readonly GraphEnvironmentConfigSource[];
+};
+
+function isArchitecture(entry: unknown): entry is GraphArchitectureRepresentation {
+	return !!entry && typeof entry === "object" && (entry as GraphRepresentation).kind === "architecture";
+}
+
+export function readGraphArchitectures(graph: unknown): GraphArchitectureRepresentation[] {
+	if (!graph || typeof graph !== "object") {
+		return [];
 	}
-	const embedded = viewSettings.get("graph");
-	if (embedded && typeof embedded === "object") {
-		return loadGraphConfig(embedded as Partial<GraphConfig>);
+	const representations = (graph as { representations?: unknown }).representations;
+	if (!Array.isArray(representations)) {
+		return [];
 	}
-	return loadGraphConfig();
+	return representations.filter(isArchitecture);
+}
+
+function overlayArchitectures(
+	base: GraphArchitectureRepresentation[],
+	overlay: readonly GraphArchitectureRepresentation[]
+): GraphArchitectureRepresentation[] {
+	const next = base.slice();
+	for (const entry of overlay) {
+		const index = next.findIndex((item) => item.id === entry.id);
+		if (index >= 0) {
+			next[index] = entry;
+		} else {
+			next.push(entry);
+		}
+	}
+	return next;
+}
+
+function environmentsOf(options?: ResolveGraphConfigOptions): readonly GraphEnvironmentConfigSource[] {
+	if (options?.environments) {
+		return options.environments;
+	}
+	if (!options?.view) {
+		return [];
+	}
+	const knownIds = rootStore.environments.environments.map((environment) => environment.id);
+	const found: GraphEnvironmentConfigSource[] = [];
+	for (const ref of resolveViewEnvironmentRefs(options.view, knownIds)) {
+		const environment = rootStore.environments.findById(ref);
+		if (environment) {
+			found.push(environment);
+		}
+	}
+	return found;
+}
+
+export function resolveGraphConfigForView(
+	viewSettings?: { get?: (key: string) => unknown } | null,
+	options?: ResolveGraphConfigOptions
+): GraphConfig {
+	const embedded =
+		viewSettings && typeof viewSettings.get === "function" ? viewSettings.get("graph") : undefined;
+	const embeddedRecord =
+		embedded && typeof embedded === "object" ? (embedded as Partial<GraphConfig>) : undefined;
+	const styleOverride = embeddedRecord ? { ...embeddedRecord } : undefined;
+	if (styleOverride) {
+		delete styleOverride.representations;
+	}
+	const base = loadGraphConfig(styleOverride);
+	const swimlanes = (base.representations ?? []).filter(
+		(entry): entry is GraphRepresentation => entry.kind === "swimlane"
+	);
+	let architectures = (base.representations ?? []).filter(isArchitecture);
+	for (const environment of environmentsOf(options)) {
+		architectures = overlayArchitectures(architectures, readGraphArchitectures(environment.properties?.graph));
+	}
+	return {
+		...base,
+		representations: [...swimlanes, ...architectures],
+	};
 }
 
 export function collectGraphViewNodes(
