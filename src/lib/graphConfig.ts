@@ -48,7 +48,7 @@ export type GraphCellBlock = {
 	strokeDasharray?: string | null;
 	labelColor?: string | null;
 	align?: GraphCellAlign | "" | null;
-	shape?: "box" | "cylinder" | "" | null;
+	shape?: "box" | "cylinder" | "c" | "" | null;
 	text?: GraphLocalizedText | null;
 	textFill?: string | null;
 	textStroke?: string | null;

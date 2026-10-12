@@ -17,8 +17,16 @@ fs.readFile(filePath, "utf8", (err, data) => {
 		return console.log(err);
 	}
 
-	// Ersetze alle <link> Tags durch selbstschließende Tags
+	// Der HTML-Minifier schreibt <!doctype html> und && in Inline-Skripten.
+	// Beides ist kein wohlgeformtes XML. CDATA lässt && im Skript stehen und bleibt in HTML ein Kommentar.
     const corrected = data
+        .replace(/<!doctype\s+html\s*>/gi, "<!DOCTYPE html>")
+        .replace(/<script(\s[^>]*)?>([\s\S]*?)<\/script>/gi, (match, attrs, body) => {
+			if (!body || body.includes("<![CDATA[") || !/[&<]/.test(body)) {
+				return match;
+			}
+			return `<script${attrs || ""}>/*<![CDATA[*/${body}/*]]>*/</script>`;
+		})
         .replace(/<meta(?!.*\/>)([^>]*)>/gi, "<meta$1/>")
         .replace(/<img(?!.*\/>)([^>]*)>/gi, "<img$1/>")
         .replace(/<link(?!.*\/>)([^>]*)>/gi, "<link$1/>")

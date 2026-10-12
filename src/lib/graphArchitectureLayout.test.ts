@@ -9,6 +9,35 @@ import {
 import type { GraphCellBlock } from "./graphConfig";
 
 describe("graphArchitectureLayout", () => {
+	it("lässt die Workflow Engine in der Öffnung eines C-Blocks zu", () => {
+		const layout = layoutArchitecture({
+			kind: "architecture",
+			id: "c-form",
+			label: "C",
+			blocks: [
+				{
+					id: "core-services",
+					role: "node",
+					range: "A5:I7",
+					shape: "c",
+					label: "Core Services API",
+					fill: "#d6e6fa",
+				},
+				{ id: "interface-contract", role: "node", range: "E6:F6", label: "Interface Contract" },
+				{ id: "orchestration", role: "node", range: "G6:K6", label: "Prozess Orchestration" },
+			],
+		});
+		expect(layout.errors).toEqual([]);
+		const core = layout.placed.find((item) => item.block.id === "core-services");
+		const engine = layout.placed.find((item) => item.block.id === "orchestration");
+		if (!core || !engine) {
+			throw new Error("C oder Engine fehlt");
+		}
+		expect(engine.x).toBeGreaterThan(core.x);
+		expect(engine.x).toBeLessThan(core.x + core.width);
+		expect(engine.x + engine.width).toBeGreaterThan(core.x + core.width);
+	});
+
 	it("liest ein Rechteck A5:D6", () => {
 		expect(parseRange("A5:D6")).toEqual({ c1: 0, r1: 4, c2: 3, r2: 5 });
 		expect(parseRange("c1")).toEqual({ c1: 2, r1: 0, c2: 2, r2: 0 });

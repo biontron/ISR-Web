@@ -71,6 +71,26 @@ function frameHeading(block: GraphCellBlock): string {
 	return header;
 }
 
+function cPath(host: PlacedBlock, nodes: PlacedBlock[]): string {
+	const guests = nodes.filter((item) => {
+		if (item.block.id === host.block.id) {
+			return false;
+		}
+		const verticallyInside = item.y > host.y + 4 && item.y + item.height < host.y + host.height - 4;
+		const startsInside = item.x > host.x + 8 && item.x < host.x + host.width;
+		return verticallyInside && startsInside;
+	});
+	const outer = `M ${host.x} ${host.y} H ${host.x + host.width} V ${host.y + host.height} H ${host.x} Z`;
+	if (guests.length === 0) {
+		return outer;
+	}
+	const notchX = Math.min(...guests.map((item) => item.x)) - 8;
+	const notchY = Math.min(...guests.map((item) => item.y)) - 8;
+	const notchBottom = Math.max(...guests.map((item) => item.y + item.height)) + 8;
+	const notch = `M ${notchX} ${notchY} H ${host.x + host.width} V ${notchBottom} H ${notchX} Z`;
+	return `${outer} ${notch}`;
+}
+
 function frameDirectlyBelow(frame: PlacedBlock, frames: PlacedBlock[]): PlacedBlock | undefined {
 	return frames.find(
 		(other) =>
@@ -387,6 +407,14 @@ export const ElementGraphArchitecture = observer(function ElementGraphArchitectu
 												strokeDasharray={dash}
 											/>
 										</>
+									) : item.block.shape === "c" ? (
+										<path
+											d={cPath(item, nodes)}
+											fill={presentPaint(item.block.fill) || "#d6e6fa"}
+											stroke={stroke}
+											strokeWidth={missingId === item.block.id ? 2 : 1}
+											fillRule="evenodd"
+										/>
 									) : (
 										<rect
 											x={item.x}
@@ -437,7 +465,7 @@ export const ElementGraphArchitecture = observer(function ElementGraphArchitectu
 											{caption}
 										</text>
 									)}
-									{preview.map((member, index) => (
+									{preview.length > 0 && item.block.shape !== "c" && preview.map((member, index) => (
 										<text
 											key={member.id}
 											x={item.x + 8}

@@ -140,6 +140,19 @@ export function rangesOverlap(a: CellRange, b: CellRange): boolean {
 	return a.c1 <= b.c2 && b.c1 <= a.c2 && a.r1 <= b.r2 && b.r1 <= a.r2;
 }
 
+/** Öffnung eines C: Mittelzeilen, rechts von der linken Spalte. Dort darf ein Block hineinragen. */
+export function sitsInCOpening(host: { block: GraphCellBlock; range: CellRange }, guest: CellRange): boolean {
+	if (host.block.shape !== "c" || host.range.r2 - host.range.r1 < 2) {
+		return false;
+	}
+	const openTop = host.range.r1 + 1;
+	const openBottom = host.range.r2 - 1;
+	if (guest.r1 < openTop || guest.r2 > openBottom) {
+		return false;
+	}
+	return guest.c1 > host.range.c1 && guest.c1 <= host.range.c2;
+}
+
 function blockRole(block: GraphCellBlock): GraphCellRole {
 	return block.role ?? "node";
 }
@@ -402,6 +415,9 @@ export function layoutArchitecture(
 				continue;
 			}
 			if (rangeCovers(a.range, b.range) || rangeCovers(b.range, a.range)) {
+				continue;
+			}
+			if (sitsInCOpening(a, b.range) || sitsInCOpening(b, a.range)) {
 				continue;
 			}
 			errors.push(`${a.block.id} und ${b.block.id} überlappen`);
