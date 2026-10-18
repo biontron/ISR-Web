@@ -49,6 +49,44 @@ describe("graphArchitectureLayout", () => {
 		expect(outer && inner && rangeCovers(outer, inner)).toBe(true);
 	});
 
+	it("liest <tags><tag>bike</tag></tags> als Zuordnung", () => {
+		const blocks: GraphCellBlock[] = [
+			{
+				id: "bike-ui",
+				role: "node",
+				range: "C1",
+				tags: { tag: "bike" } as unknown as string[],
+				previewMembers: {
+					member: [
+						{ id: "Bike-svc-1", label: "Bike Service A" },
+						{ id: "Bike-svc-2", label: "Bike Service B" },
+					],
+				} as unknown as GraphCellBlock["previewMembers"],
+			},
+			{ id: "bike-api", role: "node", range: "C3", tags: { tag: "bike" } as unknown as string[] },
+		];
+		const { byBlock, errors } = assignMembersToBlocks(blocks, [
+			{ id: "e3e465ee", label: "192.168.39.97", tags: ["bike"] },
+		]);
+		expect(errors).toEqual([]);
+		expect(byBlock.get("bike-ui")?.map((member) => member.id)).toEqual(["e3e465ee"]);
+		expect(byBlock.get("bike-api")?.map((member) => member.id)).toEqual(["e3e465ee"]);
+	});
+
+	it("ordnet Components per Hashtag einer Box zu", () => {
+		const blocks: GraphCellBlock[] = [
+			{ id: "bike", role: "node", range: "A1", tags: ["#Bike"] },
+			{ id: "other", role: "node", range: "B1", tags: ["api"] },
+		];
+		const { byBlock, errors } = assignMembersToBlocks(blocks, [
+			{ id: "svc-1", label: "Bike Service", tags: ["bike"] },
+			{ id: "svc-2", label: "Andere", tags: ["#API"] },
+		]);
+		expect(errors).toEqual([]);
+		expect(byBlock.get("bike")?.map((member) => member.id)).toEqual(["svc-1"]);
+		expect(byBlock.get("other")?.map((member) => member.id)).toEqual(["svc-2"]);
+	});
+
 	it("legt direkt verlinkte Komponenten in diesen Block und nicht in den Tag-Block", () => {
 		const blocks: GraphCellBlock[] = [
 			{ id: "linked", role: "node", range: "A1", elementIds: ["svc-1", "svc-2"] },

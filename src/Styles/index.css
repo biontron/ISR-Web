@@ -537,42 +537,6 @@ svg .edgePath.graph-edge--negative path {
 	stroke-dasharray: 6 4;
 }
 
-.graph-swimlane-title {
-	font-weight: 600;
-	padding: 0 2px 4px;
-	text-align: left;
-	white-space: nowrap;
-	color: #111;
-}
-
-.graph-canvas--swimlanes .graph-canvas__svg g.cluster rect {
-	rx: 4;
-	ry: 4;
-	width: 100%;
-}
-
-.graph-canvas--swimlanes .graph-canvas__svg {
-	min-width: 100%;
-}
-
-.graph-swimlane-title-bar {
-	overflow: visible;
-	pointer-events: none;
-}
-
-.graph-swimlane-empty {
-	min-width: 96px;
-	min-height: 36px;
-	color: #888;
-	font-style: italic;
-	text-align: center;
-}
-
-.graph-swimlane-root {
-	font-weight: 600;
-	padding: 4px 8px;
-}
-
 .graph-canvas__svg .graph-node-shell {
 	position: relative;
 	display: inline-block;

@@ -10,7 +10,6 @@ import {
 	isGraphStackClusterId,
 	resolveAssetStackRootId,
 	DEVICE_TITLE_BAR_FILL,
-	STACK_COLUMN_GAP,
 	STACK_INNER_PAD_X,
 	STACK_INNER_PAD_Y,
 	STACK_LAYER_GAP,
@@ -542,103 +541,6 @@ export function applyGraphAssetStackLayout(
 	}
 
 	hideLegacyStackClusters(svg);
-}
-
-function isSwimlaneUtilityNode(nodeId: string | undefined): boolean {
-	if (!nodeId) {
-		return false;
-	}
-	return nodeId.endsWith("__width-spacer") || nodeId.endsWith("__placeholder");
-}
-
-/** Swimlane: Stapel-Spalten in g.nodes positionieren (Lane-Cluster nur als Rahmen). */
-export function layoutSwimlaneStackNodes(
-	svg: Selection<SVGSVGElement, unknown, null, undefined>,
-	graph: DagreGraph,
-	laneNodeId: string,
-	laneLeft: number,
-	laneTop: number,
-	_contentWidth: number
-): number {
-	const assets = rootStore.assets.assets;
-	const laneChildIds = (graph.children(laneNodeId) ?? []).filter(
-		(nodeId) => !isSwimlaneUtilityNode(nodeId) && !isGraphStackClusterId(nodeId)
-	);
-
-	const nodeSelection = selectRenderedGraphNodes(svg);
-	const nodesById = new Map<string, SVGGElement>();
-	nodeSelection.each(function (nodeId) {
-		nodesById.set(nodeId, this);
-	});
-
-	const stackRootIds = new Set<string>();
-	for (const nodeId of laneChildIds) {
-		const rootId = resolveAssetStackRootId(nodeId, assets);
-		if (rootId) {
-			stackRootIds.add(rootId);
-		}
-	}
-
-	const stackEntries: Array<{ rootId: string; layers: IAsset[][] }> = [];
-	const standaloneIds: string[] = [];
-
-	for (const rootId of Array.from(stackRootIds)) {
-		const rootAsset = assets.find((item) => item.id === rootId);
-		if (!rootAsset) {
-			continue;
-		}
-		const layers = collectAssetStackLayersFromAssets(rootAsset, assets);
-		if (hasMultiLayerAssetStack(layers)) {
-			stackEntries.push({ rootId, layers });
-		}
-	}
-
-	for (const nodeId of laneChildIds) {
-		const rootId = resolveAssetStackRootId(nodeId, assets);
-		const inStack = stackEntries.some((entry) => entry.rootId === rootId);
-		if (inStack && rootId !== nodeId) {
-			continue;
-		}
-		if (!inStack) {
-			standaloneIds.push(nodeId);
-		}
-	}
-
-	let cursorX = STACK_PAD;
-	let bodyHeight = 88;
-
-	for (const entry of stackEntries) {
-		const members = flattenAssetStackLayers(entry.layers);
-		const columnNodes = new Map<string, SVGGElement>();
-		for (const member of members) {
-			const node = nodesById.get(member.id);
-			if (node) {
-				columnNodes.set(member.id, node);
-			}
-		}
-		const stackLeft = laneLeft + cursorX;
-		const layout = layoutStackColumn(columnNodes, entry.layers, stackLeft, laneTop);
-		applyStackLayoutTransforms(entry.layers, columnNodes, layout.positions);
-		bodyHeight = Math.max(bodyHeight, layout.height + STACK_PAD * 2);
-		cursorX += layout.width + STACK_COLUMN_GAP;
-	}
-
-	for (const nodeId of standaloneIds) {
-		const node = nodesById.get(nodeId);
-		if (!node) {
-			continue;
-		}
-		const { width, height } = measureGraphNodeSize(node);
-		applyGraphNodeCenterTransform(
-			node,
-			laneLeft + cursorX + width / 2,
-			laneTop + STACK_PAD + height / 2
-		);
-		bodyHeight = Math.max(bodyHeight, height + STACK_PAD * 2);
-		cursorX += width + STACK_COLUMN_GAP;
-	}
-
-	return Math.max(bodyHeight, 88);
 }
 
 /** @deprecated — applyGraphAssetStackLayout nutzen. */

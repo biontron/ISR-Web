@@ -5,7 +5,7 @@ import type {
 	GraphCellRole,
 	GraphRowBand,
 } from "./graphConfig";
-import { graphText, presentPaint } from "./graphConfig";
+import { graphText, normalizeHashtagForMatch, presentPaint, readTagStrings } from "./graphConfig";
 
 export type CellRange = {
 	c1: number;
@@ -157,16 +157,22 @@ function blockRole(block: GraphCellBlock): GraphCellRole {
 	return block.role ?? "node";
 }
 
-function normalizeTag(tag: string): string {
-	return tag.trim().toLowerCase().replace(/^#+/, "");
+function tagKey(tag: unknown): string {
+	if (typeof tag === "string") {
+		return normalizeHashtagForMatch(tag);
+	}
+	if (tag && typeof tag === "object" && "tag" in tag) {
+		return tagKey((tag as { tag: unknown }).tag);
+	}
+	return "";
 }
 
 function blockMatchesMember(block: GraphCellBlock, member: ArchitectureMember): boolean {
-	const tags = (block.tags ?? []).map(normalizeTag).filter(Boolean);
+	const tags = readTagStrings(block.tags).map(tagKey).filter(Boolean);
 	if (tags.length === 0) {
 		return false;
 	}
-	const memberTags = member.tags.map(normalizeTag);
+	const memberTags = member.tags.map(tagKey);
 	return memberTags.some((tag) => tags.includes(tag));
 }
 
@@ -203,7 +209,9 @@ export function assignMembersToBlocks(
 			(block) => !block.fallback && blockMatchesMember(block, member)
 		);
 		if (tagged.length > 0) {
-			byBlock.get(tagged[0].id)?.push(member);
+			for (const block of tagged) {
+				byBlock.get(block.id)?.push(member);
+			}
 			continue;
 		}
 		const fallback = contentBlocks.find((block) => block.fallback);
@@ -227,7 +235,7 @@ function preferredSize(
 	const width = Math.max(MIN_COL, Math.min(260, label.length * 7 + 36));
 	let height = block.shape === "cylinder" ? 58 : 36;
 	if (memberCount > 0) {
-		height += Math.min(memberCount, expanded ? 6 : 3) * 14 + 8;
+		height += Math.min(memberCount, expanded ? 6 : 3) * 18 + 8;
 	}
 	if (graphText(block.text)) {
 		height += 18;

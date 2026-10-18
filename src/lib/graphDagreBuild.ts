@@ -2,14 +2,7 @@ import * as dagreD3 from "dagre-d3-es";
 import { TreeElement } from "../Interfaces/Element";
 import { rootStore } from "../Stores/Root.Store";
 import { formatAssetDefinitionTypeLabel, resolveAssetElementType } from "./elementDefinitionTypes";
-import { GraphConfig, loadGraphConfig, swimlanesWithRest } from "./graphConfig";
-import {
-	assignComponentsToSwimlanes,
-	collectSwimlaneComponentsFromTree,
-	swimlaneNodeId,
-	swimlanePlaceholderId,
-	swimlaneWidthSpacerId,
-} from "./graphSwimlaneLayout";
+import { GraphConfig, loadGraphConfig } from "./graphConfig";
 import { ConnectionGraphEdge } from "./graphConnectionEdges";
 import {
 	collectAssetStackLayersFromAssets,
@@ -146,51 +139,6 @@ function safeSetParent(g: dagreD3.graphlib.Graph, childId: string, parentId: str
 		});
 	}
 	g.setParent(childId, parentId);
-}
-
-export const SWIMLANE_GRAPH_ROOT_ID = "__swimlanes_root__";
-
-function ensureSwimlanePlaceholder(
-	g: dagreD3.graphlib.Graph,
-	laneNodeId: string,
-	graphConfig: GraphConfig
-) {
-	const children = g.children(laneNodeId) ?? [];
-	if (children.length > 0) {
-		return;
-	}
-
-	const placeholderId = swimlanePlaceholderId(laneNodeId);
-	const laneStyle = resolveGraphStyle(
-		{ class: "Group", properties: { style: { graph: { layout: "GROUP" } } } },
-		{ config: graphConfig }
-	);
-	ensureGraphNode(g, placeholderId, {
-		labelType: "html",
-		label: "<div class=\"graph-swimlane-empty\">—</div>",
-		style: graphStyleToSvgNodeStyle(laneStyle),
-		id: placeholderId,
-		width: 96,
-		height: 36,
-	});
-	safeSetParent(g, placeholderId, laneNodeId);
-}
-
-function ensureSwimlaneWidthSpacer(
-	g: dagreD3.graphlib.Graph,
-	laneNodeId: string,
-	minWidth: number
-) {
-	const spacerId = swimlaneWidthSpacerId(laneNodeId);
-	ensureGraphNode(g, spacerId, {
-		labelType: "html",
-		label: "",
-		style: "fill:none;stroke:none;opacity:0;",
-		id: spacerId,
-		width: minWidth,
-		height: 1,
-	});
-	safeSetParent(g, spacerId, laneNodeId);
 }
 
 function treeGraphHasWalkableChild(
@@ -441,80 +389,6 @@ export function addMapPositionedNodes(
 			height: 48,
 		});
 	});
-}
-
-/** Mindestbreite für dagre-Vorlayout; endgültige Breite setzt applySwimlaneFullWidthLayout. */
-export const SWIMLANE_LAYOUT_MIN_WIDTH = 960;
-
-/** Dedicated swimlane graph: lanes + components only (no group tree nesting). */
-export function buildSwimlaneGraph(
-	g: dagreD3.graphlib.Graph,
-	viewRoot: TreeElement,
-	config?: GraphConfig,
-	activeElementId?: string
-) {
-	const graphConfig = config ?? loadGraphConfig();
-	if (!viewRoot?.definition || typeof viewRoot.children !== "function") {
-		return;
-	}
-
-	const labelContext: GraphLabelContext = {
-		contextHosts: collectContextComponents(Array.from(rootStore.assets.assets)),
-	};
-	const components = collectSwimlaneComponentsFromTree(viewRoot, 10, GRAPH_MAX_TREE_NODES);
-	const componentsByLane = assignComponentsToSwimlanes(components, graphConfig);
-
-	const shellStyle = resolveGraphStyle(viewRoot, { config: graphConfig });
-	ensureGraphNode(g, SWIMLANE_GRAPH_ROOT_ID, {
-		labelType: "html",
-		label: `<div class="graph-swimlane-root">${viewRoot.definition.name}</div>`,
-		clusterLabelPos: "top",
-		style: graphStyleToSvgNodeStyle(shellStyle),
-		id: SWIMLANE_GRAPH_ROOT_ID,
-	});
-
-	for (const component of components) {
-		const isActive = activeElementId === component.id;
-		const style = resolveGraphStyle(component, { config: graphConfig, isActive });
-		ensureGraphNode(g, component.id, {
-			labelType: "html",
-			label: buildNodeLabel(component, true, false, labelContext),
-			style: graphStyleToSvgNodeStyle(style),
-			id: component.id,
-		});
-	}
-
-	for (const lane of swimlanesWithRest(graphConfig)) {
-		const laneId = swimlaneNodeId(lane.id);
-		const laneStyle = resolveGraphStyle(
-			{ class: "Group", properties: { style: { graph: { layout: "GROUP" } } } },
-			{ config: graphConfig }
-		);
-		ensureGraphNode(g, laneId, {
-			labelType: "html",
-			label: "",
-			clusterLabelPos: "top",
-			style: graphStyleToSvgNodeStyle(laneStyle),
-			id: laneId,
-		});
-		safeSetParent(g, laneId, SWIMLANE_GRAPH_ROOT_ID);
-
-		for (const component of componentsByLane.get(lane.id) ?? []) {
-			safeSetParent(g, component.id, laneId);
-		}
-
-		ensureSwimlanePlaceholder(g, laneId, graphConfig);
-		ensureSwimlaneWidthSpacer(g, laneId, SWIMLANE_LAYOUT_MIN_WIDTH);
-	}
-}
-
-/** @deprecated Use buildSwimlaneGraph — lanes nested in tree were often invisible. */
-export function addSwimlaneLayout(
-	g: dagreD3.graphlib.Graph,
-	root: TreeElement,
-	config?: GraphConfig
-) {
-	buildSwimlaneGraph(g, root, config);
 }
 
 export function repairGraphClusterNodes(g: dagreD3.graphlib.Graph) {

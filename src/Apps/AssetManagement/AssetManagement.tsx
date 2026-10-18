@@ -9,7 +9,6 @@ import { useParams } from "react-router-dom";
 import { rootStore } from "../../Stores/Root.Store";
 import {
 	ElementGraphOverview,
-	ElementGraphSwimlanes,
 	ElementGraphMap,
 	GraphZoomButtons,
 	useGraphZoom,
@@ -279,7 +278,6 @@ const AssetManagement = observer(() => {
 						tabBarExtraContent={<GraphZoomButtons zoomIn={zoomIn} zoomOut={zoomOut} />}
 					>
 						<TabPane tab={langtext("general.graph_tab_overview")} key="GraphStack" />
-						<TabPane tab={langtext("general.graph_tab_swimlanes")} key="GraphSwimlanes" />
 						<TabPane tab={langtext("general.graph_tab_map")} key="GraphMap" />
 						{architectures.map((entry) => (
 							<TabPane tab={graphText(entry.label)} key={`arch:${entry.id}`} />
@@ -289,9 +287,6 @@ const AssetManagement = observer(() => {
 					<div className="graph-panel-content">
 						{activeGraphTab === "GraphStack" && (
 							<ElementGraphOverview element={activeElement} zoomLevel={zoomLevel} />
-						)}
-						{activeGraphTab === "GraphSwimlanes" && (
-							<ElementGraphSwimlanes element={activeElement} zoomLevel={zoomLevel} />
 						)}
 						{activeGraphTab === "GraphMap" && (
 							<ElementGraphMap element={activeElement} zoomLevel={zoomLevel} />
@@ -330,7 +325,6 @@ const AssetManagement = observer(() => {
 							}
 						>
 							<TabPane tab={langtext("general.graph_tab_overview")} key="GraphStack" />
-							<TabPane tab={langtext("general.graph_tab_swimlanes")} key="GraphSwimlanes" />
 							<TabPane tab={langtext("general.graph_tab_map")} key="GraphMap" />
 							{architectures.map((entry) => (
 								<TabPane tab={graphText(entry.label)} key={`arch:${entry.id}`} />
@@ -341,9 +335,6 @@ const AssetManagement = observer(() => {
 					<div className="graph-fullscreen-content">
 						{activeGraphTab === "GraphStack" && (
 							<ElementGraphOverview element={activeElement} zoomLevel={zoomLevel} />
-						)}
-						{activeGraphTab === "GraphSwimlanes" && (
-							<ElementGraphSwimlanes element={activeElement} zoomLevel={zoomLevel} />
 						)}
 						{activeGraphTab === "GraphMap" && (
 							<ElementGraphMap element={activeElement} zoomLevel={zoomLevel} />

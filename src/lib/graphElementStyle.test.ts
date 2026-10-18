@@ -1,3 +1,4 @@
+import { types } from "mobx-state-tree";
 import { DEFAULT_GRAPH_CONFIG } from "./graphConfig";
 import { readElementGraphTags, resolveGraphStyle } from "./graphElementStyle";
 
@@ -60,5 +61,20 @@ describe("graphElementStyle", () => {
 				definition: { tags: { tag: "#service" } },
 			})
 		).toEqual(["#service"]);
+	});
+
+	it("reads hashtags from an MST tags array", () => {
+		const Model = types.model({
+			definition: types.model({
+				tags: types.optional(
+					types.array(types.model({ tag: types.optional(types.string, "") })),
+					[]
+				),
+			}),
+		});
+		const node = Model.create({
+			definition: { tags: [{ tag: "#Bike" }, { tag: "#dmz" }] },
+		});
+		expect(readElementGraphTags(node)).toEqual(["#Bike", "#dmz"]);
 	});
 });

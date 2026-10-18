@@ -9,7 +9,7 @@ import type {
 	GraphLocalizedText,
 	GraphRowBand,
 } from "../../../lib/graphConfig";
-import { graphText, presentId } from "../../../lib/graphConfig";
+import { graphText, presentId, readTagStrings } from "../../../lib/graphConfig";
 import { rootStore } from "../../../Stores/Root.Store";
 
 type GraphArchitectureSettingsProps = {
@@ -207,7 +207,7 @@ export const GraphArchitectureSettings = observer(function GraphArchitectureSett
 								width: 140,
 								render: (_value, block) => (
 									<Input
-										value={(block.tags ?? []).join(", ")}
+										value={readTagStrings(block.tags).join(", ")}
 										disabled={!canEdit}
 										onChange={(event) =>
 											updateBlock(architecture.id, block.id, {

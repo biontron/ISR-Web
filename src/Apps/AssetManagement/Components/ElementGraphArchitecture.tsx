@@ -1,8 +1,10 @@
-import { useMemo, useState } from "react";
+import { useState } from "react";
 import { observer } from "mobx-react";
+import { useNavigate } from "react-router-dom";
 import { rootStore } from "../../../Stores/Root.Store";
+import authStore from "../../../Stores/Auth.Store";
 import type { GraphArchitectureRepresentation, GraphCellBlock } from "../../../lib/graphConfig";
-import { graphText, presentId, presentPaint } from "../../../lib/graphConfig";
+import { graphText, presentId, presentPaint, readPreviewMembers, readTagStrings } from "../../../lib/graphConfig";
 import { readElementGraphTags } from "../../../lib/graphElementStyle";
 import { collectConnectionGraphEdges } from "../../../lib/graphConnectionEdges";
 import {
@@ -25,7 +27,7 @@ function membersOf(blockMembers: ArchitectureMember[] | undefined, block: GraphC
 	if (blockMembers && blockMembers.length > 0) {
 		return blockMembers;
 	}
-	return (block.previewMembers ?? []).map((member) => ({
+	return readPreviewMembers(block.previewMembers).map((member) => ({
 		id: member.id,
 		label: graphText(member.label) || member.id,
 		tags: [],
@@ -156,82 +158,66 @@ export const ElementGraphArchitecture = observer(function ElementGraphArchitectu
 }: ElementGraphArchitectureProps) {
 	const [expandedIds, setExpandedIds] = useState<Set<string>>(() => new Set());
 	const [missingId, setMissingId] = useState<string | null>(null);
+	const navigate = useNavigate();
 	const assets = rootStore.assets.assets;
 	const connections = rootStore.connections.connections;
 
-	const members = useMemo<ArchitectureMember[]>(() => {
-		return assets
-			.filter((asset) => asset.class === "Asset" || asset.class === "AssetDetails")
-			.map((asset) => ({
-				id: asset.id,
-				label: asset.definition?.label || asset.definition?.name || asset.id,
-				tags: readElementGraphTags(asset),
-			}));
-	}, [assets]);
-
-	const assignment = useMemo(
-		() => assignMembersToBlocks(architecture.blocks, members),
-		[architecture.blocks, members]
-	);
-
-	const memberCounts = useMemo(() => {
-		const counts = new Map<string, number>();
-		for (const block of architecture.blocks) {
-			counts.set(block.id, membersOf(assignment.byBlock.get(block.id), block).length);
+	// Hashtags liegen an den Assets. Die Zuordnung muss bei jedem Render neu lesen,
+	// sonst bleibt die Liste stehen, wenn Tags ergänzt werden oder Assets nachladen.
+	const members: ArchitectureMember[] = [];
+	for (const asset of assets) {
+		if (asset.class !== "Asset" && asset.class !== "AssetDetails") {
+			continue;
 		}
-		return counts;
-	}, [architecture.blocks, assignment.byBlock]);
-
-	const layout = useMemo(
-		() => layoutArchitecture(architecture, { expandedIds, memberCounts }),
-		[architecture, expandedIds, memberCounts]
-	);
-
-	const memberToBlock = useMemo(() => {
-		const map = new Map<string, string>();
-		assignment.byBlock.forEach((blockMembers, blockId) => {
-			blockMembers.forEach((member) => {
-				map.set(member.id, blockId);
-			});
+		members.push({
+			id: asset.id,
+			label: asset.definition?.name || asset.id,
+			tags: readElementGraphTags(asset),
 		});
-		return map;
-	}, [assignment.byBlock]);
+	}
 
-	const connectionPairs = useMemo(() => {
-		const visible = new Set<string>();
-		memberToBlock.forEach((_blockId, memberId) => {
-			visible.add(memberId);
+	const assignment = assignMembersToBlocks(architecture.blocks, members);
+
+	const memberCounts = new Map<string, number>();
+	for (const block of architecture.blocks) {
+		memberCounts.set(block.id, membersOf(assignment.byBlock.get(block.id), block).length);
+	}
+
+	const layout = layoutArchitecture(architecture, { expandedIds, memberCounts });
+
+	const memberToBlock = new Map<string, string>();
+	assignment.byBlock.forEach((blockMembers, blockId) => {
+		blockMembers.forEach((member) => {
+			memberToBlock.set(member.id, blockId);
 		});
-		if (visible.size === 0) {
-			return [];
-		}
-		return collectConnectionGraphEdges(Array.from(assets), Array.from(connections), visible).map(
-			(edge) => ({ fromId: edge.fromNodeId, toId: edge.toNodeId })
+	});
+
+	const visibleMemberIds = new Set<string>();
+	memberToBlock.forEach((_blockId, memberId) => {
+		visibleMemberIds.add(memberId);
+	});
+	const connectionPairs =
+		visibleMemberIds.size === 0
+			? []
+			: collectConnectionGraphEdges(Array.from(assets), Array.from(connections), visibleMemberIds).map(
+					(edge) => ({ fromId: edge.fromNodeId, toId: edge.toNodeId })
+				);
+
+	const membersByBlock = new Map<string, string[]>();
+	for (const block of architecture.blocks) {
+		membersByBlock.set(
+			block.id,
+			membersOf(assignment.byBlock.get(block.id), block).map((member) => member.id)
 		);
-	}, [assets, connections, memberToBlock]);
+	}
 
-	const membersByBlock = useMemo(() => {
-		const map = new Map<string, string[]>();
-		for (const block of architecture.blocks) {
-			map.set(
-				block.id,
-				membersOf(assignment.byBlock.get(block.id), block).map((member) => member.id)
-			);
-		}
-		return map;
-	}, [architecture.blocks, assignment.byBlock]);
-
-	const edges = useMemo(
-		() =>
-			visibleArchitectureEdges(
-				layout.placed,
-				architecture.edges,
-				connectionPairs,
-				memberToBlock,
-				expandedIds,
-				membersByBlock
-			),
-		[layout.placed, architecture.edges, connectionPairs, memberToBlock, expandedIds, membersByBlock]
+	const edges = visibleArchitectureEdges(
+		layout.placed,
+		architecture.edges,
+		connectionPairs,
+		memberToBlock,
+		expandedIds,
+		membersByBlock
 	);
 
 	const regions = layout.placed.filter((item) => (item.block.role ?? "node") === "region");
@@ -263,6 +249,16 @@ export const ElementGraphArchitecture = observer(function ElementGraphArchitectu
 			}
 			return next;
 		});
+	}
+
+	function openComponent(event: React.MouseEvent, componentId: string) {
+		event.preventDefault();
+		event.stopPropagation();
+		const viewId = rootStore.ui.activeView?.id;
+		if (!viewId) {
+			return;
+		}
+		navigate(`/${authStore.getDomain()}/am/${viewId}/element/${componentId}`);
 	}
 
 	return (
@@ -360,13 +356,15 @@ export const ElementGraphArchitecture = observer(function ElementGraphArchitectu
 						{nodes.map((item) => {
 							const expanded = expandedIds.has(item.block.id);
 							const detailId = presentId(item.block.architectureId);
-							const shown = membersOf(assignment.byBlock.get(item.block.id), item.block);
+							const linkedMembers = assignment.byBlock.get(item.block.id) ?? [];
+							const shown = membersOf(linkedMembers, item.block);
+							const linked = linkedMembers.length > 0;
 							const label = graphText(item.block.label).trim();
 							const caption = blockSubtitle(item.block);
 							const previewCount = expanded && !detailId ? 6 : 3;
 							const preview = shown.slice(0, previewCount);
 							const tagLine =
-								preview.length === 0 ? (item.block.tags ?? []).filter(Boolean).join(", ") : "";
+								preview.length === 0 ? readTagStrings(item.block.tags).join(", ") : "";
 							const clickable = Boolean(detailId) || shown.length > 0 || Boolean(label);
 							const stroke = missingId === item.block.id ? "#c62828" : presentPaint(item.block.stroke) || "#333";
 							const dash = blockDash(item.block);
@@ -465,17 +463,56 @@ export const ElementGraphArchitecture = observer(function ElementGraphArchitectu
 											{caption}
 										</text>
 									)}
-									{preview.length > 0 && item.block.shape !== "c" && preview.map((member, index) => (
-										<text
-											key={member.id}
-											x={item.x + 8}
-											y={item.y + 32 + (caption ? 16 : 0) + index * 14}
-											fontSize={10}
-											fill={presentPaint(item.block.labelColor) || "#222"}
-										>
-											{member.label}
-										</text>
-									))}
+									{preview.length > 0 && item.block.shape !== "c" && preview.map((member, index) => {
+										if (!linked) {
+											return (
+												<text
+													key={member.id}
+													x={item.x + 8}
+													y={item.y + 32 + (caption ? 16 : 0) + index * 14}
+													fontSize={10}
+													fill={presentPaint(item.block.labelColor) || "#222"}
+												>
+													{member.label}
+												</text>
+											);
+										}
+										const frameX = item.x + 6;
+										const frameY = item.y + 22 + (caption ? 16 : 0) + index * 18;
+										const frameWidth = Math.min(
+											Math.max(24, item.width - 12),
+											Math.max(28, member.label.length * 5.8 + 8)
+										);
+										const viewId = rootStore.ui.activeView?.id ?? "";
+										const href = `/${authStore.getDomain()}/am/${viewId}/element/${member.id}`;
+										return (
+											<a
+												key={member.id}
+												href={href}
+												style={{ cursor: "pointer" }}
+												onClick={(event) => openComponent(event, member.id)}
+											>
+												<rect
+													x={frameX}
+													y={frameY}
+													width={frameWidth}
+													height={15}
+													rx={2}
+													fill="#ffffff"
+													stroke={presentPaint(item.block.stroke) || "#546e7a"}
+													strokeWidth={1}
+												/>
+												<text
+													x={frameX + 4}
+													y={frameY + 11}
+													fontSize={10}
+													fill="#1565c0"
+												>
+													{member.label}
+												</text>
+											</a>
+										);
+									})}
 									{tagLine && (
 										<text x={item.x + 8} y={item.y + 32} fontSize={10} fill="#455a64">
 											{tagLine}

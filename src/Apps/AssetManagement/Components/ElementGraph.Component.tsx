@@ -27,17 +27,12 @@ import {
 	addConnectionEdgesToGraph,
 	addMapPositionedNodes,
 	addTreeNodesToGraph,
-	buildSwimlaneGraph,
 	repairGraphClusterNodes,
 } from "../../../lib/graphDagreBuild";
 import { prepareGraphCanvas, renderDagreGraph, finalizeGraphLabels, resolveGraphCanvasSize } from "../../../lib/graphDagreRender";
 import { resolveEdgeStyle, readElementGraphPosition } from "../../../lib/graphElementStyle";
 import { GraphConfig } from "../../../lib/graphConfig";
 import { resolveGraphConfigForView } from "../../../lib/graphViewModel";
-import {
-	applySwimlaneFullWidthLayout,
-	resolveSwimlaneGraphCanvasSize,
-} from "../../../lib/graphSwimlaneRender";
 import { applyOverviewClusterLayout } from "../../../lib/graphOverviewRender";
 import { isStackMemberAsset } from "../../../lib/graphComponentStack";
 import { appendGraphArrowDefs, applyEdgeStylesToSvg } from "../../../lib/graphSvgEdges";
@@ -65,8 +60,6 @@ const GRAPH_INLINE_STYLE = `
 	g.cluster .graph-node-shell { padding-right: 0; width: max-content; }
 	.graph-link { cursor: pointer; color: #111; }
 	.graph-link:hover { text-decoration: underline; color: #0066cc; }
-	.graph-swimlane-title { font-weight: 600; padding: 0 2px 4px; color: #111; text-align: left; white-space: nowrap; }
-	svg .edgePath.graph-edge--swimlane-hidden,
 	svg .edgePath.graph-edge--layout-hidden,
 	svg .edgeLabel.graph-edge--layout-hidden { display: none; }
 	svg .node.graph-overview-rank-dummy { display: none; }
@@ -460,43 +453,6 @@ export const ElementGraphOverview = observer(
 			});
 			return undefined;
 		}}
-	/>
-));
-
-export const ElementGraphSwimlanes = observer(
-	({ element, zoomLevel }: { element: ActiveElement; zoomLevel: number }) => (
-	<GraphCanvas
-		element={element}
-		zoomLevel={zoomLevel}
-		canvasClassName="graph-canvas--swimlanes"
-		layout={{ rankdir: "TB", ranksep: 80, nodesep: 40 }}
-		buildGraph={(g, _root, config) => {
-			const view = rootStore.ui.activeView;
-			if (!view) {
-				return [];
-			}
-			const viewRoot = view as TreeElement;
-			buildSwimlaneGraph(g, viewRoot, config, rootStore.ui.activeElement?.id);
-			const edges = collectConnectionGraphEdges(
-				rootStore.assets.assets.slice(),
-				rootStore.connections.connections.slice(),
-				collectRenderedGraphNodeIds(g)
-			);
-			addConnectionEdgesToGraph(g, edges);
-			return edges;
-		}}
-		postRender={(svg, _root, graphConfig, viewportWidth, dagreGraph) =>
-			applySwimlaneFullWidthLayout(
-				svg,
-				graphConfig,
-				viewportWidth,
-				rootStore.i18n.lang,
-				dagreGraph
-			)
-		}
-		resolveCanvasSize={(_svg, viewportWidth, layoutHeight) =>
-			resolveSwimlaneGraphCanvasSize(layoutHeight ?? 300, viewportWidth)
-		}
 	/>
 ));
 

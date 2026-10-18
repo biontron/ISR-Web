@@ -1,11 +1,17 @@
 import { TreeElement } from "../Interfaces/Element";
 import { rootStore } from "../Stores/Root.Store";
 import {
+	GraphArchitectureEdge,
 	GraphArchitectureRepresentation,
+	GraphCellBlock,
 	GraphConfig,
 	GraphRepresentation,
+	GraphRowBand,
 	loadGraphConfig,
+	readPreviewMembers,
+	readTagStrings,
 	resolveSwimlaneForTags,
+	xmlChildList,
 } from "./graphConfig";
 import { readElementGraphTags } from "./graphElementStyle";
 import { resolveViewEnvironmentRefs, ViewEnvironmentSource } from "./viewEnvironments";
@@ -30,15 +36,63 @@ function isArchitecture(entry: unknown): entry is GraphArchitectureRepresentatio
 	return !!entry && typeof entry === "object" && (entry as GraphRepresentation).kind === "architecture";
 }
 
+function xmlBoolean(value: unknown): boolean | undefined {
+	if (value === true || value === "true") {
+		return true;
+	}
+	if (value === false || value === "false") {
+		return false;
+	}
+	return undefined;
+}
+
+function presentBlock(raw: unknown): GraphCellBlock | null {
+	if (!raw || typeof raw !== "object") {
+		return null;
+	}
+	const block = raw as GraphCellBlock;
+	const id = typeof block.id === "string" ? block.id.trim() : "";
+	if (!id) {
+		return null;
+	}
+	const dashed = xmlBoolean(block.dashed);
+	return {
+		...block,
+		id,
+		tags: readTagStrings(block.tags),
+		previewMembers: readPreviewMembers(block.previewMembers),
+		elementIds: xmlChildList(block.elementIds, "elementId")
+			.map((entry) => (typeof entry === "string" ? entry.trim() : ""))
+			.filter(Boolean),
+		...(dashed === undefined ? {} : { dashed }),
+	};
+}
+
+function presentArchitecture(raw: unknown): GraphArchitectureRepresentation | null {
+	if (!isArchitecture(raw)) {
+		return null;
+	}
+	return {
+		...raw,
+		blocks: xmlChildList(raw.blocks, "block")
+			.map(presentBlock)
+			.filter((block): block is GraphCellBlock => block != null),
+		edges: xmlChildList(raw.edges, "edge") as GraphArchitectureEdge[],
+		rowBands: xmlChildList(raw.rowBands, "rowBand") as GraphRowBand[],
+	};
+}
+
 export function readGraphArchitectures(graph: unknown): GraphArchitectureRepresentation[] {
 	if (!graph || typeof graph !== "object") {
 		return [];
 	}
-	const representations = (graph as { representations?: unknown }).representations;
-	if (!Array.isArray(representations)) {
-		return [];
-	}
-	return representations.filter(isArchitecture);
+	const representations = xmlChildList(
+		(graph as { representations?: unknown }).representations,
+		"representation"
+	);
+	return representations
+		.map(presentArchitecture)
+		.filter((entry): entry is GraphArchitectureRepresentation => entry != null);
 }
 
 function overlayArchitectures(

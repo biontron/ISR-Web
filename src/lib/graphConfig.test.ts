@@ -1,6 +1,6 @@
 import { DEFAULT_GRAPH_CONFIG, loadGraphConfig, resolveContainerPreset, resolveSwimlaneForTags, resolveSwimlaneLabel, resolveUngroupedSwimlane } from "./graphConfig";
 import { readGraphArchitectures, resolveGraphConfigForView } from "./graphViewModel";
-import { layoutArchitecture } from "./graphArchitectureLayout";
+import { assignMembersToBlocks, layoutArchitecture } from "./graphArchitectureLayout";
 import { EnvironmentModel, environmentRestProperties } from "../Stores/Models/Environment.Model";
 
 describe("graphConfig", () => {
@@ -198,5 +198,57 @@ describe("graphConfig", () => {
 			responsibles: [],
 			notations: [],
 		});
+	});
+
+	it("liest Block-Tags aus der XML-Form tags/tag und zieht die Component", () => {
+		const graph = {
+			representations: {
+				representation: {
+					kind: "architecture",
+					id: "zielarchitektur",
+					label: { de: "Zielarchitektur", und: "Zielarchitektur" },
+					blocks: {
+						block: [
+							{
+								id: "bike-ui",
+								role: "node",
+								range: "C1",
+								label: "Bike Web UI",
+								tags: { tag: "bike" },
+								previewMembers: {
+									member: [
+										{ id: "Bike-svc-1", label: "Bike Service A" },
+										{ id: "Bike-svc-2", label: "Bike Service B" },
+									],
+								},
+							},
+							{
+								id: "leasysoft",
+								role: "node",
+								range: "G9",
+								label: "LeasySoft",
+								tags: { tag: "leasy" },
+							},
+						],
+					},
+					edges: {
+						edge: { from: "bike-ui", to: "leasysoft" },
+					},
+				},
+			},
+		};
+		const [architecture] = readGraphArchitectures(graph);
+		expect(architecture.blocks.map((block) => block.tags)).toEqual([["bike"], ["leasy"]]);
+		expect(architecture.blocks[0].previewMembers?.map((member) => member.label)).toEqual([
+			"Bike Service A",
+			"Bike Service B",
+		]);
+		expect(architecture.edges).toEqual([{ from: "bike-ui", to: "leasysoft" }]);
+		const { byBlock } = assignMembersToBlocks(architecture.blocks, [
+			{ id: "e3e465ee", label: "192.168.39.97", tags: ["bike"] },
+			{ id: "leasy-1", label: "Leasy", tags: ["leasy"] },
+		]);
+		expect(byBlock.get("bike-ui")?.map((member) => member.label)).toEqual(["192.168.39.97"]);
+		expect(byBlock.get("leasysoft")?.map((member) => member.id)).toEqual(["leasy-1"]);
 	});
 });

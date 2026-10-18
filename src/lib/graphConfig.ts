@@ -200,9 +200,78 @@ export function presentId(value: unknown): string | undefined {
 	return typeof value === "string" && value.trim() ? value.trim() : undefined;
 }
 
+/**
+ * XML-JSON: ein einzelnes Kind bleibt ein Objekt oder Text, mehrere Kinder werden zum Array.
+ * `<tags><tag>bike</tag></tags>` wird damit zu `{ tag: "bike" }`, nicht zu `["bike"]`.
+ */
+export function xmlChildList(value: unknown, childName?: string): unknown[] {
+	if (value == null || value === "") {
+		return [];
+	}
+	if (Array.isArray(value)) {
+		return value;
+	}
+	if (typeof value !== "object") {
+		return [value];
+	}
+	const record = value as Record<string, unknown>;
+	if (childName && Object.prototype.hasOwnProperty.call(record, childName)) {
+		return xmlChildList(record[childName]);
+	}
+	return [value];
+}
+
+export function readTagStrings(value: unknown): string[] {
+	const result: string[] = [];
+	for (const entry of xmlChildList(value, "tag")) {
+		if (typeof entry === "string" || typeof entry === "number") {
+			const text = String(entry).trim();
+			if (text) {
+				result.push(text);
+			}
+			continue;
+		}
+		if (entry && typeof entry === "object" && "tag" in entry) {
+			const inner = (entry as { tag: unknown }).tag;
+			if (typeof inner === "string" || typeof inner === "number") {
+				const text = String(inner).trim();
+				if (text) {
+					result.push(text);
+				}
+			}
+		}
+	}
+	return result;
+}
+
+export function readPreviewMembers(
+	value: unknown
+): { id: string; label: GraphLocalizedText }[] {
+	const members: { id: string; label: GraphLocalizedText }[] = [];
+	for (const entry of xmlChildList(value, "member")) {
+		if (!entry || typeof entry !== "object") {
+			continue;
+		}
+		const member = entry as { id?: unknown; label?: unknown };
+		const id = typeof member.id === "string" ? member.id.trim() : "";
+		if (!id) {
+			continue;
+		}
+		const label = member.label;
+		members.push({
+			id,
+			label:
+				typeof label === "string" || (label && typeof label === "object")
+					? (label as GraphLocalizedText)
+					: id,
+		});
+	}
+	return members;
+}
+
 /** Hashtag-Vergleich: #database und database sind gleichwertig. */
 export function normalizeHashtagForMatch(tag: string): string {
-	return tag.trim().toLowerCase().replace(/^#+/, "");
+	return tag.trim().toLowerCase().replace(/^#+/, "").trim();
 }
 
 export function resolveSwimlaneForTags(
